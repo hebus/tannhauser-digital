@@ -68,8 +68,8 @@ export class CharacterLayer extends Container {
         text: `C${stats.combat} P${stats.physical} M${c.movementLeft}`,
         style: { fill: 0xffffff, fontSize: 10, stroke: { color: 0x000000, width: 3 } },
       });
-      label.anchor.set(0.5, 0);
-      label.position.set(0, r + 10);
+      label.anchor.set(0.5, 1);
+      label.position.set(0, -r - 8);
       root.addChild(label);
     }
     return root;
