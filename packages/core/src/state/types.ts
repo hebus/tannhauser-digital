@@ -16,7 +16,17 @@ export interface TurnState {
   readonly initiativePlayerId: PlayerId | null;
   /** Joueur dont c'est actuellement le tour d'activer un personnage. */
   readonly activePlayerId: PlayerId | null;
+  /** Personnage en cours d'activation (absent hors activation). */
+  readonly activeCharacterId?: CharacterId;
 }
+
+/** Paramètres de partie sérialisables (valeurs de mode de jeu, pas de constantes en dur). */
+export interface GameConfig {
+  /** PC attribués à chaque joueur à chaque refresh de début de tour (§66.1, §75). */
+  readonly commandPointsPerTurn: number;
+}
+
+export const DEFAULT_GAME_CONFIG: GameConfig = { commandPointsPerTurn: 2 };
 
 export interface PlayerState {
   readonly id: PlayerId;
@@ -71,6 +81,7 @@ export interface GameState {
   readonly schemaVersion: number;
   readonly gameId: string;
   readonly scenarioId: string;
+  readonly config: GameConfig;
   readonly turn: TurnState;
   readonly phase: GamePhase;
   readonly players: readonly PlayerState[];
