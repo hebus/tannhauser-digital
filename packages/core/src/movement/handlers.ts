@@ -1,7 +1,7 @@
 import type { Door, DoorId, NodeId } from '../board/types';
 import type { GameCommand } from '../commands/commands';
 import type { GameEvent, RuleError } from '../events/events';
-import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
+import { registerHandler, type HandlerOutcome } from '../engine/apply-command';
 import type { CharacterState, GameState } from '../state/types';
 import { findOverwatchTrigger } from '../overwatch/trigger';
 import { validatePath } from './validate-path';

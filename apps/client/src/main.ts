@@ -2,6 +2,8 @@ import { Application, Container } from 'pixi.js';
 import { BoardView, Camera, CharacterLayer, HighlightLayer, NODE_RADIUS } from '@tannhauser/renderer';
 import { describeEvent } from './event-text';
 import { GameFacade } from './game-facade';
+import { startFromSetup } from './ui/boot';
+import { mountUi } from './ui/mount';
 
 function showError(message: string): void {
   const el = document.getElementById('error');
@@ -19,7 +21,9 @@ async function main(): Promise<void> {
   await app.init({ resizeTo: window, background: 0x14161a, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
   host.appendChild(app.canvas);
 
-  const game = GameFacade.createDev();
+  // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
+  const game = await startFromSetup();
+  mountUi(game);
   const world = new Container();
   app.stage.addChild(world);
 
