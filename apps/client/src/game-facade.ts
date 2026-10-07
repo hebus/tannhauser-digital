@@ -11,6 +11,7 @@ import {
   type GameEvent,
   type GameState,
 } from '@tannhauser/core';
+import type { BoardLayout } from '@tannhauser/renderer';
 import { createCharacterState, loadDevContent } from '@tannhauser/content';
 
 /** Ennemi ciblable par le personnage, avec les armes qui passent `checkTargeting`. */
@@ -24,6 +25,8 @@ type Listener = (events: readonly GameEvent[], state: GameState) => void;
 
 /** Seul pont entre le client (Pixi/UI) et le moteur : le client n'importe jamais les règles directement. */
 export class GameFacade {
+  /** Mise en page d'AFFICHAGE du plateau (pièces, couloirs) ; absente : grille. Aucune règle n'en dépend. */
+  layout?: BoardLayout;
   private current: GameState;
   private rng: SeededRng;
   private readonly listeners = new Set<Listener>();

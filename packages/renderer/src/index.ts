@@ -1,4 +1,5 @@
 export * from './board-view';
+export * from './board-layout';
 export * from './camera';
 export * from './palette';
 export * from './character-layer';

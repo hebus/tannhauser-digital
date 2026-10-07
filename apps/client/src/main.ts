@@ -16,6 +16,7 @@ import { describeEvent } from './event-text';
 import type { GameFacade } from './game-facade';
 import { createLabeler } from './ui/labels';
 import { startFromSetup } from './ui/boot';
+import { detectLocale, hasKey, setLocale, t } from './ui/i18n';
 import { mountUi } from './ui/mount';
 
 function showError(message: string): void {
@@ -35,13 +36,24 @@ async function main(): Promise<void> {
   host.appendChild(app.canvas);
 
   // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
-  const game = await startFromSetup();
+  // Plateau de démonstration non orthogonal : développement uniquement (`?demoBoard=castle`), sans écran de mise en place.
+  const demoBoard = import.meta.env.DEV ? new URLSearchParams(location.search).get('demoBoard') : null;
+  let game: GameFacade;
+  if (demoBoard === 'castle') {
+    await import('../ui.css');
+    setLocale(detectLocale(location.search));
+    game = (await import('./fixtures/castle-demo')).createCastleDemoFacade();
+  } else {
+    game = await startFromSetup();
+  }
   const ui = mountUi(game);
+  // Libellés de la mise en page (noms de pièces) : traduction si la clé existe, sinon la clé telle quelle.
+  const label = (key: string): string => (hasKey(key) ? t(key) : key);
   const world = new Container();
   app.stage.addChild(world);
 
   let showIds = true;
-  let boardView = new BoardView(game.state.board, { showNodeIds: showIds });
+  let boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
   const highlight = new HighlightLayer(game.state.board);
   const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
@@ -267,7 +279,7 @@ async function main(): Promise<void> {
       showIds = !showIds;
       world.removeChild(boardView);
       boardView.destroy({ children: true });
-      boardView = new BoardView(game.state.board, { showNodeIds: showIds });
+      boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
       world.addChildAt(boardView, 0);
     } else if (reaction && (key === 't' || key === 'd')) {
       const ow = s.characters.find((c) => c.id === reaction.overwatcherId);
