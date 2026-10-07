@@ -127,3 +127,17 @@ describe('createGameFromSetup', () => {
     expect(() => createGameFromSetup({ ...defaultSetup(available, 1), seed: -5 }, content)).toThrow(/BAD_SEED/);
   });
 });
+
+describe('joueurs pilotés par l’IA', () => {
+  const base = { boardId: 'dev-board', seed: 5, teams: [{ playerId: 'p1', characterIds: ['a'] }, { playerId: 'p2', characterIds: ['b'] }] };
+
+  it('aller-retour dans le hash d’URL, et absence de paramètre quand personne n’est piloté', () => {
+    expect(decodeSetup(`#${encodeSetup({ ...base, ai: ['p2'] })}`)).toEqual({ ...base, ai: ['p2'] });
+    expect(encodeSetup(base)).not.toContain('ai=');
+    expect(decodeSetup(`#${encodeSetup(base)}`)).toEqual(base);
+  });
+
+  it('ignore les ids de joueur inconnus', () => {
+    expect(decodeSetup(`#${encodeSetup(base)}&ai=p9,p1`)?.ai).toEqual(['p1']);
+  });
+});

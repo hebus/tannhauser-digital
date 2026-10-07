@@ -11,6 +11,8 @@ export interface SetupConfig {
   readonly boardId: string;
   readonly seed: number;
   readonly teams: readonly TeamConfig[];
+  /** Joueurs pilotés par l'IA (absent : partie entre humains). */
+  readonly ai?: readonly string[];
 }
 
 export const MAX_TEAM_SIZE = 4;
@@ -78,6 +80,7 @@ export function encodeSetup(config: SetupConfig): string {
   params.set('board', config.boardId);
   params.set('seed', String(config.seed));
   for (const team of config.teams) params.set(team.playerId, team.characterIds.join(','));
+  if (config.ai && config.ai.length > 0) params.set('ai', config.ai.join(','));
   return params.toString();
 }
 
@@ -93,7 +96,8 @@ export function decodeSetup(hash: string): SetupConfig | null {
     if (raw === null) return null;
     teams.push({ playerId, characterIds: raw.split(',').filter((s) => s.length > 0) });
   }
-  return { boardId: board, seed: Number(seedText), teams };
+  const ai = (params.get('ai') ?? '').split(',').filter((id) => (PLAYER_IDS as readonly string[]).includes(id));
+  return { boardId: board, seed: Number(seedText), teams, ...(ai.length > 0 ? { ai } : {}) };
 }
 
 // --- Placement initial ---

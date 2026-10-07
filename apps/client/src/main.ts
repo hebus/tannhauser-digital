@@ -15,6 +15,7 @@ import {
 } from '@tannhauser/renderer';
 import { getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
+import { startAiDriver } from './ai-driver';
 import type { GameFacade } from './game-facade';
 import { bannerText } from './ui/banner-text';
 import { createLabeler } from './ui/labels';
@@ -398,7 +399,11 @@ async function main(): Promise<void> {
     }
   }, { signal });
 
+  // Joueurs pilotés par l'IA : elle joue quand les animations sont terminées ; les erreurs vont au journal.
+  const stopAi = startAiDriver(game, { whenIdle: (cb) => presentation.onIdle(cb), onError: (m) => log(`✖ ${m}`) });
+
   const cleanup = (): void => {
+    stopAi();
     lifetime.abort();
     unsubscribeGame();
     app.ticker.remove(tickAnimations);

@@ -20,6 +20,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
   return new Promise((resolve) => {
     const selected = new Map<string, Set<string>>(initial.teams.map((team) => [team.playerId, new Set(team.characterIds)]));
     let boardId = initial.boardId;
+    const aiPlayers = new Set(initial.ai ?? []);
 
     const errors = h('ul', { class: 'setup-errors', attrs: { role: 'alert', 'aria-live': 'assertive', hidden: true } });
     const seedInput = h('input', { class: 'setup-input', attrs: { id: 'setup-seed', type: 'number', min: 0, max: MAX_SEED, step: 1, value: initial.seed, inputmode: 'numeric', 'aria-describedby': 'setup-seed-hint' } });
@@ -35,6 +36,15 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
         { class: 'setup-team' },
         h('legend', { text: t('setup.team', { player: t(`player.${playerId}`) }) }),
         h('p', { class: 'hud-note', text: t('setup.teamHint', { max: MAX_TEAM_SIZE }) }),
+        h(
+          'label',
+          { class: 'setup-check', attrs: { for: `setup-ai-${playerId}` } },
+          h('input', {
+            attrs: { id: `setup-ai-${playerId}`, type: 'checkbox', checked: aiPlayers.has(playerId) },
+            on: { change: (e) => { if ((e.target as HTMLInputElement).checked) aiPlayers.add(playerId); else aiPlayers.delete(playerId); } },
+          }),
+          h('span', { text: t('setup.ai') }),
+        ),
         ...content.characters.map((c) => {
           const id = `setup-${playerId}-${c.id}`;
           return h(
@@ -59,6 +69,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       return {
         boardId,
         seed: seedInput.value.trim() === '' ? Number.NaN : Number(seedInput.value),
+        ...(aiPlayers.size > 0 ? { ai: PLAYER_IDS.filter((id) => aiPlayers.has(id)) } : {}),
         teams: PLAYER_IDS.map((playerId) => ({
           playerId,
           // Ordre du contenu, pas de l'ordre de clic : le placement reste déterministe.

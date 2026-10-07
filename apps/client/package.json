@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tannhauser/ai": "*",
     "@tannhauser/core": "*",
     "@tannhauser/content": "*",
     "@tannhauser/renderer": "*",

@@ -34,6 +34,8 @@ export class GameFacade {
     private readonly seed: number,
     /** Mise en page d'affichage du plateau (pièces, couloirs), absente pour une grille simple. */
     readonly layout?: BoardLayout,
+    /** Joueurs pilotés par l'IA : leurs commandes ne passent que par `dispatchAi`. */
+    private readonly aiPlayers: ReadonlySet<string> = new Set(),
   ) {
     this.current = state;
     this.rng = SeededRng.fromSnapshot(state.rng);
@@ -108,7 +110,20 @@ export class GameFacade {
     return visibleNodes(this.current.board, c.nodeId, { smokeNodes: smokeNodes(this.current) });
   }
 
+  isAi(playerId: string): boolean {
+    return this.aiPlayers.has(playerId);
+  }
+
+  /** Commande d'un humain : refusée si elle est émise au nom d'un joueur piloté par l'IA. */
   dispatch(command: GameCommand): CommandResult {
+    if ('playerId' in command && this.aiPlayers.has(command.playerId)) {
+      return { accepted: false, state: this.current, events: [], errors: [{ code: 'AI_PLAYER', message: 'Ce joueur est piloté par l’IA.' }] };
+    }
+    return this.dispatchAi(command);
+  }
+
+  /** Commande de l'IA (ou interne) : aucune restriction de pilotage, le moteur valide comme pour un humain. */
+  dispatchAi(command: GameCommand): CommandResult {
     const result = applyCommand(this.current, command, this.rng);
     if (result.accepted) {
       this.current = result.state;

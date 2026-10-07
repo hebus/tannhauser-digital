@@ -38,6 +38,7 @@ export const FR: Messages = {
   'status.hint.select': 'Choisissez un personnage à activer.',
   'status.playing': 'Joue',
   'status.initiative': 'Initiative',
+  'status.ai': 'IA',
 
   // Frise des phases du tour (HUD)
   'phase.track': 'Phases du tour',
@@ -208,6 +209,7 @@ export const FR: Messages = {
   'setup.board': 'Plateau',
   'setup.team': 'Équipe de {player}',
   'setup.teamHint': 'Cochez les personnages (1 à {max}).',
+  'setup.ai': 'Piloté par l’IA',
   'setup.seed': 'Graine aléatoire (nombre entier)',
   'setup.seed.random': 'Aléatoire',
   'setup.seed.hint': 'La même graine rejoue exactement la même partie.',
@@ -312,6 +314,7 @@ export const EN: Messages = {
   'status.hint.select': 'Pick a character to activate.',
   'status.playing': 'Playing',
   'status.initiative': 'Initiative',
+  'status.ai': 'AI',
 
   // Turn phase tracker (HUD)
   'phase.track': 'Turn phases',
@@ -442,6 +445,7 @@ export const EN: Messages = {
   'setup.board': 'Board',
   'setup.team': 'Team of {player}',
   'setup.teamHint': 'Tick characters (1 to {max}).',
+  'setup.ai': 'Controlled by the AI',
   'setup.seed': 'Random seed (integer)',
   'setup.seed.random': 'Random',
   'setup.seed.hint': 'The same seed replays exactly the same game.',
