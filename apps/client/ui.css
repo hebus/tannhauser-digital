@@ -209,7 +209,7 @@ kbd {
   /* Entre les panneaux gauche et droit ; marge auto : centré et plafonné en largeur sur les grands écrans. */
   left: calc(var(--hud-left-w) + 20px);
   right: calc(var(--hud-right-w) + 20px);
-  max-width: 940px;
+  max-width: 780px;
   margin-inline: auto;
   box-sizing: border-box;
   background: var(--ph-bg);
@@ -384,7 +384,7 @@ kbd {
   .phase-step:not(.is-current) .phase-label,
   .phase-player-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 }
-@container (min-width: 800px) {
+@container (min-width: 740px) {
   .phase-initiative:not(.is-pending) .phase-init-title { display: inline; }
   .phase-label { font-size: 13px; }
   .phase-card { gap: 12px; }
