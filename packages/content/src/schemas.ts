@@ -57,7 +57,7 @@ export const boardSchema = type({
 export const weaponSchema = type({
   id: 'string > 0',
   nameKey: 'string > 0',
-  kind: "'CLOSE_COMBAT' | 'PISTOL' | 'MENTAL' | 'AUTOMATIC'",
+  kind: "'CAC' | 'PISTOL' | 'MENTAL' | 'AUTOMATIC'",
   /** Nombre de dés de base (CaC 2, Pistolet 4, Mental 4, Automatique 5) : donnée, jamais constante de code. */
   dice: 'number.integer > 0',
 });

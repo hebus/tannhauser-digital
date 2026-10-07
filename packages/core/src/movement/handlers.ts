@@ -22,7 +22,7 @@ function checkActor(state: GameState, playerId: string, characterId: string): Ac
   if (!character) return no('UNKNOWN_CHARACTER', `Personnage inconnu : ${characterId}.`);
   if (character.playerId !== playerId) return no('NOT_OWNER', 'Impossible : ce personnage ne vous appartient pas.');
   if (!character.alive) return no('CHARACTER_DEAD', 'Impossible : ce personnage est hors de combat.');
-  if (character.activated) return no('ALREADY_ACTIVATED', 'Impossible : ce personnage a déjà terminé son activation.');
+  if (character.activated && state.turn.activeCharacterId !== character.id) return no('ALREADY_ACTIVATED', 'Impossible : ce personnage a déjà terminé son activation.');
   return { ok: true, character };
 }
 
