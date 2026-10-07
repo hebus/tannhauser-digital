@@ -2,12 +2,13 @@ import {
   SeededRng,
   applyCommand,
   createInitialState,
+  reachableNodes,
   type CommandResult,
   type GameCommand,
   type GameEvent,
   type GameState,
 } from '@tannhauser/core';
-import { loadDevContent } from '@tannhauser/content';
+import { createCharacterState, loadDevContent } from '@tannhauser/content';
 
 type Listener = (events: readonly GameEvent[], state: GameState) => void;
 
@@ -25,10 +26,13 @@ export class GameFacade {
     this.rng = SeededRng.fromSnapshot(state.rng);
   }
 
+  /** Partie de développement : deux joueurs, un héros et une troupe chacun, partie démarrée. */
   static createDev(seed = 1): GameFacade {
     const content = loadDevContent();
     const rng = new SeededRng(seed);
-    const state = createInitialState({
+    const def = (id: string) => content.characters.find((c) => c.id === id)!;
+    const place = (id: string, playerId: string, nodeId: string) => createCharacterState(def(id), content.weapons, { playerId, nodeId });
+    const initial = createInitialState({
       gameId: `dev-${seed}`,
       scenarioId: 'dev',
       board: content.board.board,
@@ -36,10 +40,18 @@ export class GameFacade {
         { id: 'p1', factionId: 'faction.alpha', commandPoints: 0 },
         { id: 'p2', factionId: 'faction.beta', commandPoints: 0 },
       ],
-      characters: [],
+      characters: [
+        place('char.alpha.hero', 'p1', 'n1'),
+        place('char.alpha.troop', 'p1', 'n5'),
+        place('char.beta.hero', 'p2', 'n16'),
+        place('char.beta.troop', 'p2', 'n15'),
+      ],
       rng: rng.snapshot(),
     });
-    return new GameFacade(state, seed);
+    const started = applyCommand(initial, { type: 'START_GAME' }, rng);
+    const facade = new GameFacade(started.state, seed);
+    facade.rng = rng;
+    return facade;
   }
 
   get state(): GameState {
@@ -48,6 +60,13 @@ export class GameFacade {
 
   get replaySeed(): number {
     return this.seed;
+  }
+
+  /** Nœuds atteignables par un personnage (calculés par le moteur, jamais par l'UI). */
+  reachable(characterId: string): { nodeId: string; path: readonly string[]; cost: number }[] {
+    return [...reachableNodes(this.current, characterId).entries()]
+      .filter(([, r]) => r.path.length > 0)
+      .map(([nodeId, r]) => ({ nodeId, path: r.path, cost: r.cost }));
   }
 
   dispatch(command: GameCommand): CommandResult {

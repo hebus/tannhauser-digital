@@ -7,13 +7,20 @@
     <style>
       html, body { margin: 0; height: 100%; background: #14161a; overflow: hidden; }
       #app { position: fixed; inset: 0; }
-      #hud { position: fixed; left: 12px; top: 10px; color: #c9ccd3; font: 13px/1.4 system-ui, sans-serif; pointer-events: none; }
+      #hud { position: fixed; left: 12px; top: 10px; max-width: 460px; color: #c9ccd3; font: 13px/1.4 system-ui, sans-serif; pointer-events: none; }
+      #status { font-weight: 700; color: #fff; margin-bottom: 4px; }
+      #help { opacity: .75; font-size: 12px; margin-bottom: 6px; }
+      #log { margin: 0; padding-left: 18px; font-size: 12px; opacity: .9; list-style: none; }
       #error { position: fixed; inset: 0; display: none; place-items: center; color: #fff; font: 16px system-ui, sans-serif; background: #14161a; padding: 24px; text-align: center; }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="hud">Glisser : déplacer · Molette : zoom · F : cadrer · I : ids des nœuds</div>
+    <div id="hud">
+      <div id="status"></div>
+      <div id="help">Clic : sélectionner / déplacer / attaquer · E : fin d'activation · O : Overwatch · P : passer · T : tir en réaction · D : refuser · Glisser/molette : caméra · C : cadrer · I : ids</div>
+      <ol id="log"></ol>
+    </div>
     <div id="error"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
