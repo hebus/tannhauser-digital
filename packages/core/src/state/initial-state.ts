@@ -2,7 +2,9 @@ import type { BoardState } from '../board/types';
 import type { RngState } from '../rng/rng';
 import {
   STATE_SCHEMA_VERSION,
+  DEFAULT_GAME_CONFIG,
   type CharacterState,
+  type GameConfig,
   type GameState,
   type PlayerState,
 } from './types';
@@ -14,6 +16,8 @@ export interface InitialStateInput {
   readonly players: readonly PlayerState[];
   readonly characters: readonly CharacterState[];
   readonly rng: RngState;
+  /** Valeurs de configuration ; complétées par les défauts (2 PC par tour). */
+  readonly config?: Partial<GameConfig>;
 }
 
 export function createInitialState(input: InitialStateInput): GameState {
@@ -21,6 +25,7 @@ export function createInitialState(input: InitialStateInput): GameState {
     schemaVersion: STATE_SCHEMA_VERSION,
     gameId: input.gameId,
     scenarioId: input.scenarioId,
+    config: { ...DEFAULT_GAME_CONFIG, ...input.config },
     turn: { number: 0, initiativePlayerId: null, activePlayerId: null },
     phase: 'SETUP',
     players: input.players,

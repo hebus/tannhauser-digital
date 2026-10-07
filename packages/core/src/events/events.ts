@@ -3,6 +3,9 @@ export type GameEvent =
   | { readonly type: 'GAME_STARTED'; readonly scenarioId: string }
   | { readonly type: 'TURN_STARTED'; readonly turn: number }
   | { readonly type: 'COMMAND_POINTS_REFRESHED'; readonly playerId: string; readonly amount: number }
+  | { readonly type: 'COMMAND_POINTS_SPENT'; readonly playerId: string; readonly amount: number; readonly purpose: string; readonly remaining: number }
+  | { readonly type: 'SMOKE_EXPIRED'; readonly effectId: string; readonly origin: string }
+  | { readonly type: 'INITIATIVE_CHANGED'; readonly previousWinnerId: string; readonly winnerId: string }
   | { readonly type: 'INITIATIVE_ROLLED'; readonly rolls: Readonly<Record<string, number>>; readonly winnerId: string }
   | { readonly type: 'CHARACTER_ACTIVATION_STARTED'; readonly characterId: string }
   | { readonly type: 'CHARACTER_MOVED'; readonly characterId: string; readonly path: readonly string[]; readonly cost: number }

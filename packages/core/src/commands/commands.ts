@@ -9,6 +9,7 @@ export type GameCommand =
   | { readonly type: 'OPEN_DOOR'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly doorId: DoorId }
   | { readonly type: 'CLOSE_DOOR'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly doorId: DoorId }
   | { readonly type: 'ATTACK'; readonly playerId: PlayerId; readonly attackerId: CharacterId; readonly targetId: CharacterId; readonly weaponId: string }
+  | { readonly type: 'REROLL_INITIATIVE'; readonly playerId: PlayerId }
   | { readonly type: 'PASS'; readonly playerId: PlayerId }
   | { readonly type: 'END_TURN'; readonly playerId: PlayerId };
 
