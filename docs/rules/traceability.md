@@ -22,15 +22,14 @@ Règle source -> système du moteur -> implémentation -> test automatisé -> co
 
 Chaque domaine possède son propre fichier de traçabilité, rédigé par son contributeur, au même format :
 
+Fichiers existants :
+
 - `traceability-turn.md`
 - `traceability-movement.md`
 - `traceability-combat.md`
-- `traceability-line-of-sight.md`
-- `traceability-equipment.md`
-- `traceability-abilities.md`
-- `traceability-objectives.md`
-- `traceability-victory.md`
-- `traceability-special-rules.md`
+- `traceability-overwatch.md`
+
+Fichiers prévus, pas encore créés : `traceability-line-of-sight.md`, `traceability-equipment.md`, `traceability-abilities.md`, `traceability-objectives.md`, `traceability-victory.md`, `traceability-special-rules.md`.
 
 Ce fichier n'en reprend que la vue globale ; le détail vit dans les fichiers de domaine.
 

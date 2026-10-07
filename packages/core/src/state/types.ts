@@ -19,15 +19,29 @@ export interface TurnState {
   readonly activePlayerId: PlayerId | null;
   /** Personnage en cours d'activation (absent hors activation). */
   readonly activeCharacterId?: CharacterId;
+  /** Le personnage actif a déjà effectué son unique action de l'activation. */
+  readonly actionUsed?: boolean;
+  /** Réaction d'Overwatch en attente : suspend l'activation adverse (toutes les autres commandes sont refusées). */
+  readonly reaction?: PendingReaction;
+}
+
+/** Réaction d'Overwatch déclenchée par un déplacement adverse entré dans la ligne de vue. */
+export interface PendingReaction {
+  readonly overwatcherId: CharacterId;
+  readonly targetId: CharacterId;
+  /** Joueur qui doit répondre (propriétaire du personnage en Overwatch). */
+  readonly forPlayerId: PlayerId;
 }
 
 /** Paramètres de partie sérialisables (valeurs de mode de jeu, pas de constantes en dur). */
 export interface GameConfig {
   /** PC attribués à chaque joueur à chaque refresh de début de tour (§66.1, §75). */
   readonly commandPointsPerTurn: number;
+  /** Taille de la réserve de dés d'un jet de défense (donnée, voir OQ-COMBAT-002). */
+  readonly defensePoolSize: number;
 }
 
-export const DEFAULT_GAME_CONFIG: GameConfig = { commandPointsPerTurn: 2 };
+export const DEFAULT_GAME_CONFIG: GameConfig = { commandPointsPerTurn: 2, defensePoolSize: 4 };
 
 export interface PlayerState {
   readonly id: PlayerId;
@@ -59,6 +73,8 @@ export interface CharacterState {
   /** Armes possédées (définitions runtime sérialisables, copiées du contenu à la mise en place). */
   readonly weapons?: readonly WeaponDefinition[];
   readonly activated: boolean;
+  /** En Overwatch : réagit quand un adversaire entre dans sa ligne de vue. */
+  readonly overwatch?: boolean;
   readonly movementLeft: number;
 }
 

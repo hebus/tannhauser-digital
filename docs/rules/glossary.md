@@ -14,11 +14,13 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `flag` | drapeau | Marqueur planté/capturé selon le mode |
 | `weapon` | arme | Équipement d'attaque avec type de jet et réserve de dés |
 | `equipment` | équipement | Jeton d'inventaire, occupe un emplacement |
-| `action` | action (phase d'action) | Une action majeure par activation |
+| `activation` | activation | Tour de jeu d'un personnage : déplacements (selon ses PM) et au plus une action |
+| `action` | action | Acte majeur d'une activation, une seule par activation : attaquer, Overwatch, etc. Ne coûte ni PC ni PM |
 | `move` | déplacement | Dépense de points de mouvement le long d'un chemin |
 | `attack` | attaque | Résolution d'un jet de combat contre une cible |
-| `defense` | défense | Succès adverses qui annulent des succès de l'attaquant (duel) |
-| `damage` / `wound` | dégât / blessure | Perte d'un niveau de santé |
+| `defense` | défense / parade | Jet de Physique du défenseur ; chaque succès annule une blessure |
+| `wound` | blessure | Succès du jet d'attaque, avant parade |
+| `damage` | dégât | Blessure non parée : perte d'un niveau de santé |
 | `status` | statut | État temporaire (overwatch, blessé, etc.) |
 | `ability` / `competency` | capacité / compétence | Aptitude de données requise ou donnant un bonus |
 | `scenario` | scénario | Définition de contenu : carte, mise en place, objectifs, victoire |
@@ -28,7 +30,8 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `LdM` / `LOS` | ligne de vue | Relation de visibilité réciproque entre deux nœuds |
 | `test` | test | Jet sans opposition |
 | `duel` | duel | Jets opposés |
-| `overwatch` | sur le qui-vive | Réaction préparée avant les activations |
+| `overwatch` | sur le qui-vive | Action qui prépare une réaction : un adversaire entrant dans la ligne de vue pendant un déplacement s'arrête et peut être visé |
+| `reaction` | réaction | Interruption d'une activation adverse (`turn.reaction`) : le joueur en Overwatch tire ou renonce, puis l'activation reprend |
 | `smoke` | fumée | Effet de plateau temporaire qui coupe la ligne de vue |
 | `door` | porte | Entité d'état OPEN/CLOSED sur une arête |
 | `portal` | portail | Lien non adjacent entre deux nœuds (porte secrète) |

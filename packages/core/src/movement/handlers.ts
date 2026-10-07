@@ -1,11 +1,13 @@
 import type { DoorId, NodeId } from '../board/types';
 import type { GameCommand } from '../commands/commands';
+import type { GameEvent } from '../events/events';
 import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
 import type { CharacterState, GameState } from '../state/types';
+import { findOverwatchTrigger } from '../overwatch/trigger';
 import { validatePath } from './validate-path';
 
-/** Coût en PM pour fermer une porte ouverte (§76.6). */
-export const CLOSE_DOOR_COST = 1;
+/** Une porte ne coûte rien : ni à l'ouverture ni à la fermeture (décision du product owner). */
+export const CLOSE_DOOR_COST = 0;
 /** Coût en PM pour ouvrir une porte : la spec n'en donne pas (OQ-DOOR-001). */
 export const OPEN_DOOR_COST = 0;
 
@@ -38,15 +40,31 @@ registerHandler('MOVE_CHARACTER', (state, command) => {
   const validation = validatePath(state, character.id, command.path);
   if (!validation.ok) return { ok: false, errors: validation.errors };
 
-  const destination = validation.path[validation.path.length - 1]!;
+  // Overwatch : le déplacement s'arrête à la première case vue par un adversaire en Overwatch.
+  let stopAt = validation.path.length;
+  let overwatcher: CharacterState | null = null;
+  for (let i = 0; i < validation.path.length; i += 1) {
+    overwatcher = findOverwatchTrigger(state, character, validation.path[i]!);
+    if (overwatcher) {
+      stopAt = i + 1;
+      break;
+    }
+  }
+  const path = validation.path.slice(0, stopAt);
+  const cost = validation.costs.slice(0, stopAt).reduce((a, b) => a + b, 0);
+  const destination = path[path.length - 1]!;
+  const moved = withCharacter(state, { ...character, nodeId: destination, movementLeft: character.movementLeft - cost });
+  const events: GameEvent[] = [{ type: 'CHARACTER_MOVED', characterId: character.id, path, cost }];
+  if (!overwatcher) return { ok: true, state: moved, events };
+
+  events.push({ type: 'OVERWATCH_TRIGGERED', overwatcherId: overwatcher.id, targetId: character.id, nodeId: destination });
   return {
     ok: true,
-    state: withCharacter(state, {
-      ...character,
-      nodeId: destination,
-      movementLeft: character.movementLeft - validation.cost,
-    }),
-    events: [{ type: 'CHARACTER_MOVED', characterId: character.id, path: validation.path, cost: validation.cost }],
+    events,
+    state: {
+      ...moved,
+      turn: { ...moved.turn, reaction: { overwatcherId: overwatcher.id, targetId: character.id, forPlayerId: overwatcher.playerId } },
+    },
   };
 });
 

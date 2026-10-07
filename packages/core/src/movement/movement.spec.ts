@@ -168,10 +168,37 @@ describe('MOVE_CHARACTER', () => {
     expect(res.state.history).toContainEqual(res.events[0]);
   });
 
-  it('traverse un portail', () => {
+  it('traverse un portail pour exactement 1 PM, dans les deux sens', () => {
     const board = new BoardBuilder().node('a', ['r']).node('z', ['b'], 9, 9).portal('P', 'a', 'z').build();
-    const res = move(makeState(board, [char('h1', 'p1', 'a')]), ['z']);
+    const res = move(makeState(board, [char('h1', 'p1', 'a', 3)]), ['z']);
+    expect(res.accepted).toBe(true);
     expect(res.state.characters[0]!.nodeId).toBe('z');
+    expect(res.state.characters[0]!.movementLeft).toBe(2);
+    expect(res.events).toEqual([{ type: 'CHARACTER_MOVED', characterId: 'h1', path: ['z'], cost: 1 }]);
+    const back = move(makeState(board, [char('h1', 'p1', 'z', 1)]), ['a']);
+    expect(back.accepted).toBe(true);
+    expect(back.state.characters[0]!.movementLeft).toBe(0);
+  });
+
+  it('activation : mouvement possible après une action (PM conservés), avant une action, et entre deux', () => {
+    const active = (extra: Partial<GameState['turn']>) => {
+      const s = base();
+      return { ...s, turn: { ...s.turn, activeCharacterId: 'h1', ...extra } };
+    };
+    // action déjà effectuée : le déplacement reste permis et n'altère pas actionUsed
+    const afterAction = move(active({ actionUsed: true }), ['b']);
+    expect(afterAction.accepted).toBe(true);
+    expect(afterAction.state.characters[0]!.movementLeft).toBe(2);
+    expect(afterAction.state.turn.actionUsed).toBe(true);
+    // avant l'action : le déplacement ne consomme pas l'action
+    const beforeAction = move(active({}), ['b']);
+    expect(beforeAction.accepted).toBe(true);
+    expect(beforeAction.state.turn.actionUsed).toBeFalsy();
+    // bouger, agir, bouger : le reliquat de PM se réutilise après l'action
+    const second = move({ ...beforeAction.state, turn: { ...beforeAction.state.turn, actionUsed: true } }, ['c']);
+    expect(second.accepted).toBe(true);
+    expect(second.state.characters[0]!.nodeId).toBe('c');
+    expect(second.state.characters[0]!.movementLeft).toBe(1);
   });
 
   it('refuse sans modifier l\'état : mauvais joueur, propriétaire, mort, activé, phase, PM, ennemi', () => {
@@ -216,13 +243,13 @@ describe('OPEN_DOOR / CLOSE_DOOR', () => {
   const cmd = (s: GameState, type: 'OPEN_DOOR' | 'CLOSE_DOOR', characterId = 'h1') =>
     applyCommand(s, { type, playerId: 'p1', characterId, doorId: 'D' }, new SeededRng(3));
 
-  it('ferme une porte ouverte : 1 PM, DOOR_CLOSED, la porte bloque ensuite', () => {
+  it('ferme une porte ouverte : 0 PM, DOOR_CLOSED, la porte bloque ensuite', () => {
     const s = makeState(board('OPEN'), [char('h1', 'p1', 'a', 3)]);
     const res = cmd(s, 'CLOSE_DOOR');
     expect(res.accepted).toBe(true);
     expect(res.state.board.doors.D!.state).toBe('CLOSED');
-    expect(res.state.characters[0]!.movementLeft).toBe(2);
-    expect(res.events).toEqual([{ type: 'DOOR_CLOSED', characterId: 'h1', doorId: 'D', cost: 1 }]);
+    expect(res.state.characters[0]!.movementLeft).toBe(3);
+    expect(res.events).toEqual([{ type: 'DOOR_CLOSED', characterId: 'h1', doorId: 'D', cost: 0 }]);
     expect(reachableNodes(res.state, 'h1').has('b')).toBe(false);
   });
 
@@ -240,13 +267,25 @@ describe('OPEN_DOOR / CLOSE_DOOR', () => {
     const far = makeState(board('OPEN'), [char('h1', 'p1', 'c', 3)]);
     expect(cmd(far, 'CLOSE_DOOR').errors[0]!.code).toBe('DOOR_NOT_ADJACENT');
     const near = deepFreeze(makeState(board('OPEN'), [char('h1', 'p1', 'a', 0)]));
-    expect(cmd(near, 'CLOSE_DOOR').errors[0]!.code).toBe('INSUFFICIENT_MOVEMENT');
     expect(cmd(near, 'OPEN_DOOR').errors[0]!.code).toBe('DOOR_ALREADY_OPEN');
     const closed = makeState(board('CLOSED'), [char('h1', 'p1', 'a', 3)]);
     expect(cmd(closed, 'CLOSE_DOOR').errors[0]!.code).toBe('DOOR_ALREADY_CLOSED');
     const unknown = applyCommand(near, { type: 'CLOSE_DOOR', playerId: 'p1', characterId: 'h1', doorId: 'X' }, new SeededRng(3));
     expect(unknown.errors[0]!.code).toBe('UNKNOWN_DOOR');
     expect(near.board.doors.D!.state).toBe('OPEN');
+  });
+
+  it('une porte ne coûte rien, même avec 0 PM restant (ouvrir et fermer)', () => {
+    const closed = cmd(makeState(board('OPEN'), [char('h1', 'p1', 'a', 0)]), 'CLOSE_DOOR');
+    expect(closed.accepted).toBe(true);
+    expect(closed.state.board.doors.D!.state).toBe('CLOSED');
+    expect(closed.state.characters[0]!.movementLeft).toBe(0);
+    expect(closed.events).toEqual([{ type: 'DOOR_CLOSED', characterId: 'h1', doorId: 'D', cost: 0 }]);
+    const opened = cmd(makeState(board('CLOSED'), [char('h1', 'p1', 'a', 0)]), 'OPEN_DOOR');
+    expect(opened.accepted).toBe(true);
+    expect(opened.state.board.doors.D!.state).toBe('OPEN');
+    expect(opened.state.characters[0]!.movementLeft).toBe(0);
+    expect(opened.events).toEqual([{ type: 'DOOR_OPENED', characterId: 'h1', doorId: 'D', cost: 0 }]);
   });
 
   it('refuse un joueur non actif', () => {

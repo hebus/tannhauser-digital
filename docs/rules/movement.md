@@ -20,7 +20,7 @@ Le plateau est un **graphe** de nœuds. La validation de contenu (ArkType) garan
 | RULE-MOVE-002 | Une arête **à sens unique** n'autorise le déplacement que dans le sens `from -> to`. Elle n'influence pas la ligne de vue (voir RULE-LOS-005). |
 | RULE-MOVE-003 | Une porte fermée interdit le déplacement à travers son arête ; ouverte, l'arête redevient normale. |
 | RULE-MOVE-004 | Les nœuds séparés par un mur ou une porte ne sont pas adjacents au sens de la règle d'adjacence. |
-| RULE-MOVE-005 | Un portail (porte secrète) relie deux nœuds éloignés ; voir `special-rules.md`. |
+| RULE-MOVE-005 | Un portail (porte secrète) relie deux nœuds éloignés ; le franchir coûte 1 PM, comme un pas normal, dans les deux sens (OQ-MOVE-005) ; voir `special-rules.md`. |
 
 ## Points de mouvement
 
@@ -33,10 +33,15 @@ Le plateau est un **graphe** de nœuds. La validation de contenu (ArkType) garan
 | RULE-MOVE-014 | Le pathfinding distingue : adjacence normale, sens unique, porte, porte secrète, traversée spéciale, occupation ennemie, traversée bloquée, coût de terrain. |
 | RULE-MOVE-015 | Un personnage ne peut pas entrer dans un nœud occupé par un ennemi, sauf par un passage en force autorisé. |
 | RULE-MOVE-016 | Les cases d'action et d'objectif ne font pas partie de la zone de déplacement normale ; les points d'entrée appartiennent à leur zone. |
+| RULE-MOVE-017 | Ouvrir ou fermer une porte ne coûte aucun PM, même à 0 PM restant (OQ-DOOR-001). |
+| RULE-MOVE-018 | Le déplacement n'est pas bloqué par l'action : il reste permis après l'action de l'activation (PM conservés) et avant elle (RULE-TURN-008). |
+| RULE-MOVE-019 | Un déplacement s'arrête sur la première case vue par un adversaire en Overwatch et suspend l'activation (RULE-OVERWATCH-002). |
 
 Événement : `CHARACTER_MOVED` (chemin, coût payé, PM restants).
 
 ## Passage en force
+
+À implémenter plus tard : décision du product owner, c'est un duel de Physique (OQ-MOVE-006). Seul un point d'extension existe ; une case ennemie reste refusée (`ENEMY_OCCUPIED`).
 
 | ID | Règle testable | Événements |
 |---|---|---|

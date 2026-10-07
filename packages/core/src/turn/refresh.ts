@@ -20,7 +20,7 @@ export function refreshTurn(state: GameState): RefreshResult {
   for (const p of players) events.push({ type: 'COMMAND_POINTS_REFRESHED', playerId: p.id, amount });
 
   const characters = state.characters.map((c) =>
-    c.alive ? { ...c, activated: false, movementLeft: currentStats(c).movement } : c,
+    c.alive ? { ...c, activated: false, overwatch: false, movementLeft: currentStats(c).movement } : c,
   );
 
   const effects: ActiveEffect[] = [];

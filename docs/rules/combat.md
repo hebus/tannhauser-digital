@@ -19,16 +19,19 @@
 |---|---|
 | RULE-COMBAT-001 | Déclarer une attaque : cible, arme, vérification de portée et de ciblage (ligne de vue ou règle de ciblage explicite), puis jet de combat. Une cible invalide est refusée avant tout jet. |
 | RULE-COMBAT-002 | Types d'arme de base : mêlée, pistolet, mental, automatique. Leurs réserves de dés par défaut sont des données de contenu. |
-| RULE-COMBAT-003 | Le nombre de dés du jet de combat dépend de l'arme, de la caractéristique de Combat courante et des modificateurs (y compris ceux des nœuds, RULE-NODE-001). La difficulté est `10 - Combat courant`. |
+| RULE-COMBAT-003 | Jet d'attaque : réserve = dés d'arme + bonus (y compris ceux des nœuds, RULE-NODE-001) ; difficulté = `10 - Combat courant` ; un dé ≥ difficulté est un succès (10 naturel = succès, 1 naturel = échec). Voir OQ-COMBAT-009. |
 | RULE-COMBAT-004 | Sans aucun succès, l'attaque échoue (`ATTACK_MISSED`). |
 | RULE-COMBAT-005 | Les réussites automatiques s'ajoutent aux succès obtenus aux dés. |
-| RULE-COMBAT-006 | Une attaque réussie inflige des blessures ; chaque blessure retire un niveau de santé et met à jour la ligne de caractéristiques active. |
+| RULE-COMBAT-006 | Chaque succès du jet d'attaque est une blessure. Le défenseur lance un jet de défense (RULE-COMBAT-012) ; chaque succès annule une blessure ; chaque blessure non parée est un dégât (un niveau de santé perdu, ligne de caractéristiques active mise à jour). |
 | RULE-COMBAT-007 | Perdre le dernier niveau de santé élimine le personnage (`CHARACTER_DEFEATED`). |
-| RULE-COMBAT-008 | La contre-attaque (PC) et l'attaque d'overwatch sont des attaques normales soumises aux mêmes vérifications. |
+| RULE-COMBAT-008 | La contre-attaque (PC) et l'attaque d'Overwatch sont des attaques normales soumises aux mêmes vérifications et au même échange attaque/défense. |
 | RULE-COMBAT-009 | Le journal de combat présente : dés de base, bonus, malus, jet final, succès, défense, blessures. |
 | RULE-COMBAT-010 | Les cibles sur un nœud sous fumée ne sont pas visibles (RULE-LOS-002) ; viser sans ligne de vue est refusé sauf règle explicite. |
+| RULE-COMBAT-011 | Corps à corps : la seule exigence est une arête entre les deux nœuds (sens et porte ignorés, ligne de vue non requise). |
+| RULE-COMBAT-012 | Jet de défense : réserve `config.defensePoolSize` (défaut 4), difficulté = `10 - Physique` du défenseur ; événement `DEFENSE_ROLLED`. Taille : OQ-COMBAT-008. |
+| RULE-COMBAT-013 | Une attaque ne coûte ni PC ni PM. C'est l'unique action de l'activation du personnage actif (RULE-TURN-008). |
 
-Événements : `ATTACK_DECLARED`, `COMBAT_ROLLED`, `ATTACK_HIT`, `ATTACK_MISSED`, `DAMAGE_APPLIED`, `WOUND_CANCELLED`, `CHARACTER_DEFEATED`.
+Événements : `ATTACK_DECLARED`, `COMBAT_ROLLED`, `DEFENSE_ROLLED`, `ATTACK_HIT`, `ATTACK_MISSED`, `DAMAGE_APPLIED`, `WOUND_CANCELLED`, `CHARACTER_DEFEATED`.
 
 ## Santé
 
@@ -36,4 +39,4 @@ Le suivi de santé est explicite : niveau courant, ligne de caractéristiques ac
 
 ## Tests attendus
 
-Réserves par type d'arme, 10/1 naturels, succès automatiques, annulation par duel, blessure puis changement de ligne, mort, refus hors portée/sans ligne de vue.
+Réserves par type d'arme, 10/1 naturels, succès automatiques, parade par jet de défense, blessure puis changement de ligne, mort, refus hors portée/sans ligne de vue.

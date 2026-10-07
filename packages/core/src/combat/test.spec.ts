@@ -170,6 +170,7 @@ describe('explainCombat', () => {
       combatValue: 7,
       ...buildPoolLog(t),
       defense: null,
+      defenseRoll: null,
       hit: true,
       wounds: 1,
       healthBefore: 3,

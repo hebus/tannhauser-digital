@@ -7,6 +7,7 @@ import { ScriptedRng, SeededRng } from '../rng/rng';
 import { createInitialState } from '../state/initial-state';
 import { currentStats, type CharacterState, type GameState } from '../state/types';
 import { deathmatchWinner } from '../victory/deathmatch';
+import '../turn/handlers';
 import './attack';
 import { explainCombat } from './log';
 import type { WeaponDefinition } from './weapons';
@@ -14,12 +15,17 @@ import type { WeaponDefinition } from './weapons';
 const pistol: WeaponDefinition = { id: 'pistol', kind: 'PISTOL', dice: 4 };
 const knife: WeaponDefinition = { id: 'knife', kind: 'CAC', dice: 2 };
 
-/** Combat 7 → difficulté 3 ; chute du Combat avec les blessures. */
+/**
+ * Combat 7 -> difficulte d'attaque 3 ; Physique 5 -> difficulte de defense 5.
+ * La ligne active depend de la sante (3 = premiere ligne, 1 = derniere).
+ */
 const rows = [
   { combat: 7, physical: 5, mental: 5, movement: 4 },
   { combat: 5, physical: 5, mental: 5, movement: 4 },
   { combat: 3, physical: 4, mental: 4, movement: 3 },
 ];
+
+const MISS4 = [1, 1, 1, 1];
 
 function line(): BoardState {
   return new BoardBuilder()
@@ -49,7 +55,8 @@ function char(id: string, playerId: string, nodeId: string, extra: Partial<Chara
   };
 }
 
-function makeState(opts: { board?: BoardState; characters?: CharacterState[] } = {}): GameState {
+/** h1 est le personnage actif de p1 (SELECT_CHARACTER deja passe), action non utilisee. */
+function makeState(opts: { board?: BoardState; characters?: CharacterState[]; activeCharacterId?: string | null } = {}): GameState {
   const base = createInitialState({
     gameId: 'g',
     scenarioId: 'dev',
@@ -61,7 +68,17 @@ function makeState(opts: { board?: BoardState; characters?: CharacterState[] } =
     characters: opts.characters ?? [char('h1', 'p1', 'a'), char('e1', 'p2', 'c'), char('e2', 'p2', 'd')],
     rng: new SeededRng(1).snapshot(),
   });
-  return { ...base, phase: 'ACTIVATION', turn: { number: 1, initiativePlayerId: 'p1', activePlayerId: 'p1' } };
+  const active = opts.activeCharacterId === undefined ? 'h1' : opts.activeCharacterId;
+  return {
+    ...base,
+    phase: 'ACTIVATION',
+    turn: {
+      number: 1,
+      initiativePlayerId: 'p1',
+      activePlayerId: 'p1',
+      ...(active === null ? {} : { activeCharacterId: active, actionUsed: false }),
+    },
+  };
 }
 
 const attack = (weaponId = 'pistol', targetId = 'e1') =>
@@ -76,48 +93,55 @@ const deepFreeze = <T>(o: T): T => {
 };
 
 const hp = (s: GameState, id: string) => s.characters.find((c) => c.id === id)!;
+const types = (events: readonly { type: string }[]) => events.map((e) => e.type);
 
-describe('ATTACK : résolution', () => {
-  it('attaque réussie : 1 blessure, ligne de stats active mise à jour, événements ordonnés', () => {
-    const res = applyCommand(makeState(), attack(), new ScriptedRng([2, 2, 5, 2]));
+describe('ATTACK : jet d\'attaque', () => {
+  it('attaque reussie non parée : 1 blessure = 1 dégât, ligne de stats active mise à jour, événements ordonnés', () => {
+    const res = applyCommand(makeState(), attack(), new ScriptedRng([2, 2, 5, 2, ...MISS4]));
     expect(res.accepted).toBe(true);
-    expect(res.events.map((e) => e.type)).toEqual([
+    expect(types(res.events)).toEqual([
       'ATTACK_DECLARED',
       'COMBAT_ROLLED',
+      'DEFENSE_ROLLED',
       'ATTACK_HIT',
       'DAMAGE_APPLIED',
     ]);
     expect(hp(res.state, 'e1').health).toBe(2);
     expect(currentStats(hp(res.state, 'e1')).combat).toBe(5);
-    expect(res.events[3]).toMatchObject({ wounds: 1, healthLeft: 2 });
+    expect(res.events[4]).toMatchObject({ wounds: 1, healthLeft: 2 });
     expect(res.state.history).toEqual(res.events);
   });
 
-  it('jet minimum (tous les dés à 1) : manqué, aucune blessure, état inchangé hors historique', () => {
+  it('jet minimum (tous les dés à 1) : manqué, aucune blessure, pas de jet de défense, personnages inchangés', () => {
     const state = makeState();
-    const res = applyCommand(state, attack(), new ScriptedRng([1, 1, 1, 1]));
+    const rng = new ScriptedRng(MISS4);
+    const res = applyCommand(state, attack(), rng);
     expect(res.accepted).toBe(true);
-    expect(res.events.map((e) => e.type)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_MISSED']);
+    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_MISSED']);
     expect(res.state.characters).toBe(state.characters);
+    expect(rng.snapshot().draws).toBe(4);
   });
 
-  it('jet maximum : touché une seule fois (1 blessure par attaque réussie, quel que soit le nombre de succès)', () => {
-    const res = applyCommand(makeState(), attack(), new ScriptedRng([10, 10, 10, 10]));
-    expect(hp(res.state, 'e1').health).toBe(2);
+  it('jet maximum : chaque succès est une blessure (4 succès = 4 blessures non parées)', () => {
+    const state = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 5 }), char('e2', 'p2', 'd')] });
+    const res = applyCommand(state, attack(), new ScriptedRng([10, 10, 10, 10, ...MISS4]));
     expect(res.events[1]).toMatchObject({ successes: 4 });
+    expect(hp(res.state, 'e1').health).toBe(1);
+    expect(res.events.find((e) => e.type === 'DAMAGE_APPLIED')).toMatchObject({ wounds: 4, healthLeft: 1 });
   });
 
-  it('un 10 naturel touche malgré une difficulté inatteignable ; un 1 naturel ne touche jamais', () => {
+  it('un 10 naturel réussit malgré une difficulté inatteignable ; un 1 naturel échoue toujours', () => {
     const weak = makeState({
       characters: [char('h1', 'p1', 'a', { health: 1, statRows: [{ combat: 1, physical: 1, mental: 1, movement: 1 }] }), char('e1', 'p2', 'c')],
     });
-    const hit = applyCommand(weak, attack(), new ScriptedRng([9, 9, 9, 10]));
-    expect(hit.events.map((e) => e.type)).toContain('ATTACK_HIT');
-    const miss = applyCommand(makeState(), attack(), new ScriptedRng([1, 1, 1, 1]));
-    expect(miss.events.map((e) => e.type)).toContain('ATTACK_MISSED');
+    const hit = applyCommand(weak, attack(), new ScriptedRng([8, 8, 8, 10, ...MISS4]));
+    expect(hit.events[1]).toMatchObject({ difficulty: 9, successes: 1 });
+    expect(types(hit.events)).toContain('ATTACK_HIT');
+    const miss = applyCommand(makeState(), attack(), new ScriptedRng(MISS4));
+    expect(types(miss.events)).toContain('ATTACK_MISSED');
   });
 
-  it('les dés viennent des données de l\'arme (pas de constante) : 2 dés pour un couteau, 6 pour une arme custom', () => {
+  it('les dés viennent des données de l\'arme : 2 pour un couteau, 6 pour une arme custom', () => {
     const custom: WeaponDefinition = { id: 'gatling', kind: 'AUTOMATIC', dice: 6 };
     const state = makeState({ characters: [char('h1', 'p1', 'a', { weapons: [custom] }), char('e1', 'p2', 'c')] });
     const res = applyCommand(state, attack('gatling'), new ScriptedRng([1, 1, 1, 1, 1, 1]));
@@ -130,18 +154,18 @@ describe('ATTACK : résolution', () => {
 
   it('difficulté = 10 − Combat courant : un attaquant blessé touche moins facilement', () => {
     const wounded = makeState({ characters: [char('h1', 'p1', 'a', { health: 1 }), char('e1', 'p2', 'c')] });
-    // Combat 3 → difficulté 7 : un 6 échoue, alors qu'à Combat 7 (difficulté 3) il réussit.
+    // Combat 3 -> difficulté 7 : un 6 échoue, alors qu'à Combat 7 (difficulté 3) il réussit.
     const res = applyCommand(wounded, attack(), new ScriptedRng([6, 6, 6, 6]));
     expect(res.events[1]).toMatchObject({ successes: 0, difficulty: 7 });
-    const healthy = applyCommand(makeState(), attack(), new ScriptedRng([6, 6, 6, 6]));
+    const healthy = applyCommand(makeState(), attack(), new ScriptedRng([6, 6, 6, 6, ...MISS4]));
     expect(healthy.events[1]).toMatchObject({ successes: 4, difficulty: 3 });
   });
 
   it('succès automatiques de l\'arme et dés/bonus d\'arme', () => {
     const w: WeaponDefinition = { id: 'ace', kind: 'PISTOL', dice: 2, autoSuccesses: 1, extraDice: 1, resultModifier: 4 };
     const state = makeState({ characters: [char('h1', 'p1', 'a', { weapons: [w] }), char('e1', 'p2', 'c')] });
-    // 3 dés ; difficulté 3 ; 2+4 = 6 ≥ 3 → succès sur 2, 1 naturel échoue → 2 tirés + 1 auto.
-    const res = applyCommand(state, attack('ace'), new ScriptedRng([2, 1, 5]));
+    // 3 dés ; difficulté 3 ; 2+4 = 6 et 5+4 = 9 réussissent, le 1 naturel échoue -> 2 tirés + 1 auto.
+    const res = applyCommand(state, attack('ace'), new ScriptedRng([2, 1, 5, ...MISS4]));
     expect(res.events[1]).toMatchObject({ successes: 3 });
   });
 
@@ -157,7 +181,7 @@ describe('ATTACK : résolution', () => {
   });
 
   it('journal structuré dans COMBAT_ROLLED et explainCombat', () => {
-    const res = applyCommand(makeState(), attack(), new ScriptedRng([1, 5, 10, 2]));
+    const res = applyCommand(makeState(), attack(), new ScriptedRng([1, 5, 10, 2, ...MISS4]));
     const ev = res.events[1];
     if (ev?.type !== 'COMBAT_ROLLED' || !ev.log) throw new Error('journal manquant');
     expect(ev.log).toMatchObject({
@@ -167,12 +191,167 @@ describe('ATTACK : résolution', () => {
       rolledSuccesses: 2,
       successes: 2,
       hit: true,
-      wounds: 1,
+      wounds: 2,
       healthBefore: 3,
-      healthAfter: 2,
-      defense: null,
+      healthAfter: 1,
+      defense: { attackerSuccesses: 2, defenderSuccesses: 0, remaining: 2, attackerWins: true },
+      defenseRoll: { defenderId: 'e1', physicalValue: 5, difficulty: 5, poolSize: 4, successes: 0 },
     });
-    expect(explainCombat(ev.log)[0]).toBe('h1 attaque e1 avec pistol.');
+    const lines = explainCombat(ev.log);
+    expect(lines[0]).toBe('h1 attaque e1 avec pistol.');
+    expect(lines.some((l) => l.startsWith('Défense de e1'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('Dégâts : 2'))).toBe(true);
+  });
+
+  it('journal sans défense quand l\'attaque est manquée', () => {
+    const res = applyCommand(makeState(), attack(), new ScriptedRng(MISS4));
+    const ev = res.events[1];
+    if (ev?.type !== 'COMBAT_ROLLED' || !ev.log) throw new Error('journal manquant');
+    expect(ev.log).toMatchObject({ hit: false, wounds: 0, defense: null, defenseRoll: null });
+  });
+});
+
+describe('ATTACK : jet de défense', () => {
+  it('la défense annule toutes les blessures : ATTACK_MISSED, aucun dégât, mais DEFENSE_ROLLED émis', () => {
+    const state = makeState();
+    const res = applyCommand(state, attack(), new ScriptedRng([10, 1, 1, 1, 10, 1, 1, 1]));
+    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_MISSED']);
+    expect(res.events[2]).toMatchObject({ defenderId: 'e1', successes: 1, difficulty: 5, dice: [10, 1, 1, 1] });
+    expect(hp(res.state, 'e1').health).toBe(3);
+    expect(res.state.characters).toBe(state.characters);
+    const ev = res.events[1];
+    if (ev?.type !== 'COMBAT_ROLLED' || !ev.log) throw new Error('journal manquant');
+    expect(ev.log).toMatchObject({ hit: false, wounds: 0 });
+    expect(explainCombat(ev.log).at(-1)).toBe('Toutes les blessures sont parées : aucun dégât.');
+  });
+
+  it('une parade en excès ne crée pas de dégât négatif', () => {
+    const res = applyCommand(makeState(), attack(), new ScriptedRng([10, 1, 1, 1, 10, 10, 10, 10]));
+    expect(types(res.events)).toContain('ATTACK_MISSED');
+    expect(hp(res.state, 'e1').health).toBe(3);
+  });
+
+  it('défense partielle : seules les blessures non parées infligent des dégâts', () => {
+    // 3 blessures ; défense difficulté 5 : 5 (succès), 10 (succès), 1, 4 -> 2 parées -> 1 dégât.
+    const res = applyCommand(makeState(), attack(), new ScriptedRng([10, 10, 10, 1, 5, 10, 1, 4]));
+    expect(types(res.events)).toEqual([
+      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED',
+    ]);
+    expect(res.events[2]).toMatchObject({ successes: 2 });
+    expect(res.events[4]).toMatchObject({ wounds: 1, healthLeft: 2 });
+    expect(hp(res.state, 'e1').health).toBe(2);
+  });
+
+  it('plusieurs blessures non parées = plusieurs dégâts', () => {
+    const state = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 5 }), char('e2', 'p2', 'd')] });
+    const res = applyCommand(state, attack(), new ScriptedRng([10, 10, 10, 1, ...MISS4]));
+    expect(res.events.find((e) => e.type === 'DAMAGE_APPLIED')).toMatchObject({ wounds: 3, healthLeft: 2 });
+    expect(hp(res.state, 'e1')).toMatchObject({ health: 2, alive: true });
+  });
+
+  it('les dégâts excédentaires ne rendent jamais la santé négative', () => {
+    const res = applyCommand(makeState(), attack(), new ScriptedRng([10, 10, 10, 10, ...MISS4]));
+    expect(hp(res.state, 'e1')).toMatchObject({ health: 0, alive: false });
+  });
+
+  it('Physique 0 : aucune défense (pas de jet, pas de DEFENSE_ROLLED), toutes les blessures passent', () => {
+    const zero = { combat: 3, physical: 0, mental: 1, movement: 1 };
+    const state = makeState({
+      characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 3, statRows: [zero] }), char('e2', 'p2', 'd')],
+    });
+    const rng = new ScriptedRng([10, 10, 1, 1]);
+    const res = applyCommand(state, attack(), rng);
+    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED']);
+    expect(res.events[3]).toMatchObject({ wounds: 2, healthLeft: 1 });
+    expect(rng.snapshot().draws).toBe(4);
+    const ev = res.events[1];
+    if (ev?.type !== 'COMBAT_ROLLED' || !ev.log) throw new Error('journal manquant');
+    expect(ev.log.defenseRoll).toBeNull();
+    expect(explainCombat(ev.log)).toContain('Défense impossible (Physique à 0).');
+  });
+
+  it('difficulté de défense = 10 − Physique courant du défenseur blessé', () => {
+    // e1 à 1 de santé : Physique 4 -> difficulté 6 ; un 5 ne pare pas, un 6 oui.
+    const state = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 1 }), char('e2', 'p2', 'd')] });
+    const res = applyCommand(state, attack(), new ScriptedRng([10, 1, 1, 1, 5, 5, 5, 5]));
+    expect(res.events[2]).toMatchObject({ type: 'DEFENSE_ROLLED', difficulty: 6, successes: 0 });
+    const parried = applyCommand(state, attack(), new ScriptedRng([10, 1, 1, 1, 6, 1, 1, 1]));
+    expect(types(parried.events)).toContain('ATTACK_MISSED');
+    expect(hp(parried.state, 'e1').health).toBe(1);
+  });
+
+  it('la taille de la réserve de défense vient de state.config.defensePoolSize', () => {
+    const base = makeState();
+    const small: GameState = { ...base, config: { ...base.config, defensePoolSize: 2 } };
+    const res = applyCommand(small, attack(), new ScriptedRng([10, 1, 1, 1, 1, 1]));
+    expect(res.events[2]).toMatchObject({ type: 'DEFENSE_ROLLED', dice: [1, 1] });
+    expect(base.config.defensePoolSize).toBe(4);
+    const dflt = applyCommand(base, attack(), new ScriptedRng([10, 1, 1, 1, 1, 1, 1, 1]));
+    expect(dflt.events[2]).toMatchObject({ dice: [1, 1, 1, 1] });
+  });
+
+  it('ordre des tirages : tous les dés d\'attaque, puis tous les dés de défense', () => {
+    const rng = new ScriptedRng([10, 3, 4, 10, 2, 10, 3, 9]);
+    const res = applyCommand(makeState(), attack(), rng);
+    expect(res.events[1]).toMatchObject({ dice: [10, 3, 4, 10] });
+    expect(res.events[2]).toMatchObject({ dice: [2, 10, 3, 9] });
+    expect(rng.snapshot().draws).toBe(8);
+  });
+
+  it('modificateur DEFENDER de la case du défenseur : dés de défense supplémentaires', () => {
+    const board = new BoardBuilder()
+      .node('a', ['red'])
+      .node('b', ['red'], 0, 0, { modifiers: [{ id: 'cover', applies: 'DEFENDER', extraDice: 1 }] })
+      .edge('a', 'b')
+      .build();
+    const state = makeState({ board, characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
+    const res = applyCommand(state, attack(), new ScriptedRng([10, 1, 1, 1, 1, 1, 1, 1, 1]));
+    expect(res.events[2]).toMatchObject({ dice: [1, 1, 1, 1, 1] });
+  });
+});
+
+describe('ATTACK : action unique', () => {
+  it('l\'attaque passe actionUsed à vrai sans toucher à l\'activation ni aux PM', () => {
+    const state = makeState({ characters: [char('h1', 'p1', 'a', { movementLeft: 3 }), char('e1', 'p2', 'c')] });
+    const res = applyCommand(state, attack(), new ScriptedRng(MISS4));
+    expect(res.state.turn.actionUsed).toBe(true);
+    expect(res.state.turn.activeCharacterId).toBe('h1');
+    expect(hp(res.state, 'h1').movementLeft).toBe(3);
+  });
+
+  it('une deuxième attaque (même manquée) est refusée : ACTION_ALREADY_USED', () => {
+    const rng = new ScriptedRng([...MISS4, 9, 9, 9, 9]);
+    const first = applyCommand(makeState(), attack(), rng);
+    expect(first.accepted).toBe(true);
+    const second = applyCommand(first.state, attack('pistol', 'e2'), rng);
+    expect(second.accepted).toBe(false);
+    expect(second.errors[0]?.code).toBe('ACTION_ALREADY_USED');
+    expect(second.state).toBe(first.state);
+    expect(rng.snapshot().draws).toBe(4);
+  });
+
+  it('refuse un attaquant qui n\'est pas le personnage actif (aucune activation en cours)', () => {
+    const rng = new ScriptedRng([9]);
+    const res = applyCommand(makeState({ activeCharacterId: null }), attack(), rng);
+    expect(res.errors[0]?.code).toBe('NOT_ACTIVE_CHARACTER');
+    expect(rng.snapshot().draws).toBe(0);
+  });
+
+  it('refuse un attaquant allié différent du personnage actif', () => {
+    const state = makeState({
+      characters: [char('h1', 'p1', 'a'), char('h2', 'p1', 'b'), char('e1', 'p2', 'c')],
+    });
+    const res = applyCommand(state, { ...attack(), attackerId: 'h2' }, new ScriptedRng([9]));
+    expect(res.errors[0]?.code).toBe('NOT_ACTIVE_CHARACTER');
+  });
+
+  it('refuse l\'attaque quand une réaction d\'Overwatch est en attente', () => {
+    const base = makeState();
+    const state: GameState = {
+      ...base,
+      turn: { ...base.turn, reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } },
+    };
+    expect(applyCommand(state, attack(), new ScriptedRng([9])).errors[0]?.code).toBe('REACTION_PENDING');
   });
 });
 
@@ -181,13 +360,22 @@ describe('ATTACK : mort et victoire', () => {
     const state = makeState({
       characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 1 }), char('e2', 'p2', 'd')],
     });
-    const res = applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9]));
+    const res = applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9, ...MISS4]));
     expect(hp(res.state, 'e1')).toMatchObject({ alive: false, health: 0 });
-    expect(res.events.map((e) => e.type)).toEqual([
-      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'CHARACTER_DEFEATED',
+    expect(types(res.events)).toEqual([
+      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'CHARACTER_DEFEATED',
     ]);
     expect(res.state.phase).toBe('ACTIVATION');
     expect(() => currentStats(hp(res.state, 'e1'))).not.toThrow();
+  });
+
+  it('une cible dont toutes les blessures sont parées survit même à 1 de santé', () => {
+    const state = makeState({
+      characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 1 }), char('e2', 'p2', 'd')],
+    });
+    const res = applyCommand(state, attack(), new ScriptedRng([9, 1, 1, 1, 10, 1, 1, 1]));
+    expect(hp(res.state, 'e1')).toMatchObject({ alive: true, health: 1 });
+    expect(types(res.events)).not.toContain('CHARACTER_DEFEATED');
   });
 
   it('un personnage mort ne peut pas être ciblé ni agir', () => {
@@ -201,7 +389,7 @@ describe('ATTACK : mort et victoire', () => {
 
   it('élimination du dernier personnage adverse : VICTORY, victory renseigné, phase FINISHED', () => {
     const state = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 1 })] });
-    const res = applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9]));
+    const res = applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9, ...MISS4]));
     expect(res.events.at(-1)).toEqual({ type: 'VICTORY', winnerId: 'p1', reason: 'DEATHMATCH_ELIMINATION' });
     expect(res.state.victory).toEqual({ winnerId: 'p1', reason: 'DEATHMATCH_ELIMINATION' });
     expect(res.state.phase).toBe('FINISHED');
@@ -214,7 +402,8 @@ describe('ATTACK : mort et victoire', () => {
 });
 
 describe('ATTACK : validation', () => {
-  const code = (s: GameState, cmd: Parameters<typeof applyCommand>[1]) => applyCommand(s, cmd, new ScriptedRng([9, 9, 9, 9])).errors[0]?.code;
+  const code = (s: GameState, cmd: Parameters<typeof applyCommand>[1]) =>
+    applyCommand(s, cmd, new ScriptedRng([9, 9, 9, 9, 9, 9, 9, 9])).errors[0]?.code;
 
   it('refuse hors phase d\'activation, hors tour, personnage étranger', () => {
     expect(code({ ...makeState(), phase: 'SETUP' }, attack())).toBe('NOT_IN_ACTIVATION');
@@ -247,11 +436,19 @@ describe('ATTACK : validation', () => {
     expect(res.state).toBe(state);
     expect(rng.snapshot().draws).toBe(0);
   });
+
+  it('un ciblage refusé ne consomme pas l\'action', () => {
+    const state = makeState();
+    const res = applyCommand(state, attack('knife'), new ScriptedRng([9]));
+    expect(res.errors[0]?.code).toBe('NOT_ADJACENT');
+    expect(res.state.turn.actionUsed).toBe(false);
+  });
 });
 
 describe('ATTACK : ligne de vue et portée', () => {
   const split = (): BoardState =>
     new BoardBuilder().node('a', ['red']).node('b', ['red']).node('c', ['blue']).edge('a', 'b').edge('b', 'c').build();
+  const ok = [9, 9, 9, 9, ...MISS4];
 
   it('sans couleur commune : pas de ligne de vue', () => {
     const state = makeState({ board: split(), characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c')] });
@@ -263,7 +460,7 @@ describe('ATTACK : ligne de vue et portée', () => {
       new BoardBuilder().node('a', ['red']).node('b', ['red']).node('c', ['red']).door('d', door).edge('a', 'b').edge('b', 'c', { doorId: 'd' }).build();
     const chars = [char('h1', 'p1', 'a'), char('e1', 'p2', 'c')];
     expect(applyCommand(makeState({ board: mk('CLOSED'), characters: chars }), attack(), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
-    expect(applyCommand(makeState({ board: mk('OPEN'), characters: chars }), attack(), new ScriptedRng([9, 9, 9, 9])).accepted).toBe(true);
+    expect(applyCommand(makeState({ board: mk('OPEN'), characters: chars }), attack(), new ScriptedRng(ok)).accepted).toBe(true);
   });
 
   it('la fumée coupe la ligne de vue (nœud intermédiaire ou cible)', () => {
@@ -274,7 +471,7 @@ describe('ATTACK : ligne de vue et portée', () => {
     });
     expect(applyCommand(smoked('b'), attack(), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
     expect(applyCommand(smoked('c'), attack(), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
-    expect(applyCommand(smoked('d'), attack(), new ScriptedRng([9, 9, 9, 9])).accepted).toBe(true);
+    expect(applyCommand(smoked('d'), attack(), new ScriptedRng(ok)).accepted).toBe(true);
   });
 
   it('portée maximale de l\'arme (en pas)', () => {
@@ -282,24 +479,47 @@ describe('ATTACK : ligne de vue et portée', () => {
     const state = makeState({ characters: [char('h1', 'p1', 'a', { weapons: [short] }), char('e1', 'p2', 'c')] });
     expect(applyCommand(state, attack('derringer'), new ScriptedRng([9])).errors[0]?.code).toBe('OUT_OF_RANGE');
     const near = makeState({ characters: [char('h1', 'p1', 'a', { weapons: [short] }), char('e1', 'p2', 'b')] });
-    expect(applyCommand(near, attack('derringer', 'e1'), new ScriptedRng([9, 9, 9, 9])).accepted).toBe(true);
+    expect(applyCommand(near, attack('derringer', 'e1'), new ScriptedRng(ok)).accepted).toBe(true);
   });
 
-  it('corps à corps : exige l\'adjacence, indépendante de la LdM (porte fermée entre les deux)', () => {
+  it('corps à corps : exige une arête entre les nœuds', () => {
     const far = makeState();
     expect(applyCommand(far, attack('knife'), new ScriptedRng([9])).errors[0]?.code).toBe('NOT_ADJACENT');
+    const adj = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
+    const res = applyCommand(adj, attack('knife', 'e1'), new ScriptedRng([9, 9, ...MISS4]));
+    expect(res.accepted).toBe(true);
+    expect(hp(res.state, 'e1').health).toBe(1);
+  });
+
+  it('corps à corps : porte fermée sur l\'arête et couleurs différentes (pas de LdM) n\'empêchent pas l\'attaque', () => {
     const board = new BoardBuilder().node('a', ['red']).node('b', ['blue']).door('d', 'CLOSED').edge('a', 'b', { doorId: 'd' }).build();
     const state = makeState({ board, characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
-    expect(applyCommand(state, attack('knife', 'e1'), new ScriptedRng([9, 9])).accepted).toBe(true);
+    expect(applyCommand(state, attack('knife', 'e1'), new ScriptedRng([9, 9, ...MISS4])).accepted).toBe(true);
     expect(applyCommand(state, attack('pistol', 'e1'), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
+  });
+
+  it('corps à corps : une arête à sens unique compte dans les deux sens', () => {
+    const board = new BoardBuilder().node('a', ['red']).node('b', ['blue']).edge('b', 'a', { oneWay: true }).build();
+    // Arête b -> a : l'attaquant en a (extrémité d'arrivée) et celui en b (départ) peuvent frapper.
+    const fromHead = makeState({ board, characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
+    expect(applyCommand(fromHead, attack('knife', 'e1'), new ScriptedRng([9, 9, ...MISS4])).accepted).toBe(true);
+    const fromTail = makeState({ board, characters: [char('h1', 'p1', 'b'), char('e1', 'p2', 'a')] });
+    expect(applyCommand(fromTail, attack('knife', 'e1'), new ScriptedRng([9, 9, ...MISS4])).accepted).toBe(true);
+  });
+
+  it('corps à corps : une défense complète fonctionne aussi (ATTACK_MISSED si tout est paré)', () => {
+    const adj = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
+    const res = applyCommand(adj, attack('knife', 'e1'), new ScriptedRng([10, 1, 10, 1, 1, 1]));
+    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_MISSED']);
   });
 });
 
 describe('ATTACK : invariants', () => {
   it('ne mute jamais l\'état d\'entrée (état gelé)', () => {
     const state = deepFreeze(makeState());
-    expect(() => applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9]))).not.toThrow();
+    expect(() => applyCommand(state, attack(), new ScriptedRng([9, 9, 9, 9, ...MISS4]))).not.toThrow();
     expect(hp(state, 'e1').health).toBe(3);
+    expect(state.turn.actionUsed).toBe(false);
   });
 
   it('est déterministe : même seed, même état et mêmes événements', () => {
@@ -319,8 +539,9 @@ describe('ATTACK : invariants', () => {
       for (let i = 0; i < 12 && state.phase !== 'FINISHED'; i += 1) {
         const target = state.characters.find((c) => c.playerId === 'p2' && c.alive);
         if (!target) break;
+        // Une attaque = l'action de l'activation : on la rend de nouveau disponible pour la série.
+        state = { ...state, turn: { ...state.turn, actionUsed: false } };
         const res = applyCommand(state, { ...attack('pistol', target.id) }, rng);
-        // Cibles hors LdM possibles (e2 derrière e1 : visibles ici) ; refus toléré.
         if (res.accepted) state = res.state;
         for (const c of state.characters) {
           expect(Number.isNaN(c.health)).toBe(false);

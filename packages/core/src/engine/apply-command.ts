@@ -44,6 +44,10 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
   if (state.phase === 'FINISHED' && command.type !== 'START_GAME') {
     return refused(state, 'GAME_FINISHED', 'La partie est terminée.');
   }
+  // Une réaction d'Overwatch suspend tout le reste jusqu'à sa résolution.
+  if (state.turn.reaction && command.type !== 'OVERWATCH_FIRE' && command.type !== 'OVERWATCH_DECLINE') {
+    return refused(state, 'REACTION_PENDING', "Une réaction d'Overwatch est en attente de résolution.");
+  }
   const handler = handlers[command.type] as CommandHandler | undefined;
   if (!handler) return refused(state, 'UNSUPPORTED_COMMAND', `Commande non supportée : ${command.type}`);
 

@@ -95,6 +95,8 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Test required:** `victory.spec.ts`.
 ## OQ-MOVE-003 — Activation requise pour se déplacer
 
+- **Mise à jour :** le déplacement reste permis après l'unique action de l'activation (`turn.actionUsed` ne le bloque pas) et `movementLeft` est conservé (voir OQ-COMBAT-007).
+
 - **Rule:** RULE-MOVE-009 (conditions d'une commande de déplacement)
 - **Source:** §68, §76.6 ; le système d'activation (`turn/`) n'existe pas encore.
 - **Interpretation (actuelle):** `MOVE_CHARACTER`, `OPEN_DOOR`, `CLOSE_DOOR` exigent phase ACTIVATION, joueur actif = émetteur, personnage possédé, vivant et `activated === false` (`activated` = activation déjà terminée). `movementLeft` est la réserve de PM courante ; aucune sélection préalable n'est exigée.
@@ -104,6 +106,8 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 
 ## OQ-MOVE-004 — Case occupée par un allié
 
+- **Statut :** toujours ouverte (non couverte par les décisions du product owner).
+
 - **Rule:** RULE-MOVE-006
 - **Source:** §68.3 (ne parle que des ennemis).
 - **Interpretation (actuelle):** une case occupée par un allié vivant est traversable, mais on ne peut pas y terminer son déplacement (une case = un personnage). Elle est absente de `reachableNodes`.
@@ -111,7 +115,10 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** à confirmer ; peut aussi dépendre de la taille des cases.
 - **Test required:** `movement.spec.ts` (allié traversé / DESTINATION_OCCUPIED).
 
-## OQ-MOVE-005 — Coût et déclaration d'usage d'un portail (porte secrète)
+## OQ-MOVE-005 — Coût et déclaration d'usage d'un portail (porte secrète) (RÉSOLUE)
+
+- **Résolution (product owner) :** un portail coûte 1 PM, comme un pas normal, dans les deux sens. Implémenté et testé (`movement.spec.ts`, « traverse un portail pour exactement 1 PM »). La déclaration d'intention reste non vérifiée.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-MOVE-007
 - **Source:** §76.7
@@ -120,7 +127,10 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** coût réel possiblement différent ; déclaration à ajouter avec `turn/`.
 - **Test required:** `movement.spec.ts` (portail), à compléter après confirmation.
 
-## OQ-MOVE-006 — Passage en force (§69) non implémenté
+## OQ-MOVE-006 — Passage en force (§69) non implémenté (RÉSOLUE)
+
+- **Résolution (product owner) :** le passage en force est un duel de Physique ; reporté à plus tard. Seul le point d'extension (`movement/force-passage.ts`) existe ; ENEMY_OCCUPIED reste le comportement actuel. Coût et contre-attaque restent à préciser pour cette future implémentation.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-MOVE-008
 - **Source:** §68.3, §69
@@ -129,11 +139,14 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** aucun franchissement d'ennemi possible ; coût en PM de la tentative et contre-attaque à préciser.
 - **Test required:** à écrire avec le système de duel (succès, échec, une seule tentative par activation, PM insuffisants).
 
-## OQ-DOOR-001 — Coût et compétence d'ouverture d'une porte
+## OQ-DOOR-001 — Coût et compétence d'ouverture d'une porte (RÉSOLUE)
+
+- **Résolution (product owner) :** une porte ne coûte rien : ouvrir ET fermer = 0 PM, même avec 0 PM restant (`CLOSE_DOOR_COST = 0`). Les Tests/compétences selon le type de porte restent hors périmètre. Testé (`movement.spec.ts`, « une porte ne coûte rien »).
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-DOOR-001
 - **Source:** §76.5 (compétence et Test requis selon le type de porte), §76.6 (fermer = 1 PM).
-- **Interpretation (actuelle):** `OPEN_DOOR` est possible depuis une case adjacente, coûte 0 PM, sans Test ni compétence ni distinction bois/renforcée. `CLOSE_DOOR` coûte 1 PM.
+- **Interpretation (actuelle):** `OPEN_DOOR` est possible depuis une case adjacente, coûte 0 PM, sans Test ni compétence ni distinction bois/renforcée. `CLOSE_DOOR` coûtait 1 PM (ancienne valeur, désormais 0).
 - **Reason:** la spec ne donne ni coût d'ouverture ni détail des Tests.
 - **Impact:** les portes renforcées devraient exiger une compétence ; coût d'ouverture à confirmer.
 - **Test required:** `movement.spec.ts` (ouverture), à compléter avec le système de compétences.
@@ -174,15 +187,19 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** équilibre de l'initiative.
 - **Test required:** `turn.spec.ts` (REROLL_INITIATIVE) ; à ajuster selon la réponse.
 
-## OQ-TURN-007 — Phase Overwatch et premier joueur sans personnage
+## OQ-TURN-007 — Phase Overwatch et premier joueur sans personnage (RÉSOLUE pour l'Overwatch)
 
-- **Rule:** RULE-TURN-004 (§66 : Overwatch entre initiative et activations)
+- **Rule:** RULE-TURN-004 (§66 : Overwatch entre initiative et activations), RULE-OVERWATCH-001…
 - **Source:** §66, §67
-- **Interpretation (actuelle):** l'étape Overwatch n'est pas implémentée (hors périmètre) ; la phase passe directement de l'initiative à `ACTIVATION`. Si le gagnant n'a aucun personnage à activer, le joueur suivant commence.
-- **Impact:** à insérer quand l'Overwatch sera implémenté (relance d'initiative possible jusqu'à la fin de l'Overwatch ?).
-- **Test required:** à ajouter avec l'Overwatch.
+- **Résolution (product owner) :** l'Overwatch est une ACTION du personnage actif, prise pendant son activation (commande `OVERWATCH`, qui consomme l'unique action), et non une phase dédiée. Quand un adversaire entre ensuite dans sa ligne de vue pendant un déplacement, le joueur en Overwatch a droit à une réaction (voir `traceability-overwatch.md`). La phase passe donc de l'initiative à `ACTIVATION`.
+- **Reste ouvert :** si le gagnant n'a aucun personnage à activer, le joueur suivant commence (inchangé) ; jusqu'à quand la relance d'initiative reste-t-elle possible ?
+- **Historique (avant décision) :** l'étape Overwatch n'était pas implémentée ; la phase passait directement de l'initiative à `ACTIVATION`.
+- **Test:** `overwatch.spec.ts` et tests d'intégration.
 
-## OQ-COMBAT-001 — Corps à corps : adjacence et portes
+## OQ-COMBAT-001 — Corps à corps : adjacence et portes (RÉSOLUE)
+
+- **Résolution (product owner) :** la seule exigence est une arête entre les deux nœuds ; sens unique et porte (ouverte ou fermée) sont ignorés ; la LdM n'est pas requise.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-COMBAT-005 (§70.1 : attaque au corps à corps derrière une porte « là où l'adjacence le permet »)
 - **Source:** §70.1, §72.1
@@ -191,7 +208,10 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** peut autoriser/interdire des attaques à travers portes fermées ou renforcées.
 - **Test required:** `attack.spec.ts` (corps à corps à travers porte fermée) ; à affiner.
 
-## OQ-COMBAT-002 — Défense (Duel) lors d'une attaque
+## OQ-COMBAT-002 — Défense (Duel) lors d'une attaque (RÉSOLUE)
+
+- **Résolution (product owner) :** la défense est un jet de Physique branché sur ATTACK : réserve `config.defensePoolSize` (défaut 4), difficulté = 10 − Physique du défenseur ; chaque succès annule 1 blessure (événement `DEFENSE_ROLLED`). Taille de la réserve : voir OQ-COMBAT-008.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-DUEL-001 / RULE-COMBAT-006
 - **Source:** §71.4, §72.2
@@ -200,7 +220,10 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** aucune réduction des succès côté cible.
 - **Test required:** à ajouter quand la règle de défense est précisée.
 
-## OQ-COMBAT-003 — Nombre de blessures par attaque réussie
+## OQ-COMBAT-003 — Nombre de blessures par attaque réussie (RÉSOLUE)
+
+- **Résolution (product owner) :** chaque succès du jet d'attaque = 1 blessure ; chaque blessure non parée = 1 dégât (1 niveau de santé). Le plafond « 1 blessure par attaque » (`WOUNDS_PER_HIT`) n'existe plus.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-COMBAT-007
 - **Source:** §72.4 (« can cause wounds », « removes one health level »)
@@ -210,6 +233,8 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Test required:** `attack.spec.ts` (jet maximum = 1 blessure).
 
 ## OQ-COMBAT-004 — Composition de la réserve de dés d'attaque
+
+- **Suite :** la dépendance du pool d'attaque à Combat est reprise dans OQ-COMBAT-009.
 
 - **Rule:** RULE-COMBAT-003
 - **Source:** §72.2 (« weapon + current Combat + modifiers »)
@@ -235,9 +260,54 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** lecture sûre des stats d'un cadavre (UI, journaux).
 - **Test required:** `attack.spec.ts` (mort, `currentStats` sans erreur).
 
-## OQ-COMBAT-007 — Garde-fous d'activation
+## OQ-COMBAT-007 — Garde-fous d'activation (RÉSOLUE)
+
+- **Résolution (product owner) :** une attaque ne coûte rien (ni PC ni PM). Chaque activation permet UNE seule action (attaquer, Overwatch, etc.) et autant de déplacement que les PM le permettent : bouger+agir, agir+bouger, bouger+agir+bouger, bouger seul, agir seul. Le moteur suit `turn.actionUsed` (refus `ACTION_ALREADY_USED`) ; ATTACK et OVERWATCH exigent le personnage actif.
+- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-COMBAT-001
-- **Interpretation:** `ATTACK` exige `phase = ACTIVATION` et `activePlayerId = playerId` ; elle ne consomme ni PC ni état d'activation (non spécifié ici, dépend du module `turn/`).
+- **Interpretation:** `ATTACK` exige `phase = ACTIVATION` et `activePlayerId = playerId` ; elle ne consommait ni PC ni état d'activation (état avant décision).
 - **Impact:** à raccorder avec le coût/limite d'actions par activation.
 - **Test required:** `attack.spec.ts` (validation).
+
+## OQ-OVERWATCH-001 — Durée de l'Overwatch et réactions multiples
+
+- **Rule:** RULE-OVERWATCH-003, RULE-OVERWATCH-006
+- **Interpretation (actuelle) :** l'Overwatch dure jusqu'à la réaction (tir ou renoncement), qui l'efface ; sinon il est effacé au refresh du tour suivant. Une seule réaction par Overwatch : un même adversaire ne peut pas être déclenché plusieurs fois par le même Overwatch.
+- **Reason:** hypothèse du moteur, non confirmée par le product owner.
+- **Impact:** valeur défensive de l'Overwatch ; un Overwatch inutilisé protège-t-il aussi pendant le tour adverse suivant ?
+- **Test required:** `overwatch.spec.ts` (effacement après réaction, effacement au refresh).
+
+## OQ-OVERWATCH-002 — Plusieurs personnages en Overwatch voient le mouvement
+
+- **Rule:** RULE-OVERWATCH-004
+- **Interpretation (actuelle) :** le premier personnage en Overwatch, dans l'ordre de l'état, qui voit la case réagit ; un seul déclencheur par pas. Le déplacement s'arrête sur cette case.
+- **Reason:** la règle ne précise ni le choix du réagissant (joueur, proximité) ni les réactions en chaîne.
+- **Impact:** choix potentiellement arbitraire ; les autres Overwatch restent intacts.
+- **Test required:** `overwatch.spec.ts` (deux personnages en Overwatch).
+
+## OQ-OVERWATCH-003 — Déclencheurs de l'Overwatch autres que le déplacement
+
+- **Rule:** RULE-OVERWATCH-002
+- **Interpretation (actuelle) :** seul un déplacement qui entre dans la ligne de vue déclenche l'Overwatch ; les attaques et autres actions adverses ne le déclenchent pas.
+- **Reason:** la règle confirmée ne mentionne que l'entrée dans la ligne de vue pendant un déplacement.
+- **Impact:** un adversaire immobile peut agir sans réaction.
+- **Test required:** à ajouter si l'Overwatch s'étend aux actions.
+
+## OQ-COMBAT-008 — Taille de la réserve de défense (RÉSOLUE)
+
+- **Résolution (product owner) :** depuis la règle v2, la réserve de défense est TOUJOURS de 4 dés ; elle ne dépend d'aucune caractéristique (seule la difficulté dépend du Physique). La valeur reste exposée en configuration (`config.defensePoolSize`, défaut 4) pour d'éventuelles variantes de règles.
+- **Historique :**
+- **Rule:** RULE-COMBAT-012
+- **Interpretation (actuelle) :** 4 dés par défaut, valeur de configuration `config.defensePoolSize` ; la difficulté dépend de Physique, la taille non.
+- **Reason:** valeur alignée sur la réserve de Test par défaut, non confirmée.
+- **Impact:** létalité ; à confirmer : la valeur, et une éventuelle dépendance à une caractéristique ou à l'équipement.
+- **Test required:** `attack.spec.ts` (réserve de défense configurable).
+
+## OQ-COMBAT-009 — Le pool d'attaque dépend-il de Combat ?
+
+- **Rule:** RULE-COMBAT-003
+- **Interpretation (actuelle) :** pool = dés d'arme + bonus ; Combat ne fixe que la difficulté (10 − Combat). Prolonge OQ-COMBAT-004.
+- **Reason:** formulation ambiguë de la règle source.
+- **Impact:** équilibrage de toutes les attaques.
+- **Test required:** `attack.spec.ts` (taille du pool, difficulté).

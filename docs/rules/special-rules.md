@@ -8,15 +8,15 @@ Tous les éléments ci-dessous sont des entités ou propriétés **dans le modè
 |---|---|---|
 | RULE-DOOR-001 | Une porte est une entité d'état `OPEN` ou `CLOSED` sur une arête. | |
 | RULE-DOOR-002 | Fermée : bloque déplacement et ligne de vue (RULE-MOVE-003, RULE-LOS-004). | |
-| RULE-DOOR-003 | L'ouvrir exige la compétence/test de son type (renforcée, bois) et se fait depuis un nœud adjacent. | `DOOR_OPENED` |
-| RULE-DOOR-004 | Un personnage adjacent peut fermer une porte ouverte en payant le PM requis. | `DOOR_CLOSED` |
+| RULE-DOOR-003 | L'ouvrir se fait depuis un nœud adjacent, pour 0 PM ; la compétence/test selon le type (renforcée, bois) reste hors périmètre. | `DOOR_OPENED` |
+| RULE-DOOR-004 | Un personnage adjacent peut fermer une porte ouverte, pour 0 PM. | `DOOR_CLOSED` |
 
 ## Porte secrète et passages
 
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-BOARD-001 | Une porte secrète est un portail `SECRET_DOOR` reliant deux nœuds éloignés ; une distance minimale entre extrémités est validée par le contenu. | `SECRET_DOOR_USED` |
-| RULE-BOARD-002 | Le joueur déclare l'intention au début de l'activation ; le déplacement après la sortie est résolu normalement ; usage répété autorisé si les PM le permettent ; sortie du plateau interdite. | `PORTAL_USED` |
+| RULE-BOARD-002 | Le joueur déclare l'intention au début de l'activation ; le franchissement coûte 1 PM, dans les deux sens ; le déplacement après la sortie est résolu normalement ; usage répété autorisé si les PM le permettent ; sortie du plateau interdite. | `PORTAL_USED` |
 | RULE-BOARD-003 | Jetons de passage optionnels : 1 ou 2 jetons relient deux bords adjacents ; modificateur facultatif de mise en place validé par le contenu. | |
 
 ## Cases particulières

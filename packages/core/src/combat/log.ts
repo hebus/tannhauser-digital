@@ -20,11 +20,22 @@ export interface CombatLog {
   readonly successes: number;
   /** Défense (Duel) : `null` quand l'attaque n'ouvre pas de Duel (voir OQ-COMBAT-002). */
   readonly defense: DuelOutcome | null;
+  /** Jet de défense (Physique) : `null` si aucune défense possible (Physique à 0). */
+  readonly defenseRoll: DefenseRollLog | null;
   readonly hit: boolean;
   readonly wounds: number;
   readonly healthBefore: number;
   readonly healthAfter: number;
   readonly defeated: boolean;
+}
+
+export interface DefenseRollLog {
+  readonly defenderId: string;
+  readonly physicalValue: number;
+  readonly difficulty: number;
+  readonly poolSize: number;
+  readonly dice: readonly DieResult[];
+  readonly successes: number;
 }
 
 export type PoolLog = Pick<
@@ -85,16 +96,23 @@ export function explainCombat(log: CombatLog): string[] {
       (log.autoFailure ? ' ; échec automatique : 0 succès' : '') +
       ` = ${log.successes}.`,
   );
-  if (log.defense) {
-    lines.push(
-      `Défense : ${log.defense.defenderSuccesses} succès annulent ${log.defense.attackerSuccesses} → reste ${log.defense.remaining}.`,
-    );
+  lines.push(log.successes >= 1 ? `Blessures infligées par l'attaque : ${log.successes}.` : 'Aucune blessure : attaque manquée.');
+  if (log.defenseRoll) {
+    const r = log.defenseRoll;
+    lines.push(`Défense de ${r.defenderId} : Physique ${r.physicalValue}, difficulté ${r.difficulty}, ${r.poolSize} dé(s).`);
+    r.dice.forEach((d, i) => lines.push(`Dé de défense ${i + 1} : ${d.natural} → ${OUTCOME_LABEL[d.outcome]}.`));
+  } else if (log.successes >= 1) {
+    lines.push('Défense impossible (Physique à 0).');
   }
-  lines.push(log.hit ? 'Résultat : touché.' : 'Résultat : manqué.');
-  if (log.hit) {
+  if (log.defense) {
+    lines.push(`Parades : ${log.defense.defenderSuccesses} sur ${log.defense.attackerSuccesses} blessure(s) → ${log.defense.remaining} non parée(s).`);
+  }
+  if (log.wounds > 0) {
     lines.push(
-      `Blessures : ${log.wounds} (santé ${log.healthBefore} → ${log.healthAfter})` + (log.defeated ? ' ; mis hors de combat.' : '.'),
+      `Dégâts : ${log.wounds} (santé ${log.healthBefore} → ${log.healthAfter})` + (log.defeated ? ' ; mis hors de combat.' : '.'),
     );
+  } else if (log.successes >= 1) {
+    lines.push('Toutes les blessures sont parées : aucun dégât.');
   }
   return lines;
 }

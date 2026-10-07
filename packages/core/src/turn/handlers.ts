@@ -30,6 +30,13 @@ function advance(state: GameState, events: GameEvent[], rng: RandomSource): Game
   return started.state;
 }
 
+/** Termine l'activation en cours (événement + passage au joueur suivant ou au tour suivant). */
+export function endActivation(state: GameState, events: GameEvent[], rng: RandomSource): GameState {
+  const characterId = state.turn.activeCharacterId;
+  if (characterId !== undefined) events.push({ type: 'CHARACTER_ACTIVATION_ENDED', characterId });
+  return advance(state, events, rng);
+}
+
 function checkActivationPhase(state: GameState, playerId: PlayerId): HandlerOutcome | null {
   if (state.phase !== 'ACTIVATION') return reject('WRONG_PHASE', 'Aucune phase d\'activation en cours.');
   if (state.turn.activePlayerId !== playerId) {

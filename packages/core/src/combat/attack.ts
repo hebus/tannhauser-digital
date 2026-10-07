@@ -1,15 +1,9 @@
 import { canSee } from '../board/line-of-sight';
 import type { BoardState, NodeId } from '../board/types';
-import { registerHandler, reject } from '../engine/apply-command';
-import type { GameEvent } from '../events/events';
+import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
 import { currentStats, type CharacterState, type GameState } from '../state/types';
-import { DEATHMATCH_REASON, deathmatchWinner } from '../victory/deathmatch';
-import { buildPoolLog, type CombatLog } from './log';
-import { combineModifiers, resolveCharacteristicTest } from './test';
+import { resolveAttackExchange } from './exchange';
 import type { WeaponDefinition } from './weapons';
-
-/** Blessures par attaque réussie (§72.4 ne lie pas le nombre aux succès : OQ-COMBAT-003). */
-export const WOUNDS_PER_HIT = 1;
 
 /** Deux nœuds sont adjacents s'ils sont reliés par une arête (porte ignorée : §70.1, OQ-COMBAT-001). */
 export function areAdjacent(board: BoardState, a: NodeId, b: NodeId): boolean {
@@ -42,8 +36,29 @@ function smokeNodes(state: GameState): ReadonlySet<NodeId> {
   return new Set(state.effects.filter((e) => e.type === 'SMOKE').map((e) => e.origin));
 }
 
-function replaceCharacter(state: GameState, updated: CharacterState): GameState {
-  return { ...state, characters: state.characters.map((c) => (c.id === updated.id ? updated : c)) };
+/** Ciblage : corps à corps = arête entre les nœuds (OQ-COMBAT-001, confirmé) ; sinon ligne de vue + portée. */
+export function checkTargeting(
+  state: GameState,
+  attacker: CharacterState,
+  target: CharacterState,
+  weapon: WeaponDefinition,
+): HandlerOutcome | null {
+  const stats = currentStats(attacker);
+  if (stats.combat <= 0) return reject('CHARACTERISTIC_ZERO', 'Combat à 0 : Test impossible (§65.2).');
+  if (weapon.kind === 'CAC') {
+    if (!areAdjacent(state.board, attacker.nodeId, target.nodeId)) {
+      return reject('NOT_ADJACENT', 'Le corps à corps exige une cible adjacente.');
+    }
+    return null;
+  }
+  if (!canSee(state.board, attacker.nodeId, target.nodeId, { smokeNodes: smokeNodes(state) })) {
+    return reject('NO_LINE_OF_SIGHT', 'Aucune ligne de vue sur la cible.');
+  }
+  if (weapon.maxRange !== undefined) {
+    const dist = stepDistance(state.board, attacker.nodeId, target.nodeId);
+    if (dist === null || dist > weapon.maxRange) return reject('OUT_OF_RANGE', 'Cible hors de portée.');
+  }
+  return null;
 }
 
 registerHandler('ATTACK', (state, command, rng) => {
@@ -54,6 +69,11 @@ registerHandler('ATTACK', (state, command, rng) => {
   if (!attacker) return reject('UNKNOWN_ATTACKER', `Attaquant inconnu : ${command.attackerId}`);
   if (attacker.playerId !== command.playerId) return reject('NOT_OWN_CHARACTER', "Ce personnage n'appartient pas au joueur.");
   if (!attacker.alive) return reject('ATTACKER_DEAD', 'Un personnage mort ne peut pas agir.');
+  // Une attaque est l'action unique de l'activation : le personnage doit être l'actif et n'avoir pas encore agi.
+  if (state.turn.activeCharacterId !== attacker.id) {
+    return reject('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
+  }
+  if (state.turn.actionUsed) return reject('ACTION_ALREADY_USED', "Une seule action par activation : elle est déjà utilisée.");
 
   const target = state.characters.find((c) => c.id === command.targetId);
   if (!target) return reject('UNKNOWN_TARGET', `Cible inconnue : ${command.targetId}`);
@@ -63,81 +83,9 @@ registerHandler('ATTACK', (state, command, rng) => {
   const weapon: WeaponDefinition | undefined = attacker.weapons?.find((w) => w.id === command.weaponId);
   if (!weapon) return reject('WEAPON_NOT_OWNED', `Arme non possédée : ${command.weaponId}`);
 
-  const stats = currentStats(attacker);
-  if (stats.combat <= 0) return reject('CHARACTERISTIC_ZERO', 'Combat à 0 : Test impossible (§65.2).');
+  const refused = checkTargeting(state, attacker, target, weapon);
+  if (refused) return refused;
 
-  // Ciblage : corps à corps = adjacence (indépendante de la LdM, §70.1) ; sinon LdM + portée.
-  if (weapon.kind === 'CAC') {
-    if (!areAdjacent(state.board, attacker.nodeId, target.nodeId)) {
-      return reject('NOT_ADJACENT', 'Le corps à corps exige une cible adjacente.');
-    }
-  } else {
-    if (!canSee(state.board, attacker.nodeId, target.nodeId, { smokeNodes: smokeNodes(state) })) {
-      return reject('NO_LINE_OF_SIGHT', 'Aucune ligne de vue sur la cible.');
-    }
-    if (weapon.maxRange !== undefined) {
-      const dist = stepDistance(state.board, attacker.nodeId, target.nodeId);
-      if (dist === null || dist > weapon.maxRange) return reject('OUT_OF_RANGE', 'Cible hors de portée.');
-    }
-  }
-
-  // Modificateurs : arme + modificateurs de la case de l'attaquant (OQ-COMBAT-004).
-  const nodeMods = (state.board.nodes[attacker.nodeId]?.properties.modifiers ?? []).filter(
-    (m) => m.applies === 'OCCUPANT' || m.applies === 'ATTACKER',
-  );
-  const modifiers = combineModifiers(
-    { extraDice: weapon.extraDice, resultModifier: weapon.resultModifier, autoSuccesses: weapon.autoSuccesses },
-    ...nodeMods.map((m) => ({ extraDice: m.extraDice, resultModifier: m.resultModifier })),
-  );
-
-  const test = resolveCharacteristicTest(stats.combat, weapon.dice, modifiers, rng);
-  const hit = test.success;
-  const wounds = hit ? WOUNDS_PER_HIT : 0;
-  const healthBefore = target.health;
-  const healthAfter = Math.max(0, healthBefore - wounds);
-  const defeated = hit && healthAfter === 0;
-
-  const log: CombatLog = {
-    attackerId: attacker.id,
-    targetId: target.id,
-    weaponId: weapon.id,
-    combatValue: stats.combat,
-    ...buildPoolLog(test),
-    defense: null,
-    hit,
-    wounds,
-    healthBefore,
-    healthAfter,
-    defeated,
-  };
-
-  const events: GameEvent[] = [
-    { type: 'ATTACK_DECLARED', attackerId: attacker.id, targetId: target.id, weaponId: weapon.id },
-    {
-      type: 'COMBAT_ROLLED',
-      attackerId: attacker.id,
-      dice: test.dice.map((d) => d.natural),
-      successes: test.successes,
-      difficulty: test.difficulty,
-      log,
-    },
-  ];
-
-  let next = state;
-  if (!hit) {
-    events.push({ type: 'ATTACK_MISSED', attackerId: attacker.id, targetId: target.id });
-    return { ok: true, state: next, events };
-  }
-
-  events.push({ type: 'ATTACK_HIT', attackerId: attacker.id, targetId: target.id });
-  next = replaceCharacter(next, { ...target, health: healthAfter, alive: healthAfter > 0 });
-  events.push({ type: 'DAMAGE_APPLIED', targetId: target.id, wounds, healthLeft: healthAfter });
-  if (defeated) events.push({ type: 'CHARACTER_DEFEATED', characterId: target.id });
-
-  const winnerId = deathmatchWinner(next);
-  if (winnerId !== null) {
-    next = { ...next, phase: 'FINISHED', victory: { winnerId, reason: DEATHMATCH_REASON } };
-    events.push({ type: 'VICTORY', winnerId, reason: DEATHMATCH_REASON });
-  }
-  return { ok: true, state: next, events };
+  const result = resolveAttackExchange({ ...state, turn: { ...state.turn, actionUsed: true } }, attacker, target, weapon, rng);
+  return { ok: true, state: result.state, events: result.events };
 });
