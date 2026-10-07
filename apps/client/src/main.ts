@@ -40,7 +40,10 @@ async function main(): Promise<void> {
 
   // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
   const game = await startFromSetup();
-  const ui = mountUi(game);
+  let presentationRef: Presentation | null = null;
+  const ui = mountUi(game, {
+    whenIdle: (callback) => (presentationRef ? presentationRef.onIdle(callback) : callback()),
+  });
   const world = new Container();
   app.stage.addChild(world);
 
@@ -66,6 +69,7 @@ async function main(): Promise<void> {
   };
   syncReducedMotionAttr(reducedMotion.value);
   const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
+  presentationRef = presentation;
   world.addChild(boardView, highlight, overlays, characters, presentation.worldLayer);
   app.stage.addChild(presentation.screenLayer);
 

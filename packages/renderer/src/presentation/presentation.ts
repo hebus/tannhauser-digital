@@ -63,6 +63,7 @@ export class Presentation {
   private noticeToken = 0;
   private noticeView: Container | null = null;
   private destroyed = false;
+  private idleCallbacks: Array<() => void> = [];
 
   constructor(options: PresentationOptions) {
     this.characters = options.characters;
@@ -98,6 +99,23 @@ export class Presentation {
     this.queue.tick(dtMs);
     this.runner.tick(dtMs);
     this.characters.tick(nowMs, this.reducedMotion.value);
+    this.flushIdle();
+  }
+
+  /**
+   * Appelle `callback` dès que toutes les animations et bannières sont terminées (tout de suite si c'est déjà le cas).
+   * Sert à différer l'affichage des dialogues (réaction, fin de partie) jusqu'à la fin des animations.
+   */
+  onIdle(callback: () => void): void {
+    if (this.destroyed || this.idle) callback();
+    else this.idleCallbacks.push(callback);
+  }
+
+  private flushIdle(): void {
+    if (this.idleCallbacks.length === 0 || !this.idle) return;
+    const callbacks = this.idleCallbacks;
+    this.idleCallbacks = [];
+    for (const cb of callbacks) cb();
   }
 
   /** Termine instantanément toutes les animations (l'affichage rejoint immédiatement l'état). */
@@ -105,6 +123,7 @@ export class Presentation {
     if (this.destroyed) return;
     this.queue.skip();
     this.runner.skip();
+    this.flushIdle();
   }
 
   /** Affiche immédiatement une bannière (remplace la courante) : sert au débogage (`?debugBanner=`). */

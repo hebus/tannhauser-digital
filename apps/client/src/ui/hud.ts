@@ -12,6 +12,8 @@ export type ToastTone = 'info' | 'error';
 export interface Hud {
   /** Redessine d'après l'état courant ; `events` = dernier lot d'événements (mise en valeur brève des phases). */
   render(events?: readonly GameEvent[]): void;
+  /** Autorise l'affichage des dialogues (réaction d'Overwatch) : false tant que des animations sont en cours. */
+  setDialogsReady(ready: boolean): void;
   /** Message bref visible et annoncé aux lecteurs d'écran (toujours une explication, jamais un silence). */
   toast(text: string, tone?: ToastTone): void;
   /** Ferme le sous-menu ouvert ; renvoie vrai s'il y en avait un. */
@@ -348,8 +350,9 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   }
 
   // --- Réaction d'Overwatch ---
+  let dialogsReady = true;
   function renderReaction(state: GameState, labels: Labeler): void {
-    const options = getReactionOptions(state);
+    const options = dialogsReady ? getReactionOptions(state) : null;
     reactionPanel.textContent = '';
     reactionPanel.hidden = !options;
     if (!options) return;
@@ -395,7 +398,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       phase.update(phaseModel(state, labels, events));
     });
     // La réaction attend une réponse : le focus va sur le premier bouton quand elle apparaît.
-    if (state.turn.reaction && !reactionPanel.contains(document.activeElement)) reactionPanel.querySelector<HTMLElement>('button')?.focus();
+    if (dialogsReady && state.turn.reaction && !reactionPanel.contains(document.activeElement)) reactionPanel.querySelector<HTMLElement>('button')?.focus();
   }
 
   function handleKey(event: KeyboardEvent): boolean {
@@ -431,5 +434,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     return false;
   }
 
-  return { render, toast, closeMenu, handleKey };
+  return {
+    render,
+    toast,
+    closeMenu,
+    handleKey,
+    setDialogsReady(ready: boolean): void {
+      dialogsReady = ready;
+    },
+  };
 }

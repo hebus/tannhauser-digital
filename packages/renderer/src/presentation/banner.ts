@@ -43,14 +43,14 @@ export const BANNER_ICONS: Readonly<Record<BannerKind, BannerIcon>> = {
   victory: 'star',
 };
 
-/** Durées d'affichage (ms) : 2 à 2,8 s (entrée et sortie ≈ 0,5 s chacune) ; bannière finale plus longue. */
+/** Durées d'affichage (ms) : 1,5 à 2,3 s (entrée et sortie ≈ 0,4 s chacune) ; bannière finale plus longue. */
 export const BANNER_DURATIONS: Readonly<Record<BannerKind, number>> = {
-  turnStart: 2800,
-  overwatchPhase: 2600,
-  activationPhase: 2600,
-  turnOf: 2000,
-  reaction: 2200,
-  victory: 5000,
+  turnStart: 2300,
+  overwatchPhase: 2100,
+  activationPhase: 2100,
+  turnOf: 1500,
+  reaction: 1700,
+  victory: 4500,
 };
 
 /** Pose de la bannière à un instant : décalage du contenu (en largeurs de bandeau), échelle, opacité, ouverture du bandeau (0..1). */
