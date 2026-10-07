@@ -19,7 +19,7 @@ export const TIMING = {
   shake: 260,
   defeat: 650,
   ring: 550,
-  bolt: 380,
+  bolt: 650,
   /** Message court (changement d'option). Les durées des bannières sont dans `BANNER_DURATIONS`. */
   notice: 1400,
   /** Durée d'affichage statique des indicateurs en mouvement réduit (aucun mouvement). */
@@ -338,14 +338,25 @@ export class Presentation {
       const nx = -dy / len;
       const ny = dx / len;
       const segments = 6;
-      g.moveTo(from.x, from.y);
+      const points: Point[] = [{ x: from.x, y: from.y }];
       for (let i = 1; i < segments; i += 1) {
         const t = i / segments;
         const jitter = (i % 2 === 0 ? 1 : -1) * 9;
-        g.lineTo(from.x + dx * t + nx * jitter, from.y + dy * t + ny * jitter);
+        points.push({ x: from.x + dx * t + nx * jitter, y: from.y + dy * t + ny * jitter });
       }
-      g.lineTo(dest.x, dest.y);
-      g.stroke({ width: 8, color: 0x111111, alpha: 0.8 }).stroke({ width: 4, color: 0xfff3bf });
+      points.push({ x: dest.x, y: dest.y });
+      // Pixi v8 démarre un NOUVEAU tracé après chaque `stroke()` : on retrace donc la ligne à chaque passe
+      // (sinon seule la première passe, sombre, serait visible).
+      const trace = (width: number, color: number, alpha: number): void => {
+        g.moveTo(points[0]!.x, points[0]!.y);
+        for (const p of points.slice(1)) g.lineTo(p.x, p.y);
+        g.stroke({ width, color, alpha, join: 'round', cap: 'round' });
+      };
+      trace(16, 0xff7a00, 0.35); // halo orangé
+      trace(9, 0xffc247, 0.9); // corps lumineux
+      trace(4, 0xffffff, 1); // cœur blanc
+      g.circle(dest.x, dest.y, 18).fill({ color: 0xfff3bf, alpha: 0.75 }).stroke({ width: 3, color: 0xff7a00 });
+      g.circle(from.x, from.y, 12).fill({ color: 0xffffff, alpha: 0.8 });
       this.worldLayer.addChild(g);
       return g;
     };
