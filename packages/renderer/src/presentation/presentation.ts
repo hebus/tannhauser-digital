@@ -28,6 +28,8 @@ export interface PresentationOptions {
   readonly reducedMotion: ReducedMotion;
   /** Taille de l'écran (px) pour centrer la bannière. */
   readonly screenSize: () => { width: number; height: number };
+  /** Nom affichable d'un joueur (par défaut : son identifiant). */
+  readonly playerName?: (playerId: string) => string;
 }
 
 /**
@@ -47,6 +49,7 @@ export class Presentation {
   private readonly characters: CharacterLayer;
   private readonly reducedMotion: ReducedMotion;
   private readonly screenSize: () => { width: number; height: number };
+  private readonly playerName: (playerId: string) => string;
   private readonly unsubscribe: () => void;
   private textScale = 1;
   private bannerToken = 0;
@@ -57,6 +60,7 @@ export class Presentation {
     this.characters = options.characters;
     this.reducedMotion = options.reducedMotion;
     this.screenSize = options.screenSize;
+    this.playerName = options.playerName ?? ((id) => id);
     this.worldLayer.label = 'PresentationWorld';
     this.screenLayer.label = 'PresentationScreen';
     this.queue = new AnimationQueue({ reduced: this.reducedMotion.value });
@@ -134,8 +138,18 @@ export class Presentation {
         break;
       }
       case 'banner':
-        this.queue.enqueue(action(() => this.showBanner(`Tour ${step.turn}${step.playerId ? ` — ${step.playerId}` : ''}`, TIMING.banner, 30)));
+        this.queue.enqueue(
+          action(() =>
+            this.showBanner(`Tour ${step.turn}${step.playerId ? ` — ${this.playerName(step.playerId)} commence` : ''}`, TIMING.banner, 30),
+          ),
+        );
         break;
+      case 'turnOf': {
+        const name = this.playerName(step.playerId);
+        const text = step.phase === 'OVERWATCH' ? `${name} — phase d'Overwatch` : `${name} — à vous de jouer`;
+        this.queue.enqueue(action(() => this.showBanner(text, TIMING.banner, 26)));
+        break;
+      }
     }
   }
 

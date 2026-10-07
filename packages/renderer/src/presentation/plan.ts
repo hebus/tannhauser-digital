@@ -7,7 +7,9 @@ export type PresentationStep =
   | { readonly kind: 'defeat'; readonly characterId: string }
   | { readonly kind: 'overwatchPlaced'; readonly characterId: string }
   | { readonly kind: 'overwatchTriggered'; readonly overwatcherId: string; readonly targetId: string; readonly nodeId: string }
-  | { readonly kind: 'banner'; readonly turn: number; readonly playerId: string | null };
+  | { readonly kind: 'banner'; readonly turn: number; readonly playerId: string | null }
+  /** Changement de joueur actif (ou de phase) : annonce à quelle équipe c'est le tour de jouer. */
+  | { readonly kind: 'turnOf'; readonly playerId: string; readonly phase: string };
 
 /**
  * Événements → étapes de présentation, dans l'ordre. `prev` donne les positions de départ des déplacements
@@ -50,5 +52,12 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
         break;
     }
   });
+  // Hors début de tour (déjà annoncé par la bannière « Tour N »), on annonce chaque changement de main.
+  const turnStarted = steps.some((st) => st.kind === 'banner');
+  const activeId = next.turn.activePlayerId;
+  const changed = prev !== null && (prev.turn.activePlayerId !== activeId || prev.phase !== next.phase);
+  if (!turnStarted && changed && activeId !== null && next.phase !== 'FINISHED' && next.phase !== 'SETUP') {
+    steps.push({ kind: 'turnOf', playerId: activeId, phase: next.phase });
+  }
   return steps;
 }

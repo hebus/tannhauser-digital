@@ -14,6 +14,7 @@ import {
 import { getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import type { GameFacade } from './game-facade';
+import { createLabeler } from './ui/labels';
 import { startFromSetup } from './ui/boot';
 import { mountUi } from './ui/mount';
 
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
     characters,
     reducedMotion,
     screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
+    playerName: (id) => createLabeler(game.state).player(id),
   });
   world.addChild(boardView, highlight, overlays, characters, presentation.worldLayer);
   app.stage.addChild(presentation.screenLayer);

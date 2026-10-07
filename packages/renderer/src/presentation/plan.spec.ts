@@ -54,6 +54,28 @@ describe('planPresentation', () => {
     expect(planPresentation(events, null, state(3, 'p1'))).toEqual([{ kind: 'banner', turn: 2, playerId: 'p2' }]);
   });
 
+  it("annonce à quelle équipe c'est le tour quand la main change (hors début de tour)", () => {
+    const withPhase = (active: string, phase: string): GameState =>
+      ({ ...state(1, active), phase }) as unknown as GameState;
+    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p2', 'ACTIVATION'))).toEqual([
+      { kind: 'turnOf', playerId: 'p2', phase: 'ACTIVATION' },
+    ]);
+    // Même joueur, nouvelle phase : annonce aussi (phase d'Overwatch).
+    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p1', 'OVERWATCH'))).toEqual([
+      { kind: 'turnOf', playerId: 'p1', phase: 'OVERWATCH' },
+    ]);
+    // Rien ne change : pas d'annonce ; partie terminée : pas d'annonce.
+    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p1', 'ACTIVATION'))).toEqual([]);
+    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p2', 'FINISHED'))).toEqual([]);
+  });
+
+  it('au début de tour, une seule bannière (pas de doublon avec le changement de main)', () => {
+    const next = { ...state(2, 'p2'), phase: 'OVERWATCH' } as unknown as GameState;
+    const prev = { ...state(1, 'p1'), phase: 'ACTIVATION' } as unknown as GameState;
+    const steps = planPresentation([{ type: 'TURN_STARTED', turn: 2 }], prev, next);
+    expect(steps.map((s) => s.kind)).toEqual(['banner']);
+  });
+
   it('ignore les événements sans présentation et ne mute pas l état', () => {
     const next = state(1, 'p1', { h: 'n1' });
     const snapshot = JSON.stringify(next);
