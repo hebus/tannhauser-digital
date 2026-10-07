@@ -42,10 +42,6 @@ export interface InitiativeBadge {
   /** Index (dans `GameState.players`) du gagnant, pour son marqueur forme+couleur. */
   readonly playerIndex: number | null;
   readonly playerName: string | null;
-  /** Jets, gagnant d'abord (« 8 – 4 »), ou null. */
-  readonly rolls: string | null;
-  /** Texte des jets prêt à afficher (« jets 8 – 4 »), ou null. */
-  readonly rollsText: string | null;
 }
 
 /** Capsule de PC d'un joueur. Aucune règle : état Overwatch / à activer compté depuis `GameState`. */
@@ -141,20 +137,6 @@ export function withoutLeadingName(context: string, name: string | null): string
   return context.slice(name.length).replace(/^[\s:,–-]+/, '');
 }
 
-/** Jets du dernier tirage d'initiative du tour courant (le gagnant d'abord, ex. « 7 – 1 »), lus dans l'historique. */
-export function lastInitiativeRolls(state: GameState): string | null {
-  for (let i = state.history.length - 1; i >= 0; i -= 1) {
-    const e = state.history[i]!;
-    if (e.type === 'TURN_STARTED') return null;
-    if (e.type === 'INITIATIVE_ROLLED') {
-      const winnerRoll = e.rolls[e.winnerId];
-      const others = Object.entries(e.rolls).filter(([id]) => id !== e.winnerId).map(([, v]) => v).sort((a, b) => b - a);
-      return winnerRoll === undefined ? null : [winnerRoll, ...others].join(' – ');
-    }
-  }
-  return null;
-}
-
 /** Sous-ligne de l'étape courante (qui décide, qui joue, qui commence). */
 export function stepSubline(state: GameState, labels: Labeler, id: PhaseStepId): string | null {
   const reaction = state.turn.reaction;
@@ -210,10 +192,7 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
     let detailPlayerIndex: number | null = null;
     if (id === 'initiative' && status !== 'upcoming' && state.turn.initiativePlayerId) {
       const winner = state.turn.initiativePlayerId;
-      const rolls = lastInitiativeRolls(state);
-      detail = rolls
-        ? t('phase.detail.initiativeRolls', { player: labels.player(winner), rolls })
-        : t('phase.detail.initiative', { player: labels.player(winner) });
+      detail = t('phase.detail.initiative', { player: labels.player(winner) });
       const index = state.players.findIndex((p) => p.id === winner);
       detailPlayerIndex = index >= 0 ? index : null;
     } else if (id === 'overwatch' && status !== 'upcoming' && owCount > 0) {
@@ -237,7 +216,6 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
   const initiativeStep = steps[1]!;
   const winnerId = state.turn.initiativePlayerId;
   const decided = initiativeStep.status !== 'upcoming' && winnerId !== null;
-  const rolls = decided ? lastInitiativeRolls(state) : null;
   const context = phaseContext(state, labels);
   const activeName = activeId && state.phase !== 'FINISHED' ? labels.player(activeId) : null;
   return {
@@ -246,8 +224,6 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
       decided,
       playerIndex: decided ? initiativeStep.detailPlayerIndex : null,
       playerName: decided && winnerId ? labels.player(winnerId) : null,
-      rolls,
-      rollsText: rolls ? t('phase.initiative.rolls', { rolls }) : null,
     },
     players: capsules(state, labels, activeId),
     activePlayerName: activeName,

@@ -75,7 +75,8 @@ export function createPhaseTracker(): PhaseTracker {
     const label = h('span', { class: 'phase-label' });
     const sub = h('span', { class: 'phase-sub' });
     const sr = h('span', { class: 'sr-only' });
-    const li = h('li', { class: 'phase-step', attrs: { 'data-phase': id } }, h('span', { class: 'phase-node-slot' }, node), label, sub, sr);
+    // Libellé À CÔTÉ du nœud (sous-ligne de l'étape courante sous le libellé) : la frise tient sur une seule rangée.
+    const li = h('li', { class: 'phase-step', attrs: { 'data-phase': id } }, h('span', { class: 'phase-node-slot' }, node), h('span', { class: 'phase-text' }, label, sub), sr);
     items.set(id, { li, number, label, sub, sr });
     list.append(li);
   }
@@ -84,9 +85,8 @@ export function createPhaseTracker(): PhaseTracker {
   const initFlag = svgIcon('flag', 'phase-init-flag');
   const initTitle = h('span', { class: 'phase-init-title', attrs: { 'aria-hidden': 'true' } });
   const initWinner = h('span', { class: 'phase-init-winner', attrs: { 'aria-hidden': 'true' } });
-  const initRolls = h('span', { class: 'phase-init-rolls', attrs: { 'aria-hidden': 'true' } });
   const initSr = h('span', { class: 'sr-only' });
-  const initiative = h('div', { class: 'phase-initiative' }, initFlag, h('span', { class: 'phase-init-text' }, initTitle, initWinner, initRolls), initSr);
+  const initiative = h('div', { class: 'phase-initiative' }, initFlag, h('span', { class: 'phase-init-text' }, initTitle, initWinner), initSr);
 
   const card = h('div', { class: 'phase-card' }, turn, list, initiative);
 
@@ -132,19 +132,16 @@ export function createPhaseTracker(): PhaseTracker {
         initiative.style.setProperty('--pc', mark.color);
         initTitle.textContent = t('phase.initiative.title');
         setChildren(initWinner, playerMark(ini.playerIndex), h('span', { class: 'phase-init-name', text: ini.playerName ?? '' }));
-        initRolls.textContent = ini.rollsText ?? '';
-        initRolls.hidden = ini.rollsText === null;
-        initSr.textContent = `${t('phase.initiative.title')} : ${ini.playerName ?? ''}${ini.rollsText ? ` (${ini.rollsText})` : ''}`;
+        initSr.textContent = `${t('phase.initiative.title')} : ${ini.playerName ?? ''}`;
       } else {
         initiative.style.removeProperty('--pc');
-        initTitle.textContent = t('phase.initiative.pending');
+        initTitle.textContent = t('phase.initiative.pendingShort');
         setChildren(initWinner);
-        initRolls.textContent = '';
-        initRolls.hidden = true;
         initSr.textContent = t('phase.initiative.pending');
       }
 
-      // Ligne de contexte : joueur qui a la main (forme + nom), puis la consigne.
+      // Ligne de contexte : joueur qui a la main (forme + nom), puis la consigne ; le texte complet en infobulle si la ligne est tronquée.
+      contextLine.title = model.context;
       if (model.activePlayerIndex === null || model.activePlayerName === null) {
         ctxMark.hidden = true;
         ctxName.hidden = true;
@@ -169,7 +166,10 @@ export function createPhaseTracker(): PhaseTracker {
           const mark = playerMarkStyle(p.index);
           const li = h(
             'li',
-            { class: `phase-player${p.active ? ' is-active' : ''}`, attrs: { 'aria-current': p.active ? 'true' : undefined } },
+            {
+              class: `phase-player${p.active ? ' is-active' : ''}`,
+              attrs: { 'aria-current': p.active ? 'true' : undefined, title: [p.name, p.pcText, p.stateText, p.active ? t('phase.playing') : null].filter(Boolean).join(' · ') },
+            },
             playerMark(p.index),
             h('span', { class: 'phase-player-name', text: p.name }),
             h('b', { class: 'phase-player-pc', text: p.pcText }),

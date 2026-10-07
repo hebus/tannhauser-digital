@@ -5,7 +5,7 @@ import type { BannerKind, BannerPlan } from '@tannhauser/renderer';
 import { bannerText } from './banner-text';
 import { EN, FR, setLocale, t } from './i18n';
 import { createLabeler } from './labels';
-import { PHASE_STEP_IDS, currentStepIndex, lastInitiativeRolls, phaseContext, phaseModel, withoutLeadingName } from './phase-model';
+import { PHASE_STEP_IDS, currentStepIndex, phaseContext, phaseModel, withoutLeadingName } from './phase-model';
 
 const rows = [{ combat: 7, physical: 5, mental: 5, movement: 4 }];
 const char = (id: string, playerId: string, nodeId: string, extra: Partial<CharacterState> = {}): CharacterState => ({
@@ -72,17 +72,13 @@ describe('frise des phases : étapes déduites de GameState.phase', () => {
     expect(m.steps.find((x) => x.id === 'activation')?.detail).toBeNull();
   });
 
-  it('l’étape Initiative nomme le gagnant, donne son marqueur (index du joueur) et les jets, gagnant d’abord', () => {
+  it('l’étape Initiative nomme le gagnant et donne son marqueur (index du joueur), sans afficher les jets (ils sont dans le journal)', () => {
     const base = game('OVERWATCH', { initiativePlayerId: 'p2' }, [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')]);
     const s = { ...base, history: [{ type: 'TURN_STARTED', turn: 1 }, { type: 'INITIATIVE_ROLLED', rolls: { p1: 3, p2: 8 }, winnerId: 'p2' }] } as typeof base;
     const step = phaseModel(s, createLabeler(s)).steps.find((x) => x.id === 'initiative')!;
-    expect(step.detail).toBe('Joueur 2 commence (jets 8 – 3)');
+    expect(step.detail).toBe('Joueur 2 d’abord');
+    expect(step.detail).not.toMatch(/jets|8/);
     expect(step.detailPlayerIndex).toBe(1);
-    expect(lastInitiativeRolls(s)).toBe('8 – 3');
-    // Après une relance, le dernier tirage fait foi ; un nouveau tour sans tirage n'affiche pas de jets périmés.
-    const rerolled = { ...base, history: [...s.history, { type: 'INITIATIVE_ROLLED', rolls: { p1: 9, p2: 2 }, winnerId: 'p1' }] } as typeof base;
-    expect(lastInitiativeRolls(rerolled)).toBe('9 – 2');
-    expect(lastInitiativeRolls({ ...base, history: [...s.history, { type: 'TURN_STARTED', turn: 2 }] } as typeof base)).toBeNull();
   });
 });
 
@@ -138,18 +134,15 @@ describe('bandeau : numéro de tour, sous-ligne, pastille d’initiative, capsul
     expect(phaseModel(s, createLabeler(s)).steps.map((x) => x.number)).toEqual([1, 2, 3, 4]);
   });
 
-  it('initiative : « à venir » avant le tirage, gagnant + jets ensuite, et pendant tout le tour', () => {
+  it('initiative : « à venir » avant le tirage, gagnant (sans les jets) ensuite, et pendant tout le tour', () => {
     for (const phase of ['SETUP', 'REFRESH'] as const) {
       const s = game(phase);
-      expect(phaseModel(s, createLabeler(s)).initiative).toMatchObject({ decided: false, playerName: null, playerIndex: null, rolls: null, rollsText: null });
+      expect(phaseModel(s, createLabeler(s)).initiative).toMatchObject({ decided: false, playerName: null, playerIndex: null });
     }
     for (const phase of ['OVERWATCH', 'ACTIVATION', 'END_OF_TURN'] as const) {
       const s = withRolls(game(phase));
-      expect(phaseModel(s, createLabeler(s)).initiative).toEqual({ decided: true, playerIndex: 1, playerName: 'Joueur 2', rolls: '8 – 4', rollsText: 'jets 8 – 4' });
+      expect(phaseModel(s, createLabeler(s)).initiative).toEqual({ decided: true, playerIndex: 1, playerName: 'Joueur 2' });
     }
-    // Sans jets lisibles dans l'historique : gagnant connu, pas de jets.
-    const noRolls = game('ACTIVATION');
-    expect(phaseModel(noRolls, createLabeler(noRolls)).initiative).toMatchObject({ decided: true, playerName: 'Joueur 2', rolls: null, rollsText: null });
   });
 
   it('capsules de PC : PC, joueur actif, initiative, Overwatch posés et personnages à activer', () => {

@@ -13,6 +13,8 @@
   --ui-radius: 8px;
   --hud-left-w: 292px;
   --hud-right-w: 340px;
+  /* Hauteur réservée au bandeau des phases (mesurée) : le dialogue de réaction se place dessous. */
+  --hud-phase-h: 84px;
   font-size: 16px;
 }
 
@@ -153,7 +155,7 @@ kbd {
 .hud-reaction {
   position: absolute;
   left: 50%;
-  top: 196px;
+  top: calc(var(--hud-phase-h) + 24px);
   transform: translateX(-50%);
   width: min(420px, calc(100vw - 700px));
   min-width: 300px;
@@ -189,8 +191,9 @@ kbd {
 .player-mark { color: var(--pc, var(--ui-accent)); font-size: 1.05em; line-height: 1; }
 .player-mark[hidden] { display: none; }
 
-/* Bandeau des phases du tour (carte) : badge de tour, frise connectée, pastille d'initiative, ligne de contexte, capsules de PC.
-   La phase courante se distingue par la taille, le halo, le libellé gras et la sous-ligne, jamais par la seule couleur. */
+/* Bandeau des phases du tour (carte), deux rangées fines : [tour · frise connectée · initiative] puis [contexte · capsules de PC].
+   La phase courante se distingue par la taille, le halo, le libellé gras et la sous-ligne, jamais par la seule couleur.
+   Hauteur visée ≈ 80 px (cadrage de la caméra : `insets().top` ; dialogue de réaction : `--hud-phase-h`). */
 .hud-phase {
   --ph-bg: #181b21;
   --ph-edge: #2c313b;
@@ -199,9 +202,8 @@ kbd {
   --ph-muted: #9aa1ae;
   --ph-amber: #e0b040;
   --ph-green: #7fd18b;
-  --ph-node: 30px;
-  --ph-node-current: 60px;
-  --ph-slot: 64px;
+  --ph-node: 26px;
+  --ph-node-current: 34px;
   position: absolute;
   top: 10px;
   /* Entre les panneaux gauche et droit ; marge auto : centré et plafonné en largeur sur les grands écrans. */
@@ -213,60 +215,53 @@ kbd {
   background: var(--ph-bg);
   border: 1px solid var(--ph-edge);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 6px 10px;
   color: var(--ph-text);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+  container-type: inline-size;
 }
 .hud-phase [hidden] { display: none; }
-.phase-card { display: flex; align-items: flex-start; gap: 14px; }
+.phase-card { display: flex; align-items: center; gap: 8px; min-height: 38px; }
 
 .phase-turn {
   flex: 0 0 auto;
-  align-self: flex-start;
-  margin-top: 4px;
-  min-width: 56px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   box-sizing: border-box;
-  padding: 6px 10px;
-  text-align: center;
+  padding: 3px 8px;
   border: 1px solid var(--ph-edge);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
 }
-.phase-turn-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ph-muted); }
-.phase-turn-n { display: block; font-size: 30px; line-height: 1.05; font-weight: 800; }
+.phase-turn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ph-muted); }
+.phase-turn-n { font-size: 18px; line-height: 1.1; font-weight: 800; }
 
-.phase-steps { flex: 1 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; }
+.phase-steps { flex: 1 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
 .phase-step {
   position: relative;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  padding: 0 2px;
+  gap: 5px;
   color: var(--ph-muted);
 }
-.phase-step.is-current { flex-grow: 2; }
-/* Segments : chaque nœud trace sa moitié gauche et sa moitié droite ; vert quand la phase qui précède est terminée. */
-.phase-step::before,
-.phase-step::after {
+.phase-step:first-child { flex-grow: 0; }
+/* Segment qui précède le nœud ; vert quand la phase précédente est terminée. */
+.phase-step + .phase-step::before {
   content: '';
-  position: absolute;
-  top: calc(var(--ph-slot) / 2 - 2px);
-  width: 50%;
-  height: 4px;
+  flex: 1 1 8px;
+  min-width: 6px;
+  height: 3px;
+  margin-right: 2px;
   background: var(--ph-line);
 }
-.phase-step::before { left: 0; }
-.phase-step::after { right: 0; }
-.phase-step:first-child::before,
-.phase-step:last-child::after { display: none; }
-.phase-step.is-linked::before,
-.phase-step.is-done::after { background: var(--ph-green); }
+.phase-step.is-linked::before { background: var(--ph-green); }
 
-.phase-node-slot { position: relative; z-index: 1; height: var(--ph-slot); display: flex; align-items: center; justify-content: center; }
+.phase-node-slot { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
 .phase-node {
   width: var(--ph-node);
   height: var(--ph-node);
@@ -278,14 +273,15 @@ kbd {
   border: 2px dashed #6b7384;
   color: var(--ph-muted);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
 }
 .phase-glyph,
-.phase-tick { display: none; width: 56%; height: 56%; }
+.phase-tick { display: none; width: 58%; height: 58%; }
 .phase-num { display: block; }
 
-.phase-label { margin-top: 4px; max-width: 100%; font-size: 12.5px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
-.phase-sub { margin-top: 2px; font-size: 12px; font-weight: 600; line-height: 1.2; color: var(--ph-amber); }
+.phase-text { display: flex; flex-direction: column; min-width: 0; white-space: nowrap; }
+.phase-label { font-size: 12px; font-weight: 600; line-height: 1.15; }
+.phase-sub { font-size: 11px; font-weight: 600; line-height: 1.15; color: var(--ph-amber); }
 
 .phase-step.is-done { color: var(--ph-text); }
 .phase-step.is-done .phase-node { background: var(--ph-green); border: 2px solid var(--ph-green); color: #0d2412; }
@@ -297,75 +293,102 @@ kbd {
   width: var(--ph-node-current);
   height: var(--ph-node-current);
   background: var(--ph-amber);
-  border: 3px solid #fff3c4;
+  border: 2px solid #fff3c4;
   color: #1a1400;
-  box-shadow: 0 0 0 6px rgba(224, 176, 64, 0.22), 0 0 20px rgba(224, 176, 64, 0.55);
+  box-shadow: 0 0 0 3px rgba(224, 176, 64, 0.22), 0 0 12px rgba(224, 176, 64, 0.5);
 }
-.phase-step.is-current .phase-glyph { display: block; width: 52%; height: 52%; }
-.phase-step.is-current .phase-label { font-size: 16px; font-weight: 800; }
+.phase-step.is-current .phase-glyph { display: block; width: 54%; height: 54%; }
+.phase-step.is-current .phase-label { font-size: 13.5px; font-weight: 800; }
 
-/* Pastille d'initiative : visible pendant tout le tour (gagnant : forme + nom + jets), en pointillé avant le tirage. */
+/* Pastille d'initiative : drapeau + marqueur forme/couleur + nom du gagnant (les jets sont dans le journal) ; en pointillé avant le tirage. */
 .phase-initiative {
   flex: 0 0 auto;
-  align-self: flex-start;
-  margin-top: 4px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px 6px 10px;
+  gap: 6px;
+  padding: 3px 10px 3px 7px;
   border: 1px solid var(--ph-amber);
-  border-radius: 10px;
+  border-radius: 999px;
   background: rgba(224, 176, 64, 0.1);
+  white-space: nowrap;
 }
 .phase-initiative.is-pending { border: 1px dashed #6b7384; background: transparent; color: var(--ph-muted); }
-.phase-init-flag { flex: 0 0 auto; width: 22px; height: 22px; color: var(--ph-amber); }
+.phase-init-flag { flex: 0 0 auto; width: 16px; height: 16px; color: var(--ph-amber); }
 .phase-initiative.is-pending .phase-init-flag { color: var(--ph-muted); }
-.phase-init-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.phase-init-title { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ph-amber); }
+.phase-init-text { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.phase-init-title { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ph-amber); }
 .phase-initiative.is-pending .phase-init-title { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ph-muted); }
-.phase-init-winner { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: var(--ph-text); white-space: nowrap; }
-.phase-init-winner .player-mark { font-size: 1.3em; }
-.phase-init-rolls { font-size: 12px; font-weight: 600; color: var(--ph-muted); white-space: nowrap; }
+.phase-init-winner { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 800; color: var(--ph-text); white-space: nowrap; }
+.phase-init-winner .player-mark { font-size: 1.2em; }
+/* Le libellé « INITIATIVE » n'apparaît que si la place le permet (voir les requêtes de conteneur). */
+.phase-initiative:not(.is-pending) .phase-init-title { display: none; }
 
-.phase-lower { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
+.phase-lower { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .phase-context {
-  flex: 1 1 280px;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-sizing: border-box;
+  height: 26px;
   margin: 0;
-  padding: 5px 10px;
-  font-size: 14px;
+  padding: 0 8px;
+  font-size: 13px;
   border-left: 4px solid var(--pc, var(--ph-line));
   border-radius: 0 6px 6px 0;
   background: rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+  overflow: hidden;
 }
-.phase-context .player-mark { font-size: 1.25em; }
-.phase-context-name { font-weight: 800; white-space: nowrap; }
+.phase-context .player-mark { font-size: 1.2em; }
+.phase-context-name { font-weight: 800; }
 .phase-context-sep { color: var(--ph-muted); }
-.phase-context-text { font-weight: 500; min-width: 0; }
+.phase-context-text { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
-.phase-players { flex: 0 0 auto; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.phase-players { flex: 0 0 auto; list-style: none; margin: 0; padding: 0; display: flex; gap: 5px; }
 .phase-player {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   box-sizing: border-box;
-  padding: 3px 10px;
+  height: 24px;
+  padding: 0 9px;
   border: 1px solid var(--ph-edge);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
-  font-size: 12.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .phase-player-name { font-weight: 600; }
-.phase-player-pc { font-weight: 800; padding-left: 6px; border-left: 1px solid var(--ph-line); }
+.phase-player-pc { font-weight: 800; padding-left: 5px; border-left: 1px solid var(--ph-line); }
 .phase-player-state { color: var(--ph-muted); }
 .phase-player.is-active { border-color: var(--pc, var(--ph-amber)); box-shadow: inset 0 0 0 1px var(--pc, var(--ph-amber)); background: rgba(255, 255, 255, 0.09); }
-.phase-player-playing { font-weight: 800; font-size: 11px; line-height: 1.4; padding: 0 7px; border: 1px solid var(--ph-text); border-radius: 999px; }
+.phase-player-playing { font-weight: 800; font-size: 10.5px; line-height: 1.4; padding: 0 6px; border: 1px solid var(--ph-text); border-radius: 999px; }
+
+/* Place limitée (≈ 1280 px de fenêtre : zone centrale ≈ 590 px) : l'état détaillé des capsules et le mot « joue » passent en
+   infobulle / texte pour lecteurs d'écran ; le joueur qui a la main reste indiqué par le liseré, le marqueur et la ligne de contexte. */
+@container (max-width: 700px) {
+  .phase-card { gap: 6px; }
+  .phase-step { gap: 4px; }
+  .phase-step + .phase-step::before { min-width: 10px; margin-right: 0; }
+  .phase-label { font-size: 11.5px; }
+  .phase-turn { padding: 3px 6px; }
+  .phase-initiative { padding-right: 8px; }
+  .phase-player-state,
+  .phase-player-playing { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; padding: 0; }
+}
+/* Très étroit : libellés des phases non courantes et noms des capsules disparaissent visuellement (pictogramme/numéro, forme + couleur + PC). */
+@container (max-width: 560px) {
+  .phase-step:not(.is-current) .phase-label,
+  .phase-player-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+@container (min-width: 800px) {
+  .phase-initiative:not(.is-pending) .phase-init-title { display: inline; }
+  .phase-label { font-size: 13px; }
+  .phase-card { gap: 12px; }
+}
 
 /* Panneau des joueurs : le joueur actif a un liseré + une forme à sa couleur et le mot « Joue ». */
 .hud-pc { border-left: 4px solid transparent; }
@@ -480,38 +503,13 @@ kbd {
 @media (max-width: 760px) {
   .setup-teams { grid-template-columns: 1fr; }
 }
-/* Variante compacte (fenêtre < 1500 px) : la zone entre les panneaux est étroite, le bandeau reste bas et sans débordement. */
-@media (max-width: 1499px) {
-  .hud-phase { --ph-node: 24px; --ph-node-current: 46px; --ph-slot: 50px; padding: 8px 10px; }
-  .phase-card { gap: 8px; }
-  .phase-turn { min-width: 0; padding: 4px 8px; margin-top: 2px; }
-  .phase-turn-label { font-size: 9px; }
-  .phase-turn-n { font-size: 22px; }
-  .phase-node { font-size: 11px; }
-  .phase-label { margin-top: 2px; font-size: 11px; }
-  .phase-sub { font-size: 11px; }
-  .phase-step.is-current .phase-label { font-size: 13px; }
-  .phase-step.is-current .phase-node { border-width: 2px; box-shadow: 0 0 0 4px rgba(224, 176, 64, 0.22), 0 0 14px rgba(224, 176, 64, 0.5); }
-  .phase-initiative { margin-top: 2px; padding: 4px 8px; gap: 6px; }
-  .phase-init-flag { width: 18px; height: 18px; }
-  .phase-init-title:not(:empty) { display: none; }
-  .phase-init-rolls { display: none; }
-  .phase-init-winner { font-size: 13px; }
-  .phase-initiative.is-pending .phase-init-title { display: block; font-size: 11px; white-space: normal; max-width: 6.5em; line-height: 1.15; }
-  .phase-lower { margin-top: 4px; gap: 4px; }
-  .phase-context { flex-basis: 100%; padding: 3px 8px; font-size: 13px; }
-  .phase-players { flex-basis: 100%; }
-  .phase-player { padding: 1px 8px; font-size: 12px; }
-  .hud-reaction { top: 176px; }
-}
+/* Variante compacte : le bandeau est déjà compact ; les requêtes de conteneur du bandeau adaptent le détail à la place disponible. */
 @media (prefers-reduced-motion: no-preference) {
   .hud-btn { transition: background 0.12s; }
   /* Activation d'une phase : transition douce (taille du nœud, halo, couleurs, segments) + brève impulsion si la phase vient d'avoir lieu. */
-  .phase-step { transition: flex-grow 0.4s ease, color 0.4s ease; }
-  .phase-step::before,
-  .phase-step::after { transition: background-color 0.4s ease; }
+  .phase-step { transition: color 0.4s ease; }
+  .phase-step::before { transition: background-color 0.4s ease; }
   .phase-node { transition: width 0.4s ease, height 0.4s ease, background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease; }
-  .phase-label { transition: font-size 0.3s ease; }
   .phase-step.is-fresh .phase-node { animation: phase-pulse 0.9s ease-out 1; }
   .phase-context { transition: border-color 0.4s ease; }
   .phase-player { transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease; }
@@ -519,7 +517,7 @@ kbd {
 }
 @keyframes phase-pulse {
   0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65); }
-  100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
 }
 /* Bascule « mouvement réduit » (touche R) : même effet que la préférence système. */
 :root[data-reduced-motion='true'] .phase-step,
