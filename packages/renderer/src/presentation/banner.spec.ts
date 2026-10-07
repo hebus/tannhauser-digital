@@ -20,8 +20,8 @@ describe('chooseBanner', () => {
   it('chaque type a une priorité, une icône et une durée raisonnable (bannière finale plus longue)', () => {
     for (const kind of BANNER_PRIORITY) {
       expect(BANNER_ICONS[kind]).toBeTruthy();
-      expect(BANNER_DURATIONS[kind]).toBeGreaterThanOrEqual(1200);
-      if (kind !== 'victory') expect(BANNER_DURATIONS[kind]).toBeLessThanOrEqual(1800);
+      expect(BANNER_DURATIONS[kind]).toBeGreaterThanOrEqual(2000);
+      if (kind !== 'victory') expect(BANNER_DURATIONS[kind]).toBeLessThanOrEqual(2800);
     }
     expect(BANNER_DURATIONS.victory).toBeGreaterThan(BANNER_DURATIONS.turnStart);
   });
