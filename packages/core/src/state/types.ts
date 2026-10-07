@@ -1,5 +1,6 @@
 import type { BoardState, NodeId } from '../board/types';
 import type { GameEvent } from '../events/events';
+import type { WeaponDefinition } from '../combat/weapons';
 import type { RngState } from '../rng/rng';
 
 export const STATE_SCHEMA_VERSION = 1;
@@ -55,6 +56,8 @@ export interface CharacterState {
    */
   readonly statRows: readonly CharacterStats[];
   readonly alive: boolean;
+  /** Armes possédées (définitions runtime sérialisables, copiées du contenu à la mise en place). */
+  readonly weapons?: readonly WeaponDefinition[];
   readonly activated: boolean;
   readonly movementLeft: number;
 }
@@ -96,7 +99,7 @@ export interface GameState {
 
 /** Caractéristiques courantes d'un personnage (ligne active selon la santé). */
 export function currentStats(character: CharacterState): CharacterStats {
-  const row = character.statRows[Math.max(0, character.statRows.length - character.health)];
+  const row = character.statRows[Math.min(character.statRows.length - 1, Math.max(0, character.statRows.length - character.health))];
   if (!row) throw new Error(`Aucune ligne de caractéristiques pour ${character.id}`);
   return row;
 }
