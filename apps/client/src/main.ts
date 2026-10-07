@@ -13,7 +13,9 @@ import {
 } from '@tannhauser/renderer';
 import type { GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
-import { GameFacade } from './game-facade';
+import type { GameFacade } from './game-facade';
+import { startFromSetup } from './ui/boot';
+import { mountUi } from './ui/mount';
 
 function showError(message: string): void {
   const el = document.getElementById('error');
@@ -31,7 +33,9 @@ async function main(): Promise<void> {
   await app.init({ resizeTo: window, background: 0x14161a, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
   host.appendChild(app.canvas);
 
-  const game = GameFacade.createDev();
+  // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
+  const game = await startFromSetup();
+  const ui = mountUi(game);
   const world = new Container();
   app.stage.addChild(world);
 
@@ -63,7 +67,11 @@ async function main(): Promise<void> {
     return k;
   };
   const fit = () => {
+    const { left, right } = ui.insets();
+    camera.resize(Math.max(200, app.screen.width - left - right), app.screen.height);
     camera.fit(boardView.bounds2D());
+    camera.pan(left, 0);
+    camera.resize(app.screen.width, app.screen.height);
     syncTextScale();
     updatePath();
   };
@@ -238,7 +246,7 @@ async function main(): Promise<void> {
       presentation.notify(`Ligne de vue : ${showLos ? 'affichée' : 'masquée'}`);
       return;
     }
-    if (key === 'm') {
+    if (key === 'r') {
       const reduced = reducedMotion.toggle();
       presentation.notify(`Mouvement réduit : ${reduced ? 'activé' : 'désactivé'}`);
       return;

@@ -1,8 +1,8 @@
 import { checkTargeting } from '../combat/attack';
 import { resolveAttackExchange } from '../combat/exchange';
 import { registerHandler, reject } from '../engine/apply-command';
-import type { GameEvent } from '../events/events';
-import type { GameState, TurnState } from '../state/types';
+import type { GameEvent, RuleError } from '../events/events';
+import type { CharacterState, GameState, TurnState } from '../state/types';
 import { endActivation } from '../turn/handlers';
 
 /** Retire la réaction en attente et l'état Overwatch du personnage (une seule réaction par Overwatch). */
@@ -22,17 +22,31 @@ function resolveReaction(state: GameState, overwatcherId: string): GameState {
 }
 
 /** OVERWATCH : action du personnage actif (son unique action de l'activation). */
-registerHandler('OVERWATCH', (state, command) => {
-  if (state.phase !== 'ACTIVATION') return reject('WRONG_PHASE', "Aucune phase d'activation en cours.");
-  if (state.turn.activePlayerId !== command.playerId) return reject('NOT_YOUR_TURN', "Ce n'est pas votre tour.");
-  const character = state.characters.find((c) => c.id === command.characterId);
-  if (!character) return reject('UNKNOWN_CHARACTER', `Personnage inconnu : ${command.characterId}.`);
-  if (character.playerId !== command.playerId) return reject('NOT_OWN_CHARACTER', "Ce personnage n'est pas à vous.");
-  if (!character.alive) return reject('CHARACTER_DEAD', 'Un personnage mort ne peut pas agir.');
+export type OverwatchActionCheck =
+  | { readonly ok: true; readonly character: CharacterState }
+  | { readonly ok: false; readonly errors: readonly RuleError[] };
+
+/** Conditions de la commande OVERWATCH (partagées avec `getLegalActions`). */
+export function checkOverwatchAction(state: GameState, playerId: string, characterId: string): OverwatchActionCheck {
+  const no = (code: string, message: string): OverwatchActionCheck => ({ ok: false, errors: [{ code, message }] });
+  if (state.phase !== 'ACTIVATION') return no('WRONG_PHASE', "Aucune phase d'activation en cours.");
+  if (state.turn.activePlayerId !== playerId) return no('NOT_YOUR_TURN', "Ce n'est pas votre tour.");
+  const character = state.characters.find((c) => c.id === characterId);
+  if (!character) return no('UNKNOWN_CHARACTER', `Personnage inconnu : ${characterId}.`);
+  if (character.playerId !== playerId) return no('NOT_OWN_CHARACTER', "Ce personnage n'est pas à vous.");
+  if (!character.alive) return no('CHARACTER_DEAD', 'Un personnage mort ne peut pas agir.');
   if (state.turn.activeCharacterId !== character.id) {
-    return reject('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
+    return no('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
   }
-  if (state.turn.actionUsed) return reject('ACTION_ALREADY_USED', 'Une seule action par activation : elle est déjà utilisée.');
+  if (state.turn.actionUsed) return no('ACTION_ALREADY_USED', 'Une seule action par activation : elle est déjà utilisée.');
+  if (character.overwatch) return no('ALREADY_OVERWATCH', 'Ce personnage est déjà en Overwatch.');
+  return { ok: true, character };
+}
+
+registerHandler('OVERWATCH', (state, command) => {
+  const checked = checkOverwatchAction(state, command.playerId, command.characterId);
+  if (!checked.ok) return { ok: false, errors: checked.errors };
+  const { character } = checked;
   return {
     ok: true,
     events: [{ type: 'OVERWATCH_PLACED', characterId: character.id }],
