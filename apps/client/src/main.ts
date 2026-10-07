@@ -60,6 +60,17 @@ async function main(): Promise<void> {
 
   let showIds = true;
   let boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
+  const doorSignature = (board: GameState['board']): string =>
+    Object.values(board.doors).map((d) => `${d.id}:${d.state}`).join('|');
+  let shownDoors = doorSignature(game.state.board);
+  /** Redessine le plateau (ids, état des portes) : une porte ouverte ou fermée doit changer de dessin. */
+  const rebuildBoardView = (): void => {
+    world.removeChild(boardView);
+    boardView.destroy({ children: true });
+    boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
+    world.addChildAt(boardView, 0);
+    shownDoors = doorSignature(game.state.board);
+  };
   const highlight = new HighlightLayer(game.state.board);
   const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
@@ -103,8 +114,47 @@ async function main(): Promise<void> {
     camera.fit(boardView.bounds2D());
     camera.pan(left, 0);
     camera.resize(app.screen.width, app.screen.height);
+    fitZoom = camera.zoom;
     syncTextScale();
     updatePath();
+  };
+
+  let fitZoom = camera.zoom;
+  let cameraTween: ((ticker: { deltaMS: number }) => void) | null = null;
+  const cancelCameraTween = (): void => {
+    if (cameraTween) app.ticker.remove(cameraTween);
+    cameraTween = null;
+  };
+  /** Centre la caméra sur un nœud (animation courte ; instantané en mouvement réduit). */
+  const focusNode = (nodeId: string): void => {
+    const n = game.state.board.nodes[nodeId];
+    if (!n) return;
+    const { left, right } = ui.insets();
+    const cx = left + (app.screen.width - left - right) / 2;
+    const cy = app.screen.height / 2;
+    const z = camera.zoom;
+    const tx = cx - n.x * z;
+    const ty = cy - n.y * z;
+    cancelCameraTween();
+    if (reducedMotion.value) {
+      world.position.set(tx, ty);
+      updatePath();
+      return;
+    }
+    const sx = world.x;
+    const sy = world.y;
+    let elapsed = 0;
+    const duration = 450;
+    const step = (ticker: { deltaMS: number }): void => {
+      elapsed += ticker.deltaMS;
+      const p = Math.min(1, elapsed / duration);
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      world.position.set(sx + (tx - sx) * e, sy + (ty - sy) * e);
+      updatePath();
+      if (p >= 1) cancelCameraTween();
+    };
+    cameraTween = step;
+    app.ticker.add(step);
   };
 
   const statusEl = document.getElementById('status');
@@ -156,7 +206,24 @@ async function main(): Promise<void> {
   const unsubscribeGame = game.subscribe((events, state) => {
     // Les animations sont lancées avant la mise à jour des pions (positions de départ) ; elles ne touchent pas à l'état.
     presentation.play(events, shown, state);
+    const before = shown;
     shown = state;
+    if (doorSignature(state.board) !== shownDoors) rebuildBoardView();
+    // Début d'une activation à venir : la caméra va vers le premier personnage activable de l'équipe qui joue,
+    // une fois les animations terminées (utile quand on a zoomé : plus besoin de chercher ses pions à la souris).
+    const awaitingSelection =
+      state.phase === 'ACTIVATION' &&
+      state.turn.activeCharacterId === undefined &&
+      (before.phase !== 'ACTIVATION' || before.turn.activePlayerId !== state.turn.activePlayerId || before.turn.activeCharacterId !== undefined);
+    if (awaitingSelection) {
+      presentation.onIdle(() => {
+        const cur = game.state;
+        if (cur.phase !== 'ACTIVATION' || cur.turn.activeCharacterId !== undefined) return;
+        const next = cur.characters.find((c) => c.playerId === cur.turn.activePlayerId && c.alive && !c.activated && !c.overwatch);
+        // Plateau entièrement visible (zoom de cadrage) : inutile de bouger la caméra.
+        if (next && camera.zoom > fitZoom * 1.1) focusNode(next.nodeId);
+      });
+    }
     for (const e of events) {
       const text = describeEvent(e);
       if (text) log(text);
@@ -302,10 +369,7 @@ async function main(): Promise<void> {
     if (key === 'c') fit();
     else if (key === 'i') {
       showIds = !showIds;
-      world.removeChild(boardView);
-      boardView.destroy({ children: true });
-      boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
-      world.addChildAt(boardView, 0);
+      rebuildBoardView();
     } else if (reaction && (key === 't' || key === 'd')) {
       const ow = s.characters.find((c) => c.id === reaction.overwatcherId);
       if (key === 'd') send({ type: 'OVERWATCH_DECLINE', playerId: reaction.forPlayerId });

@@ -174,18 +174,29 @@ export class BoardView extends Container {
         }
       }
     } else {
+      // Ouverte : le vantail pivote autour d'un montant et s'aligne le long du passage (vert), l'autre montant reste visible.
       const post = reinforced ? 6 : 4.5;
+      const leafLen = len * 0.82;
+      const dirX = Math.cos(d.edgeAngle);
+      const dirY = Math.sin(d.edgeAngle);
+      const leafEnd = { x: d.p1.x + dirX * leafLen, y: d.p1.y + dirY * leafLen };
+      // Arc de balayage (pointillé) entre la position fermée et la position ouverte.
+      const arcSteps = 7;
+      for (let i = 0; i < arcSteps; i += 2) {
+        const a0 = d.barAngle - (Math.PI / 2) * (i / arcSteps);
+        const a1 = d.barAngle - (Math.PI / 2) * ((i + 1) / arcSteps);
+        g.moveTo(d.p1.x + Math.cos(a0) * len, d.p1.y + Math.sin(a0) * len)
+          .lineTo(d.p1.x + Math.cos(a1) * len, d.p1.y + Math.sin(a1) * len)
+          .stroke({ width: 1.5, color: 0x7bd88f, alpha: 0.6 });
+      }
+      g.moveTo(d.p1.x, d.p1.y).lineTo(leafEnd.x, leafEnd.y).stroke({ width: (reinforced ? 8 : 6) + 3, color: 0x10240f, alpha: 0.9 });
+      g.moveTo(d.p1.x, d.p1.y).lineTo(leafEnd.x, leafEnd.y).stroke({ width: reinforced ? 8 : 6, color: 0x7bd88f });
+      if (reinforced) {
+        for (const t of [0.35, 0.65]) g.circle(d.p1.x + dirX * leafLen * t, d.p1.y + dirY * leafLen * t, 2).fill(0x10240f);
+      }
       for (const p of [d.p1, d.p2]) {
         g.circle(p.x, p.y, post).fill(0xe8c47c).stroke({ width: 1.5, color: 0x1a1100 });
         if (reinforced) g.circle(p.x, p.y, post + 4).stroke({ width: 1.5, color: 0xe8c47c });
-      }
-      const steps = 6;
-      for (let i = 0; i < steps; i += 2) {
-        const t0 = i / steps;
-        const t1 = (i + 1) / steps;
-        g.moveTo(d.p1.x + (d.p2.x - d.p1.x) * t0, d.p1.y + (d.p2.y - d.p1.y) * t0)
-          .lineTo(d.p1.x + (d.p2.x - d.p1.x) * t1, d.p1.y + (d.p2.y - d.p1.y) * t1)
-          .stroke({ width: reinforced ? 5 : 3.5, color: 0xe8c47c, alpha: 0.95 });
       }
     }
   }
