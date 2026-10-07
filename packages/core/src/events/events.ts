@@ -1,0 +1,26 @@
+/** Événements émis par le moteur (§83). Source unique pour animations, audio, replay, IA. */
+export type GameEvent =
+  | { readonly type: 'GAME_STARTED'; readonly scenarioId: string }
+  | { readonly type: 'TURN_STARTED'; readonly turn: number }
+  | { readonly type: 'COMMAND_POINTS_REFRESHED'; readonly playerId: string; readonly amount: number }
+  | { readonly type: 'INITIATIVE_ROLLED'; readonly rolls: Readonly<Record<string, number>>; readonly winnerId: string }
+  | { readonly type: 'CHARACTER_ACTIVATION_STARTED'; readonly characterId: string }
+  | { readonly type: 'CHARACTER_MOVED'; readonly characterId: string; readonly path: readonly string[]; readonly cost: number }
+  | { readonly type: 'CHARACTER_ACTIVATION_ENDED'; readonly characterId: string }
+  | { readonly type: 'TEST_RESOLVED'; readonly characterId: string; readonly dice: readonly number[]; readonly difficulty: number; readonly successes: number }
+  | { readonly type: 'ATTACK_DECLARED'; readonly attackerId: string; readonly targetId: string; readonly weaponId: string }
+  | { readonly type: 'COMBAT_ROLLED'; readonly attackerId: string; readonly dice: readonly number[]; readonly successes: number }
+  | { readonly type: 'ATTACK_HIT'; readonly attackerId: string; readonly targetId: string }
+  | { readonly type: 'ATTACK_MISSED'; readonly attackerId: string; readonly targetId: string }
+  | { readonly type: 'DAMAGE_APPLIED'; readonly targetId: string; readonly wounds: number; readonly healthLeft: number }
+  | { readonly type: 'CHARACTER_DEFEATED'; readonly characterId: string }
+  | { readonly type: 'TURN_ENDED'; readonly turn: number }
+  | { readonly type: 'PLAYER_PASSED'; readonly playerId: string }
+  | { readonly type: 'VICTORY'; readonly winnerId: string; readonly reason: string };
+
+export type GameEventType = GameEvent['type'];
+
+export interface RuleError {
+  readonly code: string;
+  readonly message: string;
+}

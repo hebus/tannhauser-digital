@@ -1,4 +1,4 @@
-import type { BoardState, ColorId, NodeId } from './types';
+import type { BoardState, NodeId } from './types';
 
 export interface LineOfSightContext {
   /** Nœuds actuellement sous fumée (TimedBoardEffect SMOKE) : coupent la ligne de vue. */
@@ -10,17 +10,14 @@ export interface LineOfSightContext {
 /**
  * Nœuds visibles depuis `from` (hors `from`).
  *
- * Modèle (RULE-LOS-001) : la vue se propage de proche en proche, sans tenir compte du sens
- * des arêtes, à travers les nœuds qui contiennent au moins une couleur du nœud d'origine.
- * Une porte fermée et la fumée (sauf équipement dédié) coupent la propagation.
- *
- * Questions ouvertes (docs/rules/open-questions.md) : réciprocité stricte, fumée sur la case
- * cible elle-même.
+ * Modèle (RULE-LOS-001, confirmé) : B est visible depuis A s'il existe une couleur
+ * présente sur TOUS les nœuds d'un chemin reliant A à B. La relation est donc réciproque.
+ * Le sens des arêtes est ignoré. Une porte fermée et la fumée (sauf équipement dédié)
+ * coupent le chemin.
  */
 export function visibleNodes(board: BoardState, from: NodeId, ctx: LineOfSightContext = {}): Set<NodeId> {
   const origin = board.nodes[from];
   if (!origin) throw new Error(`Nœud inconnu : ${from}`);
-  const colors: ReadonlySet<ColorId> = new Set(origin.colors);
   const smoke = ctx.ignoresSmoke ? undefined : ctx.smokeNodes;
 
   const neighbours = new Map<NodeId, NodeId[]>();
@@ -31,18 +28,20 @@ export function visibleNodes(board: BoardState, from: NodeId, ctx: LineOfSightCo
   }
 
   const visible = new Set<NodeId>();
-  const queue: NodeId[] = [from];
-  const seen = new Set<NodeId>([from]);
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    for (const next of neighbours.get(current) ?? []) {
-      if (seen.has(next)) continue;
-      seen.add(next);
-      const node = board.nodes[next];
-      if (!node || !node.colors.some((c) => colors.has(c))) continue;
-      if (smoke?.has(next)) continue;
-      visible.add(next);
-      queue.push(next);
+  for (const color of origin.colors) {
+    const seen = new Set<NodeId>([from]);
+    const queue: NodeId[] = [from];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const next of neighbours.get(current) ?? []) {
+        if (seen.has(next)) continue;
+        const node = board.nodes[next];
+        if (!node || !node.colors.includes(color)) continue;
+        if (smoke?.has(next)) continue;
+        seen.add(next);
+        visible.add(next);
+        queue.push(next);
+      }
     }
   }
   return visible;

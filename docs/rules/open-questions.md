@@ -2,14 +2,11 @@
 
 Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 
-## OQ-LOS-001 — Propagation de la ligne de vue
+## OQ-LOS-001 — Propagation de la ligne de vue (RÉSOLUE)
 
 - **Rule:** RULE-LOS-001 (ligne de vue par couleurs)
-- **Source:** précisions du product owner (« tous les nodes dans le path qui contiennent du rouge, du vert ou du bleu sont dans la ligne de vue »)
-- **Interpretation (actuelle):** la vue se propage de proche en proche depuis le nœud d'origine, à travers les nœuds contenant au moins une couleur de l'origine (`visibleNodes`).
-- **Reason:** formulation littérale ; la variante « couleur commune unique sur tout le chemin » n'est pas retenue sans confirmation.
-- **Impact:** la réciprocité `canSee(a,b) === canSee(b,a)` (spec §70) n'est pas garantie quand les ensembles de couleurs diffèrent.
-- **Test required:** `board.spec.ts` (3 couleurs / 1 couleur / aucune couleur commune) ; ajouter un test de réciprocité une fois tranché.
+- **Résolution (product owner) :** il faut toujours une couleur commune sur tout le chemin. B est visible depuis A s'il existe une couleur présente sur tous les nœuds d'un chemin A→B. Réciprocité garantie.
+- **Test:** `board.spec.ts` (couleur unique sur le chemin, réciprocité exhaustive).
 
 ## OQ-LOS-002 — Fumée sur la case cible
 

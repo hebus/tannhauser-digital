@@ -60,8 +60,31 @@ describe('ligne de vue par couleurs (RULE-LOS-001)', () => {
     .edge('a', 'b').edge('b', 'c').edge('c', 'd').edge('a', 'e')
     .build();
 
-  it('un nœud à 3 couleurs voit tous les nœuds portant au moins une de ses couleurs', () => {
-    expect([...visibleNodes(board, 'a')].sort()).toEqual(['b', 'c', 'e']);
+  it('un nœud à 3 couleurs voit les nœuds reliés par un chemin à couleur unique commune', () => {
+    // c(green) n'est pas relié à a par un chemin 100 % vert (b est rouge) : invisible.
+    expect([...visibleNodes(board, 'a')].sort()).toEqual(['b', 'e']);
+  });
+
+  it('exige une même couleur sur tout le chemin', () => {
+    const b2 = new BoardBuilder()
+      .node('a', ['red', 'green'])
+      .node('m', ['red', 'green'])
+      .node('z', ['green'])
+      .edge('a', 'm').edge('m', 'z')
+      .build();
+    expect(canSee(b2, 'a', 'z')).toBe(true);
+    const mixed = new BoardBuilder()
+      .node('a', ['red', 'green'])
+      .node('m', ['red'])
+      .node('z', ['green'])
+      .edge('a', 'm').edge('m', 'z')
+      .build();
+    expect(canSee(mixed, 'a', 'z')).toBe(false);
+  });
+
+  it('est réciproque', () => {
+    const ids = Object.keys(board.nodes);
+    for (const x of ids) for (const y of ids) expect(canSee(board, x, y)).toBe(canSee(board, y, x));
   });
 
   it('un nœud sans couleur commune n\'est pas visible', () => {
@@ -71,6 +94,7 @@ describe('ligne de vue par couleurs (RULE-LOS-001)', () => {
   it('un nœud à 1 couleur ne voit pas à travers un nœud d\'une autre couleur', () => {
     expect(canSee(board, 'b', 'c')).toBe(false);
     expect(canSee(board, 'b', 'a')).toBe(true);
+    expect(canSee(board, 'a', 'c')).toBe(false);
   });
 
   it('les arêtes à sens unique n\'affectent pas la ligne de vue', () => {
