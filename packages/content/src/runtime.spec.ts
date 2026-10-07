@@ -10,7 +10,7 @@ describe('createCharacterState', () => {
     const state = createCharacterState(hero, weapons, { playerId: 'p1', nodeId: 'n1' });
     expect(state.health).toBe(hero.statRows.length);
     expect(state.alive).toBe(true);
-    expect(state.weapons?.map((w) => w.id)).toEqual(['weapon.pistol', 'weapon.melee']);
+    expect(state.weapons?.map((w) => w.id)).toEqual(['weapon.pistol', 'weapon.melee', 'weapon.unarmed']);
     expect(currentStats(state)).toEqual(hero.statRows[0]);
     expect(state.movementLeft).toBe(hero.statRows[0]!.movement);
   });

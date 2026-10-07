@@ -304,10 +304,23 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** létalité ; à confirmer : la valeur, et une éventuelle dépendance à une caractéristique ou à l'équipement.
 - **Test required:** `attack.spec.ts` (réserve de défense configurable).
 
-## OQ-COMBAT-009 — Le pool d'attaque dépend-il de Combat ?
+## OQ-COMBAT-009 — Le pool d'attaque dépend-il de Combat ? (RÉSOLUE)
+
+- **Résolution (product owner, règles v2) :** le pool d'attaque est donné par un TABLEAU selon l'arme : sans arme 2 dés, corps à corps 4, pistolet 4, arme mentale 4, arme automatique 5. La difficulté dépend de la valeur de Combat courante du personnage (10 − Combat). Combat n'ajoute pas de dés.
+- **Implémentation :** valeurs dans `packages/content/src/data/weapons.json` (`weapon.unarmed` 2, `weapon.melee` 4, `weapon.pistol` 4, `weapon.mental` 4, `weapon.automatic` 5) ; l'attaque à mains nues est ajoutée à tout personnage par `createCharacterState`.
+- **Reste ouvert (OQ-COMBAT-010) :** l'attaque à mains nues est traitée comme du corps à corps (cible sur un nœud adjacent) ; à confirmer.
+- **Historique :**
 
 - **Rule:** RULE-COMBAT-003
 - **Interpretation (actuelle) :** pool = dés d'arme + bonus ; Combat ne fixe que la difficulté (10 − Combat). Prolonge OQ-COMBAT-004.
 - **Reason:** formulation ambiguë de la règle source.
 - **Impact:** équilibrage de toutes les attaques.
 - **Test required:** `attack.spec.ts` (taille du pool, difficulté).
+
+## OQ-COMBAT-010 — Portée de l'attaque à mains nues
+
+- **Rule:** RULE-COMBAT-003
+- **Interpretation (actuelle) :** sans arme, l'attaque est de type corps à corps (arête entre les deux nœuds, sens et porte ignorés), avec une réserve de 2 dés.
+- **Reason:** le tableau v2 donne 2 dés sans arme mais pas la portée.
+- **Impact:** tout personnage peut toujours attaquer un adversaire adjacent.
+- **Test required:** `runtime.spec.ts` (arme ajoutée), `attack.spec.ts` (corps à corps).

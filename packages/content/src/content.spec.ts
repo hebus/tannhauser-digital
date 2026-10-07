@@ -10,7 +10,9 @@ describe('contenu de développement', () => {
 
   it('se charge et se valide en entier', () => {
     expect(Object.keys(content.board.board.nodes)).toHaveLength(16);
-    expect(content.weapons.map((w) => w.dice)).toEqual([2, 4, 4, 5]);
+    // Tableau des réserves de dés (règles v2) : sans arme 2, corps à corps 4, pistolet 4, mental 4, automatique 5.
+    const dice = Object.fromEntries(content.weapons.map((w) => [w.id, w.dice]));
+    expect(dice).toEqual({ 'weapon.unarmed': 2, 'weapon.melee': 4, 'weapon.pistol': 4, 'weapon.mental': 4, 'weapon.automatic': 5 });
     expect(content.characters).toHaveLength(4);
   });
 

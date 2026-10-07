@@ -30,7 +30,7 @@ describe('GameFacade.targetable', () => {
     expect(targets.map((t) => t.targetId)).toEqual([enemyHero]);
     expect(targets[0]!.nodeId).toBe('n2');
     // Adjacent + ligne de vue : pistolet et corps à corps.
-    expect([...targets[0]!.weaponIds].sort()).toEqual(['weapon.melee', 'weapon.pistol']);
+    expect([...targets[0]!.weaponIds].sort()).toEqual(['weapon.melee', 'weapon.pistol', 'weapon.unarmed']);
   });
 
   it('exclut les ennemis hors ligne de vue et les alliés', () => {
