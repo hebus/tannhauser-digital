@@ -1,0 +1,40 @@
+# Glossaire
+
+Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CASE` ou kebab-case selon le type) ; les libellés localisés vivent hors moteur.
+
+| Terme canonique | Libellé FR | Définition technique |
+|---|---|---|
+| `character` | personnage | Unité jouable (héros, troupe, mercenaire) avec caractéristiques, santé, inventaire |
+| `faction` | faction | Camp d'appartenance (Union, Reich, Matriarchy, Shogunate) ; relations ALLY/ENEMY/NEUTRAL en données |
+| `node` | nœud / case | Sommet du graphe du plateau ; porte 1 à 3 couleurs |
+| `edge` | arête | Lien entre deux nœuds ; bidirectionnel ou à sens unique |
+| `color` | couleur | Étiquette de visibilité portée par les nœuds ; le plateau peut compter plus de 3 couleurs |
+| `zone` | zone | Regroupement de nœuds de déplacement ; les murs/portes séparent les zones |
+| `objective` | objectif | Élément de scénario/mode à accomplir (un ou deux stades) |
+| `flag` | drapeau | Marqueur planté/capturé selon le mode |
+| `weapon` | arme | Équipement d'attaque avec type de jet et réserve de dés |
+| `equipment` | équipement | Jeton d'inventaire, occupe un emplacement |
+| `action` | action (phase d'action) | Une action majeure par activation |
+| `move` | déplacement | Dépense de points de mouvement le long d'un chemin |
+| `attack` | attaque | Résolution d'un jet de combat contre une cible |
+| `defense` | défense | Succès adverses qui annulent des succès de l'attaquant (duel) |
+| `damage` / `wound` | dégât / blessure | Perte d'un niveau de santé |
+| `status` | statut | État temporaire (overwatch, blessé, etc.) |
+| `ability` / `competency` | capacité / compétence | Aptitude de données requise ou donnant un bonus |
+| `scenario` | scénario | Définition de contenu : carte, mise en place, objectifs, victoire |
+| `victory_condition` | condition de victoire | Prédicat évalué par le système de victoire |
+| `PC` (`commandPoints`) | points de commandement | Ressource tactique rafraîchie à chaque tour |
+| `PM` (`movementPoints`) | points de mouvement | Budget de déplacement d'une activation |
+| `LdM` / `LOS` | ligne de vue | Relation de visibilité réciproque entre deux nœuds |
+| `test` | test | Jet sans opposition |
+| `duel` | duel | Jets opposés |
+| `overwatch` | sur le qui-vive | Réaction préparée avant les activations |
+| `smoke` | fumée | Effet de plateau temporaire qui coupe la ligne de vue |
+| `door` | porte | Entité d'état OPEN/CLOSED sur une arête |
+| `portal` | portail | Lien non adjacent entre deux nœuds (porte secrète) |
+| `rubble` | gravats | Modificateur de coût de déplacement d'un nœud |
+| `modifier` | modificateur | Bonus/malus (dés supplémentaires, modificateur de résultat, réussite/échec auto) |
+
+## Valeurs de caractéristique
+
+Trois notions distinctes, jamais confondues dans le code : valeur **courante** (selon la santé), valeur **maximale** (niveau de santé le plus élevé), valeur **la plus haute de la colonne**. Voir `abilities.md`.
