@@ -1,7 +1,8 @@
-import type { GameState } from '@tannhauser/core';
+import type { GameMode, GameState } from '@tannhauser/core';
 import { h } from './dom';
 import { t } from './i18n';
 import type { Labeler } from './labels';
+import { modeRules } from './mode-rules';
 import { openNewSetup, replaySameSeed } from './session';
 
 const FOCUSABLE = 'button, [href], input, select, [tabindex]:not([tabindex="-1"])';
@@ -110,4 +111,41 @@ export function createEndScreen(root: HTMLElement): EndScreen {
       box.querySelector<HTMLElement>('button')?.focus();
     },
   };
+}
+
+export interface ModeRulesDialog {
+  toggle(): void;
+  close(): boolean;
+}
+
+/** Fenêtre « Règles du mode » : objectif et règles du mode de la partie, ouverte depuis le HUD (bouton ou touche V). */
+export function createModeRulesDialog(root: HTMLElement, mode: GameMode, onClose: () => void): ModeRulesDialog {
+  const info = modeRules(mode);
+  const overlay = h('div', { class: 'ui-overlay', attrs: { hidden: true } });
+  const box = h(
+    'div',
+    { class: 'ui-dialog', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'mode-rules-title' } },
+    h('h2', { class: 'ui-dialog-title', text: `${t('modeHelp.title')} — ${info.name}`, attrs: { id: 'mode-rules-title' } }),
+    h('p', { class: 'mode-goal' }, h('strong', { text: `${t('modeHelp.goalLabel')} : ` }), info.goal),
+    h('ul', { class: 'mode-rules' }, ...info.rules.map((r) => h('li', { text: r }))),
+    h('div', { class: 'ui-dialog-buttons' }, h('button', { class: 'hud-btn hud-btn-primary', text: t('modeHelp.close'), attrs: { type: 'button' }, on: { click: () => close() } })),
+  );
+  overlay.append(box);
+  trapFocus(box, () => close());
+  overlay.addEventListener('pointerdown', (e) => {
+    if (e.target === overlay) close();
+  });
+  root.append(overlay);
+
+  function open(): void {
+    overlay.hidden = false;
+    box.querySelector<HTMLElement>('button')?.focus();
+  }
+  function close(): boolean {
+    if (overlay.hidden) return false;
+    overlay.hidden = true;
+    onClose();
+    return true;
+  }
+  return { toggle: () => (overlay.hidden ? open() : void close()), close };
 }

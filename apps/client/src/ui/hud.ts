@@ -3,7 +3,9 @@ import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';
 import { reasonText, t } from './i18n';
+import { modeRules } from './mode-rules';
 import { createLabeler, type Labeler } from './labels';
+import { createModeRulesDialog } from './dialogs';
 import { createPhaseTracker, playerMarkStyle } from './phase-tracker';
 import { phaseModel } from './phase-model';
 
@@ -34,6 +36,8 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   const phase = createPhaseTracker();
   const left = h('div', { class: 'hud-left' }, statusPanel, actionsPanel);
   root.append(left, phase.element, reactionPanel, toastEl);
+  const mode = game.state.mode ?? 'DEATHMATCH';
+  const rulesDialog = createModeRulesDialog(root, mode, () => root.querySelector<HTMLElement>('[data-fid="mode-rules"]')?.focus());
 
   let menu: MenuKind | null = null;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -89,7 +93,16 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         return li;
       }),
     );
-    statusPanel.append(head, pcs);
+    statusPanel.append(
+      head,
+      h(
+        'div',
+        { class: 'hud-row hud-goal' },
+        h('span', { text: `🎯 ${modeRules(mode).goal}` }),
+        h('button', { class: 'hud-link', text: `${t('modeHelp.button')} (V)`, attrs: { type: 'button', 'data-fid': 'mode-rules' }, on: { click: () => rulesDialog.toggle() } }),
+      ),
+      pcs,
+    );
 
     if (m.character) {
       const c = m.character;
@@ -428,7 +441,11 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     if (event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) return false;
     const key = event.key.toLowerCase();
     const state = game.state;
-    if (key === 'escape') return closeMenu();
+    if (key === 'escape') return rulesDialog.close() || closeMenu();
+    if (key === 'v') {
+      rulesDialog.toggle();
+      return true;
+    }
     if (MAIN_HANDLED_KEYS.has(key) || state.turn.reaction || state.phase === 'FINISHED') return false;
     if (/^[1-9]$/.test(key) && state.phase === 'OVERWATCH') {
       const placement = placementModel(state, createLabeler(state));

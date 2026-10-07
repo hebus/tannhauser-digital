@@ -1,5 +1,6 @@
 import { h } from '../ui/dom';
 import { t } from '../ui/i18n';
+import { modeRules } from '../ui/mode-rules';
 import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
 
 export interface SetupScreenContent extends SetupContent {
@@ -33,9 +34,20 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
 
     const modeSelect = h(
       'select',
-      { class: 'setup-input', attrs: { id: 'setup-mode' }, on: { change: (e) => { mode = (e.target as HTMLSelectElement).value as typeof mode; } } },
+      { class: 'setup-input', attrs: { id: 'setup-mode' }, on: { change: (e) => { mode = (e.target as HTMLSelectElement).value as typeof mode; renderModeHelp(); } } },
       ...GAME_MODES.map((m) => h('option', { text: t(m.nameKey), attrs: { value: m.mode, selected: m.mode === mode } })),
     );
+
+    const modeHelp = h('div', { class: 'setup-mode-help', attrs: { 'aria-live': 'polite' } });
+    const renderModeHelp = (): void => {
+      const info = modeRules(mode);
+      modeHelp.textContent = '';
+      modeHelp.append(
+        h('p', { class: 'mode-goal' }, h('strong', { text: `${t('modeHelp.goalLabel')} : ` }), info.goal),
+        h('ul', { class: 'mode-rules' }, ...info.rules.map((r) => h('li', { text: r }))),
+      );
+    };
+    renderModeHelp();
 
     const teamFieldset = (playerId: string) =>
       h(
@@ -106,7 +118,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       h('h1', { class: 'ui-dialog-title', text: t('setup.title'), attrs: { id: 'setup-title' } }),
       h('p', { class: 'hud-note', text: t('setup.subtitle') }),
       h('div', { class: 'setup-field' }, h('label', { text: t('setup.board'), attrs: { for: 'setup-board' } }), boardSelect),
-      h('div', { class: 'setup-field' }, h('label', { text: t('setup.mode'), attrs: { for: 'setup-mode' } }), modeSelect),
+      h('div', { class: 'setup-field' }, h('label', { text: t('setup.mode'), attrs: { for: 'setup-mode' } }), modeSelect, modeHelp),
       h('div', { class: 'setup-teams' }, ...PLAYER_IDS.map(teamFieldset)),
       h(
         'div',
