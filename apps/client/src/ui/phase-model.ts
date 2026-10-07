@@ -13,13 +13,16 @@ export type PhaseStepStatus = 'done' | 'current' | 'upcoming';
 /** Ordre d'affichage (= ordre réel d'un tour, voir docs/rules/turn-structure.md). */
 export const PHASE_STEP_IDS: readonly PhaseStepId[] = ['refresh', 'initiative', 'overwatch', 'activation'];
 
-/** Pictogrammes (texte, masqués aux lecteurs d'écran) : la phase n'est jamais indiquée par la seule couleur. */
-export const PHASE_ICONS: Readonly<Record<PhaseStepId, string>> = { refresh: '↻', initiative: '⚑', overwatch: '◉', activation: '▶' };
+/** Pictogrammes (noms ; dessinés en SVG trait par `phase-tracker`, masqués aux lecteurs d'écran) : la phase n'est jamais indiquée par la seule couleur. */
+export type PhaseIconName = 'refresh' | 'flag' | 'eye' | 'play';
+export const PHASE_ICONS: Readonly<Record<PhaseStepId, PhaseIconName>> = { refresh: 'refresh', initiative: 'flag', overwatch: 'eye', activation: 'play' };
 
 export interface PhaseStep {
   readonly id: PhaseStepId;
   readonly label: string;
-  readonly icon: string;
+  readonly icon: PhaseIconName;
+  /** Numéro d'ordre (1 à 4), affiché dans le nœud d'une phase à venir. */
+  readonly number: number;
   readonly status: PhaseStepStatus;
   /** Libellé accessible de l'état (« en cours », « terminée », « à venir »). */
   readonly statusText: string;
@@ -27,15 +30,53 @@ export interface PhaseStep {
   readonly detail: string | null;
   /** Index (dans `GameState.players`) du joueur mis en avant dans `detail` (gagnant de l'initiative), pour son marqueur forme+couleur. */
   readonly detailPlayerIndex: number | null;
+  /** Sous-ligne de l'étape COURANTE uniquement (« Joueur 1 décide », « Joueur 2 joue », « Joueur 1 commence »). */
+  readonly subline: string | null;
   /** Phase instantanée dont un événement vient de passer dans le dernier lot (mise en valeur brève). */
   readonly fresh: boolean;
 }
 
+/** Pastille d'initiative, visible pendant tout le tour : « à venir » tant que le tirage n'a pas eu lieu. */
+export interface InitiativeBadge {
+  readonly decided: boolean;
+  /** Index (dans `GameState.players`) du gagnant, pour son marqueur forme+couleur. */
+  readonly playerIndex: number | null;
+  readonly playerName: string | null;
+  /** Jets, gagnant d'abord (« 8 – 4 »), ou null. */
+  readonly rolls: string | null;
+  /** Texte des jets prêt à afficher (« jets 8 – 4 »), ou null. */
+  readonly rollsText: string | null;
+}
+
+/** Capsule de PC d'un joueur. Aucune règle : état Overwatch / à activer compté depuis `GameState`. */
+export interface PlayerCapsule {
+  readonly id: string;
+  readonly index: number;
+  readonly name: string;
+  readonly commandPoints: number;
+  readonly pcText: string;
+  readonly active: boolean;
+  readonly initiative: boolean;
+  /** Personnages vivants en Overwatch. */
+  readonly overwatchCount: number;
+  /** Personnages vivants pas encore activés ce tour. */
+  readonly toActivateCount: number;
+  /** « 1 en Overwatch », « 2 à activer »… ou null quand rien d'utile à dire (phase instantanée, mise en place, fin). */
+  readonly stateText: string | null;
+}
+
 export interface PhaseModel {
+  /** Numéro du tour (null avant le premier tour). */
+  readonly turnNumber: number | null;
+  readonly initiative: InitiativeBadge;
+  readonly players: readonly PlayerCapsule[];
+  readonly activePlayerName: string | null;
   readonly steps: readonly PhaseStep[];
   readonly currentId: PhaseStepId | null;
-  /** Ligne contextuelle sous la frise. */
+  /** Ligne contextuelle sous la frise (phrase complète, avec le nom du joueur). */
   readonly context: string;
+  /** Consigne seule : la phrase contextuelle sans le nom du joueur qui a la main (affiché à part, avec son marqueur). */
+  readonly instruction: string;
   /** Joueur à qui c'est la main (index dans `GameState.players`), ou null. */
   readonly activePlayerIndex: number | null;
 }
@@ -94,6 +135,12 @@ export function phaseContext(state: GameState, labels: Labeler): string {
   }
 }
 
+/** Retire le nom du joueur en tête d'une phrase contextuelle (« Joueur 1 : activez… » → « activez… »). */
+export function withoutLeadingName(context: string, name: string | null): string {
+  if (!name || !context.startsWith(name)) return context;
+  return context.slice(name.length).replace(/^[\s:,–-]+/, '');
+}
+
 /** Jets du dernier tirage d'initiative du tour courant (le gagnant d'abord, ex. « 7 – 1 »), lus dans l'historique. */
 export function lastInitiativeRolls(state: GameState): string | null {
   for (let i = state.history.length - 1; i >= 0; i -= 1) {
@@ -106,6 +153,51 @@ export function lastInitiativeRolls(state: GameState): string | null {
     }
   }
   return null;
+}
+
+/** Sous-ligne de l'étape courante (qui décide, qui joue, qui commence). */
+export function stepSubline(state: GameState, labels: Labeler, id: PhaseStepId): string | null {
+  const reaction = state.turn.reaction;
+  const player = state.turn.activePlayerId ? labels.player(state.turn.activePlayerId) : null;
+  switch (id) {
+    case 'refresh':
+      return t('phase.sub.refresh');
+    case 'initiative': {
+      const winner = state.turn.initiativePlayerId;
+      return winner && state.phase !== 'INITIATIVE' ? t('phase.sub.starts', { player: labels.player(winner) }) : t('phase.sub.rolling');
+    }
+    case 'overwatch':
+      return player ? t('phase.sub.decides', { player }) : null;
+    case 'activation':
+      if (reaction) return t('phase.sub.decides', { player: labels.player(reaction.forPlayerId) });
+      return player ? t('phase.sub.plays', { player }) : null;
+  }
+}
+
+function capsules(state: GameState, labels: Labeler, activeId: string | null): PlayerCapsule[] {
+  const live = state.phase !== 'SETUP' && state.phase !== 'FINISHED';
+  return state.players.map((p, index): PlayerCapsule => {
+    const mine = state.characters.filter((c) => c.alive && c.playerId === p.id);
+    const overwatchCount = mine.filter((c) => c.overwatch === true).length;
+    const toActivateCount = mine.filter((c) => !c.activated).length;
+    const parts: string[] = [];
+    if (state.phase === 'OVERWATCH' || state.phase === 'ACTIVATION') {
+      if (state.phase === 'ACTIVATION') parts.push(toActivateCount > 0 ? t('phase.capsule.toActivate', { n: toActivateCount }) : t('phase.capsule.allActivated'));
+      if (overwatchCount > 0) parts.push(t('phase.detail.overwatch', { n: overwatchCount }));
+    }
+    return {
+      id: p.id,
+      index,
+      name: labels.player(p.id),
+      commandPoints: p.commandPoints,
+      pcText: t('status.pc', { n: p.commandPoints }),
+      active: p.id === activeId && state.phase !== 'FINISHED',
+      initiative: live && p.id === state.turn.initiativePlayerId,
+      overwatchCount,
+      toActivateCount,
+      stateText: parts.length > 0 ? parts.join(' · ') : null,
+    };
+  });
 }
 
 export function phaseModel(state: GameState, labels: Labeler, recent: readonly GameEvent[] = []): PhaseModel {
@@ -131,19 +223,38 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
       id,
       label: t(`phase.${id}`),
       icon: PHASE_ICONS[id],
+      number: i + 1,
       status,
       statusText: t(`phase.status.${status}`),
       detail,
       detailPlayerIndex,
+      subline: status === 'current' ? stepSubline(state, labels, id) : null,
       fresh: FRESH_EVENTS[id].some((type) => recentTypes.has(type)),
     };
   });
   const activeId = state.phase === 'FINISHED' ? null : (state.turn.reaction?.forPlayerId ?? state.turn.activePlayerId);
   const index = activeId ? state.players.findIndex((p) => p.id === activeId) : -1;
+  const initiativeStep = steps[1]!;
+  const winnerId = state.turn.initiativePlayerId;
+  const decided = initiativeStep.status !== 'upcoming' && winnerId !== null;
+  const rolls = decided ? lastInitiativeRolls(state) : null;
+  const context = phaseContext(state, labels);
+  const activeName = activeId && state.phase !== 'FINISHED' ? labels.player(activeId) : null;
   return {
+    turnNumber: state.phase === 'SETUP' || state.turn.number < 1 ? null : state.turn.number,
+    initiative: {
+      decided,
+      playerIndex: decided ? initiativeStep.detailPlayerIndex : null,
+      playerName: decided && winnerId ? labels.player(winnerId) : null,
+      rolls,
+      rollsText: rolls ? t('phase.initiative.rolls', { rolls }) : null,
+    },
+    players: capsules(state, labels, activeId),
+    activePlayerName: activeName,
     steps,
     currentId: current >= 0 && current < PHASE_STEP_IDS.length ? PHASE_STEP_IDS[current]! : null,
-    context: phaseContext(state, labels),
+    context,
+    instruction: withoutLeadingName(context, activeName),
     activePlayerIndex: index >= 0 ? index : null,
   };
 }

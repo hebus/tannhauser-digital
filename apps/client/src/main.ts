@@ -49,6 +49,13 @@ async function main(): Promise<void> {
   } else {
     game = await startFromSetup();
   }
+  // Débogage de la frise des phases : `?debugPhase=activation` fait passer les joueurs (PASS_OVERWATCH) jusqu'à la
+  // phase d'activation, pour la voir sans jouer. Commandes ordinaires, aucune règle contournée.
+  if (new URLSearchParams(location.search).get('debugPhase') === 'activation') {
+    for (let guard = 0; guard < 8 && game.state.phase === 'OVERWATCH' && game.state.turn.activePlayerId; guard += 1) {
+      game.dispatch({ type: 'PASS_OVERWATCH', playerId: game.state.turn.activePlayerId });
+    }
+  }
   let presentationRef: Presentation | null = null;
   const ui = mountUi(game, {
     whenIdle: (callback) => (presentationRef ? presentationRef.onIdle(callback) : callback()),
@@ -109,10 +116,10 @@ async function main(): Promise<void> {
     return k;
   };
   const fit = () => {
-    const { left, right } = ui.insets();
-    camera.resize(Math.max(200, app.screen.width - left - right), app.screen.height);
+    const { left, right, top } = ui.insets();
+    camera.resize(Math.max(200, app.screen.width - left - right), Math.max(200, app.screen.height - top));
     camera.fit(boardView.bounds2D());
-    camera.pan(left, 0);
+    camera.pan(left, top);
     camera.resize(app.screen.width, app.screen.height);
     fitZoom = camera.zoom;
     syncTextScale();
@@ -129,9 +136,9 @@ async function main(): Promise<void> {
   const focusNode = (nodeId: string): void => {
     const n = game.state.board.nodes[nodeId];
     if (!n) return;
-    const { left, right } = ui.insets();
+    const { left, right, top } = ui.insets();
     const cx = left + (app.screen.width - left - right) / 2;
-    const cy = app.screen.height / 2;
+    const cy = top + (app.screen.height - top) / 2;
     const z = camera.zoom;
     const tx = cx - n.x * z;
     const ty = cy - n.y * z;

@@ -5,7 +5,7 @@ import type { BannerKind, BannerPlan } from '@tannhauser/renderer';
 import { bannerText } from './banner-text';
 import { EN, FR, setLocale, t } from './i18n';
 import { createLabeler } from './labels';
-import { PHASE_STEP_IDS, currentStepIndex, lastInitiativeRolls, phaseContext, phaseModel } from './phase-model';
+import { PHASE_STEP_IDS, currentStepIndex, lastInitiativeRolls, phaseContext, phaseModel, withoutLeadingName } from './phase-model';
 
 const rows = [{ combat: 7, physical: 5, mental: 5, movement: 4 }];
 const char = (id: string, playerId: string, nodeId: string, extra: Partial<CharacterState> = {}): CharacterState => ({
@@ -108,6 +108,122 @@ describe('ligne contextuelle', () => {
   it('joueur actif : index dans la liste des joueurs', () => {
     const s = game('ACTIVATION', { activePlayerId: 'p1' });
     expect(phaseModel(s, createLabeler(s)).activePlayerIndex).toBe(0);
+  });
+});
+
+const withRolls = (s: GameState): GameState =>
+  ({ ...s, history: [{ type: 'TURN_STARTED', turn: 1 }, { type: 'INITIATIVE_ROLLED', rolls: { p1: 4, p2: 8 }, winnerId: 'p2' }] }) as GameState;
+const subline = (s: GameState): string | null => phaseModel(s, createLabeler(s)).steps.find((x) => x.status === 'current')?.subline ?? null;
+
+describe('bandeau : numéro de tour, sous-ligne, pastille d’initiative, capsules de PC', () => {
+  it('numéro de tour : null avant le premier tour, sinon le numéro courant', () => {
+    expect(phaseModel(game('SETUP', { number: 0 }), createLabeler(game('SETUP'))).turnNumber).toBeNull();
+    expect(phaseModel(game('OVERWATCH', { number: 3 }), createLabeler(game('OVERWATCH'))).turnNumber).toBe(3);
+  });
+
+  it('sous-ligne : seulement sur l’étape courante, selon la phase', () => {
+    expect(subline(game('REFRESH'))).toBe('PC rendus');
+    expect(subline(game('INITIATIVE', { initiativePlayerId: null }))).toBe('Jet en cours');
+    expect(subline(game('OVERWATCH', { activePlayerId: 'p1' }))).toBe('Joueur 1 décide');
+    expect(subline(game('ACTIVATION', { activePlayerId: 'p2' }))).toBe('Joueur 2 joue');
+    expect(subline(game('ACTIVATION', { activePlayerId: 'p1', reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } }))).toBe('Joueur 2 décide');
+    const s = game('OVERWATCH');
+    expect(phaseModel(s, createLabeler(s)).steps.filter((x) => x.subline !== null).map((x) => x.id)).toEqual(['overwatch']);
+    expect(phaseModel(game('FINISHED'), createLabeler(game('FINISHED'))).steps.every((x) => x.subline === null)).toBe(true);
+    expect(phaseModel(game('SETUP'), createLabeler(game('SETUP'))).steps.every((x) => x.subline === null)).toBe(true);
+  });
+
+  it('numéros d’ordre des étapes : 1 à 4', () => {
+    const s = game('OVERWATCH');
+    expect(phaseModel(s, createLabeler(s)).steps.map((x) => x.number)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('initiative : « à venir » avant le tirage, gagnant + jets ensuite, et pendant tout le tour', () => {
+    for (const phase of ['SETUP', 'REFRESH'] as const) {
+      const s = game(phase);
+      expect(phaseModel(s, createLabeler(s)).initiative).toMatchObject({ decided: false, playerName: null, playerIndex: null, rolls: null, rollsText: null });
+    }
+    for (const phase of ['OVERWATCH', 'ACTIVATION', 'END_OF_TURN'] as const) {
+      const s = withRolls(game(phase));
+      expect(phaseModel(s, createLabeler(s)).initiative).toEqual({ decided: true, playerIndex: 1, playerName: 'Joueur 2', rolls: '8 – 4', rollsText: 'jets 8 – 4' });
+    }
+    // Sans jets lisibles dans l'historique : gagnant connu, pas de jets.
+    const noRolls = game('ACTIVATION');
+    expect(phaseModel(noRolls, createLabeler(noRolls)).initiative).toMatchObject({ decided: true, playerName: 'Joueur 2', rolls: null, rollsText: null });
+  });
+
+  it('capsules de PC : PC, joueur actif, initiative, Overwatch posés et personnages à activer', () => {
+    const chars = [
+      char('h1', 'p1', 'a', { overwatch: true }),
+      char('t1', 'p1', 'a', { activated: true }),
+      char('dead', 'p1', 'a', { alive: false, overwatch: true }),
+      char('e1', 'p2', 'b'),
+      char('e2', 'p2', 'b'),
+    ];
+    const ow = game('OVERWATCH', { activePlayerId: 'p1' }, chars);
+    const m = phaseModel(ow, createLabeler(ow));
+    expect(m.players.map((p) => [p.name, p.pcText, p.active, p.initiative, p.overwatchCount, p.toActivateCount, p.stateText])).toEqual([
+      ['Joueur 1', '2 PC', true, false, 1, 1, '1 en Overwatch'],
+      ['Joueur 2', '2 PC', false, true, 0, 2, null],
+    ]);
+    const act = game('ACTIVATION', { activePlayerId: 'p2' }, chars);
+    expect(phaseModel(act, createLabeler(act)).players.map((p) => [p.active, p.stateText])).toEqual([
+      [false, '1 à activer · 1 en Overwatch'],
+      [true, '2 à activer'],
+    ]);
+    const allDone = game('ACTIVATION', {}, [char('h1', 'p1', 'a', { activated: true }), char('e1', 'p2', 'b', { activated: true })]);
+    expect(phaseModel(allDone, createLabeler(allDone)).players.map((p) => p.stateText)).toEqual(['tous activés', 'tous activés']);
+  });
+
+  it('capsules : réaction = le joueur qui répond est actif ; aucun état à la mise en place ni à la fin', () => {
+    const reacting = game('ACTIVATION', { activePlayerId: 'p1', reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } });
+    expect(phaseModel(reacting, createLabeler(reacting)).players.map((p) => p.active)).toEqual([false, true]);
+    for (const phase of ['SETUP', 'FINISHED'] as const) {
+      const s = game(phase);
+      const m = phaseModel(s, createLabeler(s));
+      expect(m.players.some((p) => p.active && phase === 'FINISHED')).toBe(false);
+      expect(m.players.every((p) => p.stateText === null)).toBe(true);
+    }
+  });
+
+  it('consigne : la phrase contextuelle sans le nom du joueur qui a la main', () => {
+    expect(withoutLeadingName('Joueur 1 : activez un personnage', 'Joueur 1')).toBe('activez un personnage');
+    expect(withoutLeadingName('Joueur 2 décide : Overwatch (1 PC) ou passer', 'Joueur 2')).toBe('décide : Overwatch (1 PC) ou passer');
+    expect(withoutLeadingName('Fin du tour.', 'Joueur 1')).toBe('Fin du tour.');
+    expect(withoutLeadingName('Fin du tour.', null)).toBe('Fin du tour.');
+    const s = game('ACTIVATION', { activePlayerId: 'p1' });
+    expect(phaseModel(s, createLabeler(s))).toMatchObject({ context: 'Joueur 1 : activez un personnage', instruction: 'activez un personnage', activePlayerName: 'Joueur 1' });
+  });
+
+  it('état par phase de SETUP à FINISHED : un modèle cohérent à chaque phase, en français et en anglais', () => {
+    for (const locale of ['fr', 'en'] as const) {
+      setLocale(locale);
+      for (const phase of ['SETUP', 'REFRESH', 'INITIATIVE', 'OVERWATCH', 'ACTIVATION', 'END_OF_TURN', 'FINISHED'] as const) {
+        const s = withRolls(game(phase));
+        const m = phaseModel(s, createLabeler(s));
+        expect(m.steps).toHaveLength(4);
+        expect(m.players).toHaveLength(2);
+        expect(m.context).not.toBe('');
+        expect(JSON.stringify(m)).not.toMatch(/\{\w+\}|phase\.|status\./);
+        expect(m.steps.filter((x) => x.subline !== null).length).toBe(m.currentId ? 1 : 0);
+      }
+    }
+    setLocale('fr');
+  });
+});
+
+describe('i18n du bandeau : clés françaises et anglaises identiques', () => {
+  // Périmètre : bandeau des phases (`phase.*`). L'anglais complet des autres écrans n'est pas l'objet de ce test.
+  it('mêmes clés phase.* dans FR et EN, mêmes paramètres, aucune valeur vide', () => {
+    const own = (m: Record<string, string>): string[] => Object.keys(m).filter((k) => k.startsWith('phase.')).sort();
+    expect(own(EN)).toEqual(own(FR));
+    expect(own(FR).length).toBeGreaterThan(30);
+    const params = (v: string): string[] => [...v.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort();
+    for (const key of own(FR)) {
+      expect(FR[key]!.trim(), key).not.toBe('');
+      expect(EN[key]!.trim(), key).not.toBe('');
+      expect(params(EN[key]!), key).toEqual(params(FR[key]!));
+    }
   });
 });
 

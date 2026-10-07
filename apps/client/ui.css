@@ -11,6 +11,8 @@
   --ui-bad: #ff8a80;
   --ui-focus: #8ab4ff;
   --ui-radius: 8px;
+  --hud-left-w: 292px;
+  --hud-right-w: 340px;
   font-size: 16px;
 }
 
@@ -151,7 +153,7 @@ kbd {
 .hud-reaction {
   position: absolute;
   left: 50%;
-  top: 128px;
+  top: 196px;
   transform: translateX(-50%);
   width: min(420px, calc(100vw - 700px));
   min-width: 300px;
@@ -187,68 +189,183 @@ kbd {
 .player-mark { color: var(--pc, var(--ui-accent)); font-size: 1.05em; line-height: 1; }
 .player-mark[hidden] { display: none; }
 
-/* Frise des phases du tour : phase courante nettement mise en évidence (fond plein, icône, gras, taille), jamais par la seule couleur. */
+/* Bandeau des phases du tour (carte) : badge de tour, frise connectée, pastille d'initiative, ligne de contexte, capsules de PC.
+   La phase courante se distingue par la taille, le halo, le libellé gras et la sous-ligne, jamais par la seule couleur. */
 .hud-phase {
+  --ph-bg: #181b21;
+  --ph-edge: #2c313b;
+  --ph-line: #3a404c;
+  --ph-text: #e8eaf0;
+  --ph-muted: #9aa1ae;
+  --ph-amber: #e0b040;
+  --ph-green: #7fd18b;
+  --ph-node: 30px;
+  --ph-node-current: 60px;
+  --ph-slot: 64px;
   position: absolute;
-  left: 50%;
   top: 10px;
-  transform: translateX(-50%);
-  width: min(560px, calc(100vw - 720px));
-  min-width: 440px;
+  /* Entre les panneaux gauche et droit ; marge auto : centré et plafonné en largeur sur les grands écrans. */
+  left: calc(var(--hud-left-w) + 20px);
+  right: calc(var(--hud-right-w) + 20px);
+  max-width: 940px;
+  margin-inline: auto;
   box-sizing: border-box;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
-  border-radius: var(--ui-radius);
-  padding: 8px 10px 8px;
+  background: var(--ph-bg);
+  border: 1px solid var(--ph-edge);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--ph-text);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
-.phase-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
+.hud-phase [hidden] { display: none; }
+.phase-card { display: flex; align-items: flex-start; gap: 14px; }
+
+.phase-turn {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 4px;
+  min-width: 56px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  text-align: center;
+  border: 1px solid var(--ph-edge);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.phase-turn-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ph-muted); }
+.phase-turn-n { display: block; font-size: 30px; line-height: 1.05; font-weight: 800; }
+
+.phase-steps { flex: 1 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; }
 .phase-step {
+  position: relative;
   flex: 1 1 0;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--ui-muted);
-  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+  padding: 0 2px;
+  color: var(--ph-muted);
 }
-.phase-icon { flex: 0 0 auto; width: 1.3em; text-align: center; font-size: 15px; }
-.phase-text { display: flex; flex-direction: column; min-width: 0; }
-.phase-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
-.phase-detail { font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
-.phase-detail[hidden] { display: none; }
-/* Initiative : le gagnant doit se repérer d'un coup d'œil (marqueur forme+couleur, texte en gras, retour à la ligne plutôt que « … »). */
-.phase-step[data-phase='initiative'].has-detail { flex-grow: 1.8; }
-.phase-step[data-phase='initiative'] .phase-detail { font-weight: 700; opacity: 1; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }
-.phase-step[data-phase='initiative'] .phase-detail .player-mark { font-size: 1.25em; }
-.phase-step.is-done { color: var(--ui-text); background: rgba(127, 209, 139, 0.1); border-color: rgba(127, 209, 139, 0.35); }
-.phase-step.is-done .phase-check { color: var(--ui-ok); }
-.phase-step.is-upcoming { border-style: dashed; border-color: var(--ui-border); }
-.phase-step.is-current {
-  flex-grow: 1.35;
-  color: var(--ui-accent-text);
-  background: var(--ui-accent);
-  border-color: #fff3c4;
-  box-shadow: 0 0 0 2px rgba(224, 176, 64, 0.35), 0 3px 12px rgba(224, 176, 64, 0.35);
+.phase-step.is-current { flex-grow: 2; }
+/* Segments : chaque nœud trace sa moitié gauche et sa moitié droite ; vert quand la phase qui précède est terminée. */
+.phase-step::before,
+.phase-step::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--ph-slot) / 2 - 2px);
+  width: 50%;
+  height: 4px;
+  background: var(--ph-line);
 }
-.phase-step.is-current .phase-title { font-size: 15px; font-weight: 800; }
-.phase-step.is-current .phase-icon { font-size: 18px; }
-.phase-context {
+.phase-step::before { left: 0; }
+.phase-step::after { right: 0; }
+.phase-step:first-child::before,
+.phase-step:last-child::after { display: none; }
+.phase-step.is-linked::before,
+.phase-step.is-done::after { background: var(--ph-green); }
+
+.phase-node-slot { position: relative; z-index: 1; height: var(--ph-slot); display: flex; align-items: center; justify-content: center; }
+.phase-node {
+  width: var(--ph-node);
+  height: var(--ph-node);
+  box-sizing: border-box;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ph-bg);
+  border: 2px dashed #6b7384;
+  color: var(--ph-muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+.phase-glyph,
+.phase-tick { display: none; width: 56%; height: 56%; }
+.phase-num { display: block; }
+
+.phase-label { margin-top: 4px; max-width: 100%; font-size: 12.5px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.phase-sub { margin-top: 2px; font-size: 12px; font-weight: 600; line-height: 1.2; color: var(--ph-amber); }
+
+.phase-step.is-done { color: var(--ph-text); }
+.phase-step.is-done .phase-node { background: var(--ph-green); border: 2px solid var(--ph-green); color: #0d2412; }
+.phase-step.is-done .phase-tick { display: block; stroke-width: 3; }
+.phase-step.is-done .phase-num,
+.phase-step.is-current .phase-num { display: none; }
+.phase-step.is-current { color: var(--ph-text); }
+.phase-step.is-current .phase-node {
+  width: var(--ph-node-current);
+  height: var(--ph-node-current);
+  background: var(--ph-amber);
+  border: 3px solid #fff3c4;
+  color: #1a1400;
+  box-shadow: 0 0 0 6px rgba(224, 176, 64, 0.22), 0 0 20px rgba(224, 176, 64, 0.55);
+}
+.phase-step.is-current .phase-glyph { display: block; width: 52%; height: 52%; }
+.phase-step.is-current .phase-label { font-size: 16px; font-weight: 800; }
+
+/* Pastille d'initiative : visible pendant tout le tour (gagnant : forme + nom + jets), en pointillé avant le tirage. */
+.phase-initiative {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 4px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 8px 0 0;
-  padding: 4px 8px 4px 10px;
-  font-size: 14px;
-  font-weight: 600;
-  border-left: 4px solid var(--pc, var(--ui-border));
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 0 4px 4px 0;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--ph-amber);
+  border-radius: 10px;
+  background: rgba(224, 176, 64, 0.1);
 }
+.phase-initiative.is-pending { border: 1px dashed #6b7384; background: transparent; color: var(--ph-muted); }
+.phase-init-flag { flex: 0 0 auto; width: 22px; height: 22px; color: var(--ph-amber); }
+.phase-initiative.is-pending .phase-init-flag { color: var(--ph-muted); }
+.phase-init-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.phase-init-title { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ph-amber); }
+.phase-initiative.is-pending .phase-init-title { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ph-muted); }
+.phase-init-winner { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: var(--ph-text); white-space: nowrap; }
+.phase-init-winner .player-mark { font-size: 1.3em; }
+.phase-init-rolls { font-size: 12px; font-weight: 600; color: var(--ph-muted); white-space: nowrap; }
+
+.phase-lower { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
+.phase-context {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-left: 4px solid var(--pc, var(--ph-line));
+  border-radius: 0 6px 6px 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+.phase-context .player-mark { font-size: 1.25em; }
+.phase-context-name { font-weight: 800; white-space: nowrap; }
+.phase-context-sep { color: var(--ph-muted); }
+.phase-context-text { font-weight: 500; min-width: 0; }
+
+.phase-players { flex: 0 0 auto; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.phase-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 3px 10px;
+  border: 1px solid var(--ph-edge);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.phase-player-name { font-weight: 600; }
+.phase-player-pc { font-weight: 800; padding-left: 6px; border-left: 1px solid var(--ph-line); }
+.phase-player-state { color: var(--ph-muted); }
+.phase-player.is-active { border-color: var(--pc, var(--ph-amber)); box-shadow: inset 0 0 0 1px var(--pc, var(--ph-amber)); background: rgba(255, 255, 255, 0.09); }
+.phase-player-playing { font-weight: 800; font-size: 11px; line-height: 1.4; padding: 0 7px; border: 1px solid var(--ph-text); border-radius: 999px; }
 
 /* Panneau des joueurs : le joueur actif a un liseré + une forme à sa couleur et le mot « Joue ». */
 .hud-pc { border-left: 4px solid transparent; }
@@ -355,6 +472,7 @@ kbd {
 .setup-errors .setup-errors-title { font-weight: 700; }
 
 @media (max-width: 1100px) {
+  :root { --hud-left-w: 260px; --hud-right-w: 290px; }
   .hud-left { width: 260px; }
   .hud-right { width: 290px; }
   .hud-reaction, .hud-toast { max-width: min(420px, calc(100vw - 600px)); }
@@ -362,14 +480,41 @@ kbd {
 @media (max-width: 760px) {
   .setup-teams { grid-template-columns: 1fr; }
 }
+/* Variante compacte (fenêtre < 1500 px) : la zone entre les panneaux est étroite, le bandeau reste bas et sans débordement. */
+@media (max-width: 1499px) {
+  .hud-phase { --ph-node: 24px; --ph-node-current: 46px; --ph-slot: 50px; padding: 8px 10px; }
+  .phase-card { gap: 8px; }
+  .phase-turn { min-width: 0; padding: 4px 8px; margin-top: 2px; }
+  .phase-turn-label { font-size: 9px; }
+  .phase-turn-n { font-size: 22px; }
+  .phase-node { font-size: 11px; }
+  .phase-label { margin-top: 2px; font-size: 11px; }
+  .phase-sub { font-size: 11px; }
+  .phase-step.is-current .phase-label { font-size: 13px; }
+  .phase-step.is-current .phase-node { border-width: 2px; box-shadow: 0 0 0 4px rgba(224, 176, 64, 0.22), 0 0 14px rgba(224, 176, 64, 0.5); }
+  .phase-initiative { margin-top: 2px; padding: 4px 8px; gap: 6px; }
+  .phase-init-flag { width: 18px; height: 18px; }
+  .phase-init-title:not(:empty) { display: none; }
+  .phase-init-rolls { display: none; }
+  .phase-init-winner { font-size: 13px; }
+  .phase-initiative.is-pending .phase-init-title { display: block; font-size: 11px; white-space: normal; max-width: 6.5em; line-height: 1.15; }
+  .phase-lower { margin-top: 4px; gap: 4px; }
+  .phase-context { flex-basis: 100%; padding: 3px 8px; font-size: 13px; }
+  .phase-players { flex-basis: 100%; }
+  .phase-player { padding: 1px 8px; font-size: 12px; }
+  .hud-reaction { top: 176px; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .hud-btn { transition: background 0.12s; }
-  /* Activation d'une phase : transition douce (couleurs, ombre, largeur) + brève impulsion si la phase vient d'avoir lieu. */
-  .phase-step {
-    transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, flex-grow 0.4s ease;
-  }
-  .phase-step.is-fresh { animation: phase-pulse 0.9s ease-out 1; }
+  /* Activation d'une phase : transition douce (taille du nœud, halo, couleurs, segments) + brève impulsion si la phase vient d'avoir lieu. */
+  .phase-step { transition: flex-grow 0.4s ease, color 0.4s ease; }
+  .phase-step::before,
+  .phase-step::after { transition: background-color 0.4s ease; }
+  .phase-node { transition: width 0.4s ease, height 0.4s ease, background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease; }
+  .phase-label { transition: font-size 0.3s ease; }
+  .phase-step.is-fresh .phase-node { animation: phase-pulse 0.9s ease-out 1; }
   .phase-context { transition: border-color 0.4s ease; }
+  .phase-player { transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease; }
   .hud-pc { transition: border-color 0.3s ease, background-color 0.3s ease; }
 }
 @keyframes phase-pulse {
@@ -378,7 +523,12 @@ kbd {
 }
 /* Bascule « mouvement réduit » (touche R) : même effet que la préférence système. */
 :root[data-reduced-motion='true'] .phase-step,
+:root[data-reduced-motion='true'] .phase-step::before,
+:root[data-reduced-motion='true'] .phase-step::after,
+:root[data-reduced-motion='true'] .phase-node,
+:root[data-reduced-motion='true'] .phase-label,
 :root[data-reduced-motion='true'] .phase-context,
+:root[data-reduced-motion='true'] .phase-player,
 :root[data-reduced-motion='true'] .hud-pc,
 :root[data-reduced-motion='true'] .hud-btn {
   transition: none;

@@ -10,8 +10,8 @@ import { interceptRefusals, watchIgnoredInput } from './refusals';
 import { t } from './i18n';
 
 export interface UiHandle {
-  /** Largeur occupée par les panneaux latéraux (px) : à déduire de la zone de cadrage de la caméra. */
-  insets(): { left: number; right: number };
+  /** Espace occupé par les panneaux latéraux et le bandeau des phases en haut (px) : à déduire de la zone de cadrage de la caméra. */
+  insets(): { left: number; right: number; top: number };
 }
 
 /**
@@ -91,7 +91,8 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
     insets: () => {
       const l = root.querySelector('.hud-left')?.getBoundingClientRect();
       const r = right.getBoundingClientRect();
-      return { left: Math.round(l?.right ?? 0), right: Math.round(window.innerWidth - r.left) };
+      const p = root.querySelector('.hud-phase')?.getBoundingClientRect();
+      return { left: Math.round(l?.right ?? 0), right: Math.round(window.innerWidth - r.left), top: Math.round(p ? p.bottom + 6 : 0) };
     },
   };
 }
