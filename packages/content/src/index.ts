@@ -15,3 +15,4 @@ export function loadDevContent() {
   const board = loadBoard(devBoardJson, 'dev-board');
   return { factions, weapons, characters, board };
 }
+export * from './runtime';
