@@ -395,6 +395,7 @@ kbd {
 .hud-pc-name { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hud-pc.is-active { border-left-color: var(--pc, var(--ui-accent)); }
 .hud-pc-initiative { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(224, 176, 64, 0.2); border: 1px solid var(--ui-accent); color: var(--ui-text); white-space: nowrap; }
+.hud-pc-flags { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid #f0c040; color: var(--ui-text); white-space: nowrap; }
 .hud-pc-ai { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid var(--ui-muted, #9aa1ae); color: var(--ui-muted, #9aa1ae); letter-spacing: 0.04em; }
 .hud-pc-playing { font-size: 12px; font-weight: 700; padding: 0 6px; border: 1px solid var(--pc, var(--ui-accent)); border-radius: 999px; }
 

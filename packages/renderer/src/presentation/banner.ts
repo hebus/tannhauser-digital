@@ -12,6 +12,8 @@ export interface BannerPlan {
   /** Réaction d'Overwatch : tireur et cible. */
   readonly overwatcherId?: string;
   readonly targetId?: string;
+  /** Victoire : raison renvoyée par le moteur (ex. `CTF_FLAGS_PLANTED`), pour préciser le sous-titre. */
+  readonly reason?: string;
 }
 
 /** Textes d'une bannière : titre principal + sous-titre explicatif. */

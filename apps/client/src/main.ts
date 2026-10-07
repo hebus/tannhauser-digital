@@ -3,7 +3,9 @@ import {
   BoardView,
   Camera,
   CharacterLayer,
+  FlagLayer,
   HighlightLayer,
+  LAYOUT_NODE_RADIUS,
   NODE_RADIUS,
   OverlayLayer,
   Presentation,
@@ -82,6 +84,7 @@ async function main(): Promise<void> {
   const highlight = new HighlightLayer(game.state.board);
   const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
+  const flags = new FlagLayer(game.layout ? LAYOUT_NODE_RADIUS : NODE_RADIUS);
   const reducedMotion = new ReducedMotion();
   // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
   // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
@@ -100,7 +103,7 @@ async function main(): Promise<void> {
   syncReducedMotionAttr(reducedMotion.value);
   const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
   presentationRef = presentation;
-  world.addChild(boardView, highlight, overlays, characters, presentation.worldLayer);
+  world.addChild(boardView, highlight, overlays, flags, characters, presentation.worldLayer);
   app.stage.addChild(presentation.screenLayer);
 
   // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
@@ -192,6 +195,7 @@ async function main(): Promise<void> {
   const refresh = () => {
     const s = game.state;
     characters.update(s);
+    flags.update(s);
     const active = activeCharacter();
     const reachable = active && !s.turn.reaction ? game.reachable(active.id) : [];
     reachableNow = reachable;
@@ -289,6 +293,12 @@ async function main(): Promise<void> {
       const entry = game.targetable(active.id).find((t) => t.targetId === enemy.id);
       const weaponId = entry?.weaponIds[0] ?? active.weapons?.[0]?.id;
       if (weaponId) send({ type: 'ATTACK', playerId: player, attackerId: active.id, targetId: enemy.id, weaponId });
+      return;
+    }
+    // Capture du drapeau : cliquer un drapeau ennemi au sol (sa case ou une case voisine) le récupère si le moteur l'autorise.
+    const flagHere = (s.flags ?? []).find((f) => f.location.kind === 'NODE' && f.location.nodeId === nodeId && f.ownerId !== player);
+    if (flagHere && getLegalActions(s, active.id).some((a) => a.id === 'CAPTURE_FLAG' && a.available && a.details?.flagIds?.includes(flagHere.id))) {
+      send({ type: 'CAPTURE_FLAG', playerId: player, characterId: active.id, flagId: flagHere.id });
       return;
     }
     const target = game.reachable(active.id).find((r) => r.nodeId === nodeId);

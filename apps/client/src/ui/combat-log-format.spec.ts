@@ -100,6 +100,22 @@ describe('journal de combat', () => {
     expect(formatEvent({ type: 'VICTORY', winnerId: 'p1', reason: 'x' }, labels)).toMatchObject({ tone: 'victory', text: 'Victoire de Joueur 1 !' });
   });
 
+  it('événements de drapeau : une ligne lisible (propriétaire retrouvé dans l’état)', () => {
+    const withFlags = createLabeler({ ...state, flags: [{ id: 'f2', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'b' } }] });
+    expect(formatEvent({ type: 'FLAG_PLACED', flagId: 'f2', ownerId: 'p2', nodeId: 'b' }, withFlags)?.text).toBe('Drapeau de Joueur 2 posé en b.');
+    expect(formatEvent({ type: 'FLAG_CAPTURED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'b' }, withFlags)?.text).toBe('Héros Alpha récupère le drapeau de Joueur 2 (b).');
+    expect(formatEvent({ type: 'FLAG_DROPPED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'a' }, withFlags)?.text).toBe('Héros Alpha laisse tomber le drapeau de Joueur 2 en a.');
+    expect(formatEvent({ type: 'FLAG_PLANTED', flagId: 'f2', characterId: 'char.alpha.hero', playerId: 'p1', nodeId: 'a' }, withFlags)?.text).toBe('Héros Alpha plante le drapeau de Joueur 2 dans le camp de Joueur 1 (a).');
+    // Drapeau inconnu de l'état : on affiche son id plutôt que rien.
+    expect(formatEvent({ type: 'FLAG_CAPTURED', flagId: 'zz', characterId: 'char.alpha.hero', nodeId: 'b' }, labels)?.text).toContain('zz');
+  });
+
+  it('les événements de drapeau ont leur texte en anglais, et la raison de victoire par drapeaux est traduite', () => {
+    expect(t('log.event.FLAG_PLANTED', { character: 'A', owner: 'B', player: 'C', node: 'n' }, 'en')).toBe('A plants B’s flag in C’s camp (n).');
+    expect(t('end.reason.CTF_FLAGS_PLANTED')).not.toBe('end.reason.CTF_FLAGS_PLANTED');
+    expect(t('end.reason.CTF_FLAGS_PLANTED', undefined, 'en')).toMatch(/flags/);
+  });
+
   it('un refus du moteur est une entrée visible', () => {
     expect(refusalEntry('Impossible : aucun ennemi à portée.')).toMatchObject({ kind: 'refusal', text: '✖ Impossible : aucun ennemi à portée.' });
   });

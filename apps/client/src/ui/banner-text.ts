@@ -1,5 +1,5 @@
 import type { BannerPlan, BannerText } from '@tannhauser/renderer';
-import { t } from './i18n';
+import { hasKey, t } from './i18n';
 import type { Labeler } from './labels';
 
 /** Titre + sous-titre (localisés) des bannières animées du plateau. Pur : plan + noms lisibles → textes. */
@@ -28,7 +28,8 @@ export function bannerText(plan: BannerPlan, labels: Labeler): BannerText {
     case 'victory':
       return {
         title: t('banner.victory.title'),
-        subtitle: player ? t('banner.victory.subtitle', { player }) : t('banner.victory.subtitleNoPlayer'),
+        // Sous-titre propre à la raison de victoire quand il existe (ex. drapeaux plantés), sinon le texte générique.
+        subtitle: player ? t(plan.reason && hasKey(`banner.victory.subtitle.${plan.reason}`) ? `banner.victory.subtitle.${plan.reason}` : 'banner.victory.subtitle', { player }) : t('banner.victory.subtitleNoPlayer'),
       };
   }
 }

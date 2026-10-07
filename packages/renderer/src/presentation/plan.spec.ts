@@ -99,7 +99,36 @@ describe('planPresentation', () => {
     ];
     const steps = planPresentation(events, at(1, 'p1', 'ACTIVATION'), at(1, 'p2', 'FINISHED'));
     expect(steps.map((s) => s.kind)).toEqual(['damage', 'defeat', 'banner']);
-    expect(banners(steps)).toEqual([{ kind: 'victory', turn: 1, playerId: 'p1' }]);
+    expect(banners(steps)).toEqual([{ kind: 'victory', turn: 1, playerId: 'p1', reason: 'elimination' }]);
+  });
+
+  describe('Capture du drapeau', () => {
+    const ctf = { ...state(1, 'p1'), players: [{ id: 'p1' }, { id: 'p2' }], flags: [{ id: 'f2', ownerId: 'p2', location: { kind: 'CARRIED', characterId: 'h1' } }] } as unknown as GameState;
+
+    it('pose, ramassage, dépôt, plantage : une étape par événement, avec l index du propriétaire du drapeau', () => {
+      const events: GameEvent[] = [
+        { type: 'FLAG_PLACED', flagId: 'f1', ownerId: 'p1', nodeId: 'n1' },
+        { type: 'FLAG_CAPTURED', flagId: 'f2', characterId: 'h1', nodeId: 'n2' },
+        { type: 'FLAG_DROPPED', flagId: 'f2', characterId: 'h1', nodeId: 'n3' },
+        { type: 'FLAG_PLANTED', flagId: 'f2', characterId: 'h1', playerId: 'p1', nodeId: 'e1' },
+      ];
+      expect(planPresentation(events, null, ctf)).toEqual([
+        { kind: 'flagPlaced', flagId: 'f1', ownerIndex: 0, nodeId: 'n1' },
+        { kind: 'flagCaptured', flagId: 'f2', ownerIndex: 1, characterId: 'h1', nodeId: 'n2' },
+        { kind: 'flagDropped', flagId: 'f2', ownerIndex: 1, characterId: 'h1', nodeId: 'n3' },
+        { kind: 'flagPlanted', flagId: 'f2', ownerIndex: 1, characterId: 'h1', nodeId: 'e1' },
+      ]);
+    });
+
+    it('propriétaire inconnu (drapeau absent de l état) : index 0 plutôt qu une erreur', () => {
+      const steps = planPresentation([{ type: 'FLAG_CAPTURED', flagId: '?', characterId: 'h1', nodeId: 'n2' }], null, state(1, 'p1'));
+      expect(steps).toEqual([{ kind: 'flagCaptured', flagId: '?', ownerIndex: 0, characterId: 'h1', nodeId: 'n2' }]);
+    });
+
+    it('la victoire par drapeaux transmet sa raison à la bannière', () => {
+      const steps = planPresentation([{ type: 'VICTORY', winnerId: 'p1', reason: 'CTF_FLAGS_PLANTED' }], at(1, 'p1', 'ACTIVATION'), at(1, 'p1', 'FINISHED'));
+      expect(banners(steps)).toEqual([{ kind: 'victory', turn: 1, playerId: 'p1', reason: 'CTF_FLAGS_PLANTED' }]);
+    });
   });
 
   it('ignore les événements sans présentation et ne mute pas l état', () => {

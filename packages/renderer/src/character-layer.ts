@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { currentStats, type CharacterState, type GameState } from '@tannhauser/core';
 import { NODE_RADIUS } from './board-view';
+import { carriedOwnerIndexes } from './flag-model';
 import { PLAYER_COLORS } from './palette';
 import type { Point } from './presentation/path-geometry';
 
@@ -34,6 +35,30 @@ export function drawBody(g: Graphics, shape: number, r: number, color: number, s
       break;
   }
   g.fill(color).stroke({ width: strokeWidth, color: strokeColor });
+}
+
+/**
+ * Fanion de drapeau, pied du mât à l'origine du conteneur. Le propriétaire se lit à la couleur ET à l'emblème
+ * (la forme de son pion sur l'étoffe) ; un drapeau planté ajoute un socle doré et un mât doré.
+ */
+export function createPennant(ownerIndex: number, scale = 1, planted = false): Container {
+  const root = new Container();
+  const height = 28;
+  const pole = new Graphics();
+  pole.moveTo(0, 0).lineTo(0, -height).stroke({ width: 4.5, color: 0x111111, cap: 'round' });
+  pole.moveTo(0, 0).lineTo(0, -height).stroke({ width: 2, color: planted ? 0xf0c040 : 0xf1f3f5, cap: 'round' });
+  if (planted) pole.roundRect(-6, -2, 12, 5, 2).fill(0xf0c040).stroke({ width: 1.5, color: 0x111111 });
+  root.addChild(pole);
+  const cloth = new Graphics();
+  const color = PLAYER_COLORS[ownerIndex % PLAYER_COLORS.length]!;
+  cloth.poly([0, -height, 17, -height + 7, 0, -height + 14]).fill(color).stroke({ width: 2, color: 0x111111, join: 'round' });
+  root.addChild(cloth);
+  const emblem = new Graphics();
+  drawBody(emblem, ownerIndex, 3, 0xffffff, 1, 0x111111);
+  emblem.position.set(5.5, -height + 7);
+  root.addChild(emblem);
+  root.scale.set(scale);
+  return root;
 }
 
 /**
@@ -181,6 +206,13 @@ export class CharacterLayer extends Container {
     initials.anchor.set(0.5);
     initials.scale.set(this.textScale);
     root.addChild(initials);
+
+    // Drapeaux portés : un fanion par drapeau, accroché au flanc du pion (il suit donc ses déplacements).
+    carriedOwnerIndexes(state, c.id).forEach((owner, i) => {
+      const pennant = createPennant(owner, 0.8);
+      pennant.position.set(r * 0.85 + i * 9, r * 0.55);
+      root.addChild(pennant);
+    });
 
     if (c.alive) {
       const max = c.statRows.length;
