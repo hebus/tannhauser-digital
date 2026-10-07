@@ -25,6 +25,8 @@ export interface PhaseStep {
   readonly statusText: string;
   /** Précision lue dans l'état (ex. qui a l'initiative, nombre d'Overwatch posés). */
   readonly detail: string | null;
+  /** Index (dans `GameState.players`) du joueur mis en avant dans `detail` (gagnant de l'initiative), pour son marqueur forme+couleur. */
+  readonly detailPlayerIndex: number | null;
   /** Phase instantanée dont un événement vient de passer dans le dernier lot (mise en valeur brève). */
   readonly fresh: boolean;
 }
@@ -92,6 +94,20 @@ export function phaseContext(state: GameState, labels: Labeler): string {
   }
 }
 
+/** Jets du dernier tirage d'initiative du tour courant (le gagnant d'abord, ex. « 7 – 1 »), lus dans l'historique. */
+export function lastInitiativeRolls(state: GameState): string | null {
+  for (let i = state.history.length - 1; i >= 0; i -= 1) {
+    const e = state.history[i]!;
+    if (e.type === 'TURN_STARTED') return null;
+    if (e.type === 'INITIATIVE_ROLLED') {
+      const winnerRoll = e.rolls[e.winnerId];
+      const others = Object.entries(e.rolls).filter(([id]) => id !== e.winnerId).map(([, v]) => v).sort((a, b) => b - a);
+      return winnerRoll === undefined ? null : [winnerRoll, ...others].join(' – ');
+    }
+  }
+  return null;
+}
+
 export function phaseModel(state: GameState, labels: Labeler, recent: readonly GameEvent[] = []): PhaseModel {
   const current = currentStepIndex(state);
   const recentTypes = new Set(recent.map((e) => e.type));
@@ -99,8 +115,15 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
   const steps = PHASE_STEP_IDS.map((id, i): PhaseStep => {
     const status: PhaseStepStatus = i < current ? 'done' : i === current ? 'current' : 'upcoming';
     let detail: string | null = null;
+    let detailPlayerIndex: number | null = null;
     if (id === 'initiative' && status !== 'upcoming' && state.turn.initiativePlayerId) {
-      detail = t('phase.detail.initiative', { player: labels.player(state.turn.initiativePlayerId) });
+      const winner = state.turn.initiativePlayerId;
+      const rolls = lastInitiativeRolls(state);
+      detail = rolls
+        ? t('phase.detail.initiativeRolls', { player: labels.player(winner), rolls })
+        : t('phase.detail.initiative', { player: labels.player(winner) });
+      const index = state.players.findIndex((p) => p.id === winner);
+      detailPlayerIndex = index >= 0 ? index : null;
     } else if (id === 'overwatch' && status !== 'upcoming' && owCount > 0) {
       detail = t('phase.detail.overwatch', { n: owCount });
     }
@@ -111,6 +134,7 @@ export function phaseModel(state: GameState, labels: Labeler, recent: readonly G
       status,
       statusText: t(`phase.status.${status}`),
       detail,
+      detailPlayerIndex,
       fresh: FRESH_EVENTS[id].some((type) => recentTypes.has(type)),
     };
   });

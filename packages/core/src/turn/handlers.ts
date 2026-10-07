@@ -3,7 +3,7 @@ import { registerHandler, reject } from '../engine/apply-command';
 import type { CharacterState, GameState, PlayerId } from '../state/types';
 import { CommandPointService } from './command-points';
 import { rollInitiative } from './initiative';
-import { nextPlayerWithActivation, startTurn, turnWithoutActivation } from './start-turn';
+import { nextPlayerWithActivation, settleOverwatchPhase, startTurn, turnWithoutActivation } from './start-turn';
 import type { RandomSource } from '../rng/rng';
 
 /** Coût en PC de la relance d'initiative (§66.2, §75). */
@@ -151,12 +151,9 @@ registerHandler('REROLL_INITIATIVE', (state, command, rng) => {
   const events: GameEvent[] = [spent.event, { type: 'INITIATIVE_ROLLED', rolls, winnerId }];
   if (winnerId !== previousWinnerId) events.push({ type: 'INITIATIVE_CHANGED', previousWinnerId, winnerId });
 
-  return {
-    ok: true,
-    events,
-    state: {
-      ...spent.state,
-      turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
-    },
+  const rerolled: GameState = {
+    ...spent.state,
+    turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
   };
+  return { ok: true, events, state: settleOverwatchPhase(rerolled, events, rng) };
 });

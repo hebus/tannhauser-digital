@@ -31,8 +31,8 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `test` | test | Jet sans opposition |
 | `duel` | duel | Jets opposés |
 | `overwatch` | sur le qui-vive | État pris pendant la phase Overwatch pour 1 PC (le personnage n'est pas activé ce tour) : un adversaire qui entre dans sa ligne de vue en se déplaçant s'arrête, ou qui tente de bouger/agir depuis sa ligne de vue est interrompu ; l'attaque d'opportunité est optionnelle |
-| `placement` | placement (phase OVERWATCH) | Phase entre l'initiative et les activations où, à tour de rôle (gagnant de l'initiative d'abord), chaque joueur place UN SEUL personnage en Overwatch (1 PC) ou passe ; elle s'achève quand les deux joueurs passent consécutivement |
-| `pass_overwatch` | passe (phase OVERWATCH) | Décision de ne placer aucun personnage en Overwatch (commande `PASS_OVERWATCH`, événement `OVERWATCH_PASSED`) ; deux passes consécutives (`turn.overwatchPasses`) terminent la phase (`OVERWATCH_PHASE_ENDED`) |
+| `placement` | placement (phase OVERWATCH) | Phase entre l'initiative et les activations où, à tour de rôle (gagnant de l'initiative d'abord), chaque joueur place UN SEUL personnage en Overwatch (1 PC) ou passe ; elle s'achève quand les deux joueurs passent consécutivement ; un joueur qui ne peut plus placer (moins de 1 PC ou aucun personnage éligible) passe automatiquement |
+| `pass_overwatch` | passe (phase OVERWATCH) | Décision de ne placer aucun personnage en Overwatch (commande `PASS_OVERWATCH`, événement `OVERWATCH_PASSED`, avec `auto: true` pour une passe automatique) ; deux passes consécutives (`turn.overwatchPasses`) terminent la phase (`OVERWATCH_PHASE_ENDED`) |
 | `reaction` | réaction | Interruption d'une activation adverse (`turn.reaction`) : le joueur en Overwatch tire (attaque d'opportunité) ou renonce, puis l'activation reprend ; la commande adverse annoncée (déplacement/action) est alors exécutée |
 | `smoke` | fumée | Effet de plateau temporaire qui coupe la ligne de vue |
 | `door` | porte | Entité d'état OPEN/CLOSED sur une arête |

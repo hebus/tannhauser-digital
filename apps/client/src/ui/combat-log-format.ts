@@ -60,7 +60,7 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
     case 'COMMAND_POINTS_SPENT':
       return info('log.event.COMMAND_POINTS_SPENT', { player: labels.player(e.playerId), amount: e.amount, purpose: e.purpose, remaining: e.remaining });
     case 'OVERWATCH_PASSED':
-      return info('log.event.OVERWATCH_PASSED', { player: labels.player(e.playerId) });
+      return info(e.auto ? 'log.event.OVERWATCH_PASSED_AUTO' : 'log.event.OVERWATCH_PASSED', { player: labels.player(e.playerId) });
     case 'OVERWATCH_PHASE_ENDED':
       return info('log.event.OVERWATCH_PHASE_ENDED', {});
     case 'OVERWATCH_RESUME_REFUSED':

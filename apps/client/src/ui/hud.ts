@@ -76,7 +76,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         const li = h(
           'li',
           { class: `hud-pc${p.active ? ' is-active' : ''}`, attrs: { 'aria-current': p.active ? 'true' : undefined } },
-          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null),
+          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null, p.initiative ? h('span', { class: 'hud-pc-initiative', text: `⚑ ${t('status.initiative')}` }) : null),
           h('b', { text: t('status.pc', { n: p.commandPoints }) }),
         );
         li.style.setProperty('--pc', mark.color);

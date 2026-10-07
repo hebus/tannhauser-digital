@@ -221,6 +221,10 @@ kbd {
 .phase-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
 .phase-detail { font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
 .phase-detail[hidden] { display: none; }
+/* Initiative : le gagnant doit se repérer d'un coup d'œil (marqueur forme+couleur, texte en gras, retour à la ligne plutôt que « … »). */
+.phase-step[data-phase='initiative'].has-detail { flex-grow: 1.8; }
+.phase-step[data-phase='initiative'] .phase-detail { font-weight: 700; opacity: 1; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }
+.phase-step[data-phase='initiative'] .phase-detail .player-mark { font-size: 1.25em; }
 .phase-step.is-done { color: var(--ui-text); background: rgba(127, 209, 139, 0.1); border-color: rgba(127, 209, 139, 0.35); }
 .phase-step.is-done .phase-check { color: var(--ui-ok); }
 .phase-step.is-upcoming { border-style: dashed; border-color: var(--ui-border); }
@@ -250,6 +254,7 @@ kbd {
 .hud-pc { border-left: 4px solid transparent; }
 .hud-pc-name { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hud-pc.is-active { border-left-color: var(--pc, var(--ui-accent)); }
+.hud-pc-initiative { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(224, 176, 64, 0.2); border: 1px solid var(--ui-accent); color: var(--ui-text); white-space: nowrap; }
 .hud-pc-playing { font-size: 12px; font-weight: 700; padding: 0 6px; border: 1px solid var(--pc, var(--ui-accent)); border-radius: 999px; }
 
 .hud-toast {

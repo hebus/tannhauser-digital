@@ -37,6 +37,7 @@ export const FR: Messages = {
   'status.seed.copied': 'Lien copié.',
   'status.hint.select': 'Choisissez un personnage à activer.',
   'status.playing': 'Joue',
+  'status.initiative': 'Initiative',
 
   // Frise des phases du tour (HUD)
   'phase.track': 'Phases du tour',
@@ -48,6 +49,7 @@ export const FR: Messages = {
   'phase.status.current': 'en cours',
   'phase.status.upcoming': 'à venir',
   'phase.detail.initiative': '{player} d’abord',
+  'phase.detail.initiativeRolls': '{player} commence (jets {rolls})',
   'phase.detail.overwatch': '{n} en Overwatch',
   'phase.context.setup': 'Mise en place de la partie.',
   'phase.context.refresh': 'Début de tour : les PC sont rendus.',
@@ -163,6 +165,7 @@ export const FR: Messages = {
   'log.event.OVERWATCH_TRIGGERED.announced': 'Overwatch : {overwatcher} voit {target} en {node} avant son action ({action}).',
   'log.event.COMMAND_POINTS_SPENT': '{player} dépense {amount} PC ({purpose}) : {remaining} restant(s).',
   'log.event.OVERWATCH_PASSED': '{player} passe (aucun Overwatch).',
+  'log.event.OVERWATCH_PASSED_AUTO': '{player} passe automatiquement : plus rien à placer en Overwatch.',
   'log.event.OVERWATCH_PHASE_ENDED': 'Phase Overwatch terminée : les activations commencent.',
   'log.event.OVERWATCH_RESUME_REFUSED': 'Action annoncée annulée ({command}) : {message}',
   'log.event.OVERWATCH_RESOLVED.fired': "{overwatcher} tire en réaction.",
@@ -296,6 +299,7 @@ export const EN: Messages = {
   'status.seed.copied': 'Link copied.',
   'status.hint.select': 'Pick a character to activate.',
   'status.playing': 'Playing',
+  'status.initiative': 'Initiative',
 
   // Turn phase tracker (HUD)
   'phase.track': 'Turn phases',
@@ -307,6 +311,7 @@ export const EN: Messages = {
   'phase.status.current': 'in progress',
   'phase.status.upcoming': 'upcoming',
   'phase.detail.initiative': '{player} first',
+  'phase.detail.initiativeRolls': '{player} goes first (rolls {rolls})',
   'phase.detail.overwatch': '{n} on Overwatch',
   'phase.context.setup': 'Game setup.',
   'phase.context.refresh': 'Start of turn: CP are refreshed.',
@@ -384,6 +389,7 @@ export const EN: Messages = {
   'log.event.OVERWATCH_TRIGGERED.announced': 'Overwatch: {overwatcher} sees {target} at {node} before its action ({action}).',
   'log.event.COMMAND_POINTS_SPENT': '{player} spends {amount} CP ({purpose}): {remaining} left.',
   'log.event.OVERWATCH_PASSED': '{player} passes (no Overwatch).',
+  'log.event.OVERWATCH_PASSED_AUTO': '{player} passes automatically: nothing left to place on Overwatch.',
   'log.event.OVERWATCH_PHASE_ENDED': 'Overwatch phase over: activations begin.',
   'log.event.OVERWATCH_RESUME_REFUSED': 'Announced action cancelled ({command}): {message}',
   'reason.ALREADY_OVERWATCH': 'Impossible: already on Overwatch this turn.',

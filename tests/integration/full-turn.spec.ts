@@ -261,13 +261,18 @@ describe('parcours Overwatch complet', () => {
       expect(d.state.turn).toMatchObject({ activePlayerId: 'p2', overwatchPasses: 0 });
       d.refuse(place('p1', 'h3'), 'NOT_YOUR_DECISION_TURN');
       d.run(place('p2', 'h2')); // p2, qui avait passé, peut encore placer
-      d.run(place('p1', 'h3')); // p1 place un second personnage (2e PC)
-      d.refuse(place('p1', 'h1'), 'NOT_YOUR_DECISION_TURN');
-      d.run({ type: 'PASS_OVERWATCH', playerId: 'p2' });
-      expect(d.state.phase).toBe('OVERWATCH');
-      const end = d.run({ type: 'PASS_OVERWATCH', playerId: 'p1' });
-      expect(end.events.map((e) => e.type)).toEqual(['OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED']);
+      // p1 place un second personnage (2e PC, son dernier) : p2 n'a plus de personnage éligible et p1 plus de PC,
+      // les deux passent automatiquement (deux passes consécutives) et la phase se ferme d'elle-même.
+      const end = d.run(place('p1', 'h3'));
+      expect(end.events.map((e) => e.type)).toEqual([
+        'COMMAND_POINTS_SPENT', 'OVERWATCH_PLACED', 'OVERWATCH_PASSED', 'OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED',
+      ]);
+      expect(end.events.slice(2, 4)).toEqual([
+        { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+        { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      ]);
       expect(d.state.phase).toBe('ACTIVATION');
+      d.refuse({ type: 'PASS_OVERWATCH', playerId: 'p2' }, 'NOT_OVERWATCH_PHASE');
       return d.state;
     };
     const first = play();

@@ -12,18 +12,14 @@ import type { GameEvent, RuleError } from '../events/events';
 import type { RandomSource } from '../rng/rng';
 import type { CharacterState, GameState, PendingReaction } from '../state/types';
 import { CommandPointService } from '../turn/command-points';
-import { beginActivations } from '../turn/start-turn';
+import { nextOverwatchDecider, passOverwatchDecision, settleOverwatchPhase } from '../turn/start-turn';
 import { endActivation } from '../turn/handlers';
 import { findOverwatchTrigger } from './trigger';
 
 /** Coût en PC pour placer un personnage en Overwatch (règle du product owner). */
 export const OVERWATCH_COST = 1;
 
-/** Joueur suivant dans l'ordre des joueurs (cyclique) à partir du joueur qui vient de décider. */
-function nextDecider(state: GameState): string | null {
-  const current = state.players.findIndex((p) => p.id === state.turn.activePlayerId);
-  return state.players[(current + 1) % state.players.length]?.id ?? null;
-}
+const nextDecider = nextOverwatchDecider;
 
 const notYourDecision: RuleError = { code: 'NOT_YOUR_DECISION_TURN', message: "Impossible : ce n'est pas votre tour de décider." };
 
@@ -55,7 +51,7 @@ export function checkOverwatchPlacement(state: GameState, playerId: string, char
  * personnage est traité comme déjà activé (non activable ce tour). Ne consomme aucune action. La main passe à
  * l'autre joueur et le compteur de passes consécutives retombe à 0.
  */
-registerHandler('OVERWATCH', (state, command) => {
+registerHandler('OVERWATCH', (state, command, rng) => {
   const checked = checkOverwatchPlacement(state, command.playerId, command.characterId);
   if (!checked.ok) return { ok: false, errors: checked.errors };
   const { character } = checked;
@@ -65,19 +61,18 @@ registerHandler('OVERWATCH', (state, command) => {
     ...spent.state,
     characters: spent.state.characters.map((c) => (c.id === character.id ? { ...c, overwatch: true, activated: true } : c)),
   };
-  return {
-    ok: true,
-    events: [spent.event, { type: 'OVERWATCH_PLACED', characterId: character.id }],
-    state: {
-      ...placed,
-      turn: {
-        ...placed.turn,
-        activePlayerId: nextDecider(placed),
-        overwatchPasses: 0,
-        overwatchDecisions: (placed.turn.overwatchDecisions ?? 0) + 1,
-      },
+  const events: GameEvent[] = [spent.event, { type: 'OVERWATCH_PLACED', characterId: character.id }];
+  const next: GameState = {
+    ...placed,
+    turn: {
+      ...placed.turn,
+      activePlayerId: nextDecider(placed),
+      overwatchPasses: 0,
+      overwatchDecisions: (placed.turn.overwatchDecisions ?? 0) + 1,
     },
   };
+  // Un joueur qui ne peut plus rien placer passe automatiquement.
+  return { ok: true, events, state: settleOverwatchPhase(next, events, rng) };
 });
 
 /** Conditions de PASS_OVERWATCH (partagées avec `getLegalActions`). Aucun PC ni personnage requis : passer est toujours possible. */
@@ -97,18 +92,9 @@ export function checkPassOverwatch(state: GameState, playerId: string): { ok: tr
 registerHandler('PASS_OVERWATCH', (state, command, rng) => {
   const checked = checkPassOverwatch(state, command.playerId);
   if (!checked.ok) return { ok: false, errors: [checked.error] };
-  const events: GameEvent[] = [{ type: 'OVERWATCH_PASSED', playerId: command.playerId }];
-  const passes = (state.turn.overwatchPasses ?? 0) + 1;
-  const decisions = (state.turn.overwatchDecisions ?? 0) + 1;
-  if (passes >= state.players.length) {
-    events.push({ type: 'OVERWATCH_PHASE_ENDED' });
-    return { ok: true, events, state: beginActivations(state, events, rng) };
-  }
-  return {
-    ok: true,
-    events,
-    state: { ...state, turn: { ...state.turn, activePlayerId: nextDecider(state), overwatchPasses: passes, overwatchDecisions: decisions } },
-  };
+  const events: GameEvent[] = [];
+  const passed = passOverwatchDecision(state, events, rng);
+  return { ok: true, events, state: settleOverwatchPhase(passed, events, rng) };
 });
 
 // --- Attaque d'opportunité ---------------------------------------------------------------------------------------

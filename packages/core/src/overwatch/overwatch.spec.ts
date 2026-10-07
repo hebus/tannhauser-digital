@@ -234,11 +234,52 @@ describe('OVERWATCH : placement (phase OVERWATCH, 1 PC)', () => {
     expect(third.state.turn.overwatchDecisions).toBe(3);
   });
 
-  it('sans PC : le placement est refusé (1 PC requis), le joueur peut seulement passer', () => {
+  it('sans PC : le placement est refusé (1 PC requis) ; la passe manuelle de p2 déclenche la passe automatique de p1 (même sans PC)', () => {
     const state = placementState({ commandPoints: 0 });
     const res = applyCommand(state, overwatch('e1'), new ScriptedRng([]));
     expect(res.errors[0]).toEqual({ code: 'INSUFFICIENT_COMMAND_POINTS', message: 'Impossible : 1 PC requis.' });
-    expect(run(state, passOverwatch('p2')).state.turn.activePlayerId).toBe('p1');
+    // L'état est construit à la main (aucun auto-pass n'a eu lieu au démarrage) : p2 passe, p1 ne peut rien placer et passe seul.
+    const passed = run(state, passOverwatch('p2'));
+    expect(passed.events).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2' },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    expect(passed.state.phase).toBe('ACTIVATION');
+    expect(passed.state.turn.activePlayerId).toBe('p2');
+  });
+
+  it('dernier PC dépensé : le joueur passe automatiquement aux décisions suivantes ; l\'autre peut enchaîner ses placements', () => {
+    // p2 : 1 seul PC mais deux personnages ; p1 : 3 PC, deux personnages.
+    const state = placementState({ commandPoints: 1 });
+    const rich: GameState = { ...state, players: state.players.map((p) => (p.id === 'p1' ? { ...p, commandPoints: 3 } : p)) };
+    const first = run(rich, overwatch('e1')); // p2 dépense son dernier PC
+    expect(types(first.events)).toEqual(['COMMAND_POINTS_SPENT', 'OVERWATCH_PLACED']);
+    expect(first.state.turn.activePlayerId).toBe('p1');
+    const second = run(first.state, overwatch('h1', 'p1')); // p1 place ; p2 (sans PC) passe automatiquement ; p1 rejoue
+    expect(types(second.events)).toEqual(['COMMAND_POINTS_SPENT', 'OVERWATCH_PLACED', 'OVERWATCH_PASSED']);
+    expect(second.events[2]).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true });
+    expect(second.state.turn).toMatchObject({ activePlayerId: 'p1', overwatchPasses: 1 });
+    const third = run(second.state, overwatch('h2', 'p1')); // dernier personnage de p1 ; p2 repasse seul
+    // p2 repasse seul, puis p1 (plus aucun personnage éligible) passe seul à son tour : deux passes ferment la phase.
+    expect(third.events.slice(2)).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    expect(third.state.phase).toBe('ACTIVATION');
+    expect(third.state.players.map((p) => p.commandPoints)).toEqual([1, 0]);
+  });
+
+  it('passe automatique : aucun personnage éligible (tous en Overwatch ou activés) même avec des PC', () => {
+    const state = placementState({
+      characters: [char('h1', 'p1', 'a'), char('h2', 'p1', 'z'), char('e1', 'p2', 'e', { activated: true }), char('e2', 'p2', 'd', { overwatch: true, activated: true })],
+    });
+    // p1 décide et place h1 : p2 (e1 déjà non activable, e2 en Overwatch) passe seul, p1 garde la main.
+    const res = run({ ...state, turn: { ...state.turn, activePlayerId: 'p1' } }, overwatch('h1', 'p1'));
+    expect(res.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true });
+    expect(res.state.phase).toBe('OVERWATCH');
+    expect(res.state.turn).toMatchObject({ activePlayerId: 'p1', overwatchPasses: 1 });
   });
 
   it('ordre de décision : le joueur d\'initiative d\'abord, l\'autre ensuite ; refus hors tour de décider', () => {
@@ -303,14 +344,15 @@ describe('OVERWATCH : placement (phase OVERWATCH, 1 PC)', () => {
     expect(types(end.events)).toEqual(['OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED']);
   });
 
-  it('aucun PC des deux côtés : les deux joueurs passent (pas de passage automatique) et les activations commencent', () => {
+  it('aucun PC des deux côtés : les deux joueurs passent automatiquement et les activations commencent (p2, initiative, en premier)', () => {
+    // Depuis un état construit à la main, une commande acceptée déclenche le règlement automatique de la phase :
+    // p2 passe manuellement, p1 passe seul, et les deux passes consécutives ferment la phase.
     const state = placementState({ commandPoints: 0 });
     expect(state.phase).toBe('OVERWATCH');
-    const afterP2 = run(state, passOverwatch('p2')).state;
-    expect(afterP2.phase).toBe('OVERWATCH');
-    const end = run(afterP2, passOverwatch('p1'));
+    const end = run(state, passOverwatch('p2'));
     expect(end.state.phase).toBe('ACTIVATION');
     expect(end.state.turn.activePlayerId).toBe('p2');
+    expect(end.events.filter((e) => e.type === 'OVERWATCH_PASSED' && 'auto' in e)).toEqual([{ type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true }]);
   });
 
   it('les commandes d\'activation sont refusées pendant la phase de placement', () => {
@@ -882,7 +924,8 @@ describe('OVERWATCH : déterminisme, immutabilité, sérialisation', () => {
     const b = play(7);
     expect(a.state).toEqual(b.state);
     expect(a.accepted).toEqual(b.accepted);
-    expect(a.accepted.slice(0, 6)).toEqual([true, true, true, true, true, true]);
+    // p2 (un seul personnage) place e1 puis passe seul ; la 3e commande (PASS_OVERWATCH p2) est donc refusée (hors tour de décider).
+    expect(a.accepted.slice(0, 6)).toEqual([true, true, false, true, true, true]);
   });
 
   it('l\'état reste sérialisable en JSON sans perte, réaction en attente comprise', () => {

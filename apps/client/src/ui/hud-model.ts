@@ -42,7 +42,7 @@ export interface StatusModel {
   readonly turnNumber: number;
   readonly activePlayerId: string | null;
   readonly activePlayerName: string;
-  readonly players: readonly { readonly id: string; readonly name: string; readonly commandPoints: number; readonly active: boolean }[];
+  readonly players: readonly { readonly id: string; readonly name: string; readonly commandPoints: number; readonly active: boolean; readonly initiative: boolean }[];
   readonly character: CharacterCard | null;
   readonly actionUsed: boolean;
   readonly reactionFor: string | null;
@@ -74,7 +74,13 @@ export function statusModel(state: GameState, labels: Labeler): StatusModel {
     turnNumber: state.turn.number,
     activePlayerId: state.turn.activePlayerId,
     activePlayerName: state.turn.activePlayerId ? labels.player(state.turn.activePlayerId) : '—',
-    players: state.players.map((p) => ({ id: p.id, name: labels.player(p.id), commandPoints: p.commandPoints, active: p.id === state.turn.activePlayerId })),
+    players: state.players.map((p) => ({
+      id: p.id,
+      name: labels.player(p.id),
+      commandPoints: p.commandPoints,
+      active: p.id === state.turn.activePlayerId,
+      initiative: state.phase !== 'SETUP' && state.phase !== 'FINISHED' && p.id === state.turn.initiativePlayerId,
+    })),
     character: active ? characterCard(active, labels) : null,
     actionUsed: state.turn.actionUsed === true,
     reactionFor: state.turn.reaction ? labels.player(state.turn.reaction.forPlayerId) : null,

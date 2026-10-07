@@ -355,13 +355,18 @@ describe('phase OVERWATCH : enchaînement du tour', () => {
     expect(last.state.turn).toEqual({ number: 2, initiativePlayerId: 'p1', activePlayerId: 'p1', overwatchPasses: 0, overwatchDecisions: 0 });
   });
 
-  it('un joueur dont tous les personnages sont en Overwatch ne bloque pas la partie', () => {
+  it('un joueur dont tous les personnages sont en Overwatch ne bloque pas la partie (il passe automatiquement)', () => {
     const rng = new ScriptedRng([3, 8, 9, 4]);
     let state = startedPlacement(rng);
-    state = run(
-      state, rng,
-      placeOverwatch('p2', 'b1'), passOverwatch('p1'), placeOverwatch('p2', 'b2'), passOverwatch('p1'), passOverwatch('p2'),
-    ).state;
+    state = run(state, rng, placeOverwatch('p2', 'b1'), passOverwatch('p1')).state;
+    const placedLast = run(state, rng, placeOverwatch('p2', 'b2'), passOverwatch('p1'));
+    // Dernier personnage de p2 placé, puis passe manuelle de p1 : p2 n'a plus rien à placer et passe seul (auto), ce qui ferme la phase.
+    expect(placedLast.events.slice(-3)).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p1' },
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    state = placedLast.state;
     // p2 n'a rien à activer : la main revient à p1 qui enchaîne ses deux personnages, puis le tour se termine.
     expect(state.phase).toBe('ACTIVATION');
     expect(state.turn.activePlayerId).toBe('p1');
@@ -372,32 +377,155 @@ describe('phase OVERWATCH : enchaînement du tour', () => {
     expect(last.state.turn.number).toBe(2);
   });
 
-  it('un joueur sans PC peut seulement passer ; aucun passage automatique', () => {
+  it('un joueur sans PC ne peut pas placer et passe automatiquement (dès un état où il doit décider)', () => {
     const rng = new ScriptedRng([3, 8]);
     const base = startedPlacement(rng);
     const broke: GameState = { ...base, players: base.players.map((p) => ({ ...p, commandPoints: 0 })) };
     expect(applyCommand(broke, placeOverwatch('p2', 'b1'), rng).errors[0]?.code).toBe('INSUFFICIENT_COMMAND_POINTS');
-    const afterP2 = run(broke, rng, passOverwatch('p2')).state;
-    expect(afterP2.phase).toBe('OVERWATCH');
-    expect(run(afterP2, rng, passOverwatch('p1')).state.phase).toBe('ACTIVATION');
+    // État fabriqué sans PC : la passe manuelle de p2 est suivie de la passe automatique de p1 (aucun PC).
+    const res = run(broke, rng, passOverwatch('p2'));
+    expect(res.events).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2' },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    expect(res.state.phase).toBe('ACTIVATION');
+    expect(res.state.turn.activePlayerId).toBe('p2');
   });
 
   it('si plus aucun personnage n\'est activable, le tour suivant démarre aussitôt', () => {
     const rng = new ScriptedRng([3, 8, 7, 6]);
     const base = startedPlacement(rng);
     const lone: GameState = { ...base, characters: base.characters.filter((c) => c.playerId === 'p2') };
-    const state = run(
-      lone, rng,
-      placeOverwatch('p2', 'b1'), passOverwatch('p1'), placeOverwatch('p2', 'b2'), passOverwatch('p1'),
-    ).state;
-    const res = applyCommand(state, passOverwatch('p2'), rng);
+    // p1 n'a aucun personnage : il passe automatiquement après chaque décision de p2.
+    const afterFirst = run(lone, rng, placeOverwatch('p2', 'b1'));
+    expect(afterFirst.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true });
+    expect(afterFirst.state.turn.activePlayerId).toBe('p2');
+    const res = applyCommand(afterFirst.state, placeOverwatch('p2', 'b2'), rng);
     expect(res.accepted).toBe(true);
     expect(res.events.map((e) => e.type)).toEqual([
-      'OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED', 'TURN_ENDED', 'TURN_STARTED',
-      'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED',
+      'COMMAND_POINTS_SPENT', 'OVERWATCH_PLACED', 'OVERWATCH_PASSED', 'OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED',
+      'TURN_ENDED', 'TURN_STARTED', 'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED',
+      // Tour 2 : p1 gagne l'initiative (7 vs 6) mais n'a aucun personnage : il passe seul, p2 décide.
+      'OVERWATCH_PASSED',
     ]);
-    expect(res.state.turn.number).toBe(2);
+    expect(res.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true });
+    expect(res.state.turn).toMatchObject({ number: 2, initiativePlayerId: 'p1', activePlayerId: 'p2', overwatchPasses: 1 });
     expect(res.state.phase).toBe('OVERWATCH');
+  });
+});
+
+describe('passe automatique d\'Overwatch (règle du product owner)', () => {
+  /** Partie avec `commandPointsPerTurn` PC par tour et la liste de personnages donnée (p2 gagne l'initiative : 3 vs 8). */
+  function start(characters: (state: GameState) => readonly CharacterState[], commandPointsPerTurn = 2, rolls: number[] = [3, 8]) {
+    const rng = new ScriptedRng(rolls);
+    const base = makeState({ commandPointsPerTurn });
+    const res = applyCommand({ ...base, characters: characters(base) }, { type: 'START_GAME' }, rng);
+    expect(res.errors).toEqual([]);
+    return { rng, res };
+  }
+  const pendingTypes = (events: readonly { type: string }[]) => events.map((e) => e.type);
+
+  it('un joueur sans personnage éligible passe automatiquement dès le début du tour ; l\'adversaire décide ensuite', () => {
+    // p2 (gagnant de l'initiative) n'a que des personnages hors de combat.
+    const { res } = start((s) => s.characters.map((c) => (c.playerId === 'p2' ? { ...c, alive: false } : c)));
+    expect(pendingTypes(res.events)).toEqual([
+      'GAME_STARTED', 'TURN_STARTED', 'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED', 'OVERWATCH_PASSED',
+    ]);
+    expect(res.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true });
+    expect(res.state.phase).toBe('OVERWATCH');
+    expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p1', overwatchPasses: 1, overwatchDecisions: 1 });
+  });
+
+  it('les deux joueurs ne pouvant rien placer (0 PC) : la phase se termine d\'elle-même et l\'activation commence dès le démarrage du tour', () => {
+    const { rng, res } = start((s) => s.characters, 0);
+    // Les deux joueurs passent seuls (gagnant d'abord) et l'activation commence aussitôt.
+    expect(pendingTypes(res.events).slice(-3)).toEqual(['OVERWATCH_PASSED', 'OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED']);
+    expect(res.events.slice(-3, -1)).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+    ]);
+    expect(res.state.phase).toBe('ACTIVATION');
+    // Activation : le joueur d'initiative (p2) commence.
+    expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2' });
+    expect(applyCommand(res.state, passOverwatch('p2'), rng).errors[0]?.code).toBe('NOT_OVERWATCH_PHASE');
+    expect(run(res.state, rng, select('p2', 'b1')).events).toEqual([{ type: 'CHARACTER_ACTIVATION_STARTED', characterId: 'b1' }]);
+  });
+
+  it('après son dernier PC dépensé, un joueur passe seul aux décisions suivantes ; l\'autre peut enchaîner', () => {
+    // 1 PC par tour pour chacun : p2 place b1 (0 PC), p1 place a1 (0 PC) -> plus personne ne peut rien placer.
+    const { rng, res } = start((s) => s.characters, 1);
+    expect(res.state.turn.activePlayerId).toBe('p2');
+    const p2 = run(res.state, rng, placeOverwatch('p2', 'b1'));
+    expect(p2.state.turn.activePlayerId).toBe('p1');
+    // p1 passe manuellement : p2 (sans PC) passe seul, ce qui ferme la phase.
+    const closed = run(p2.state, rng, passOverwatch('p1'));
+    expect(closed.events).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p1' },
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    expect(closed.state.phase).toBe('ACTIVATION');
+    // Variante : p1 dépense à son tour son dernier PC, les deux joueurs passent seuls dans la foulée.
+    const both = run(p2.state, rng, placeOverwatch('p1', 'a1'));
+    expect(both.events.slice(2)).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    expect(both.state.phase).toBe('ACTIVATION');
+    expect(both.state.players.map((p) => p.commandPoints)).toEqual([0, 0]);
+  });
+
+  it('après son dernier personnage éligible placé, un joueur passe seul ; l\'autre peut placer plusieurs personnages de suite', () => {
+    // p2 n'a qu'un personnage (b1) ; p1 en a deux (a1, a2) et 2 PC.
+    const { rng, res } = start((s) => s.characters.filter((c) => c.id !== 'b2'), 2, [3, 8, 7, 6]);
+    const p2 = run(res.state, rng, placeOverwatch('p2', 'b1'));
+    expect(p2.state.turn.activePlayerId).toBe('p1');
+    const first = run(p2.state, rng, placeOverwatch('p1', 'a1'));
+    expect(first.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true });
+    expect(first.state.turn).toMatchObject({ activePlayerId: 'p1', overwatchPasses: 1 });
+    expect(first.state.phase).toBe('OVERWATCH');
+    const second = run(first.state, rng, placeOverwatch('p1', 'a2'));
+    expect(second.events.slice(2, 5)).toEqual([
+      { type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true },
+      { type: 'OVERWATCH_PASSED', playerId: 'p1', auto: true },
+      { type: 'OVERWATCH_PHASE_ENDED' },
+    ]);
+    // Tous les personnages sont en Overwatch : plus rien à activer, le tour 2 démarre aussitôt (p1 gagne l'initiative 7 vs 6).
+    expect(second.events.slice(5, 7).map((e) => e.type)).toEqual(['TURN_ENDED', 'TURN_STARTED']);
+    expect(second.state.turn).toMatchObject({ number: 2, initiativePlayerId: 'p1', activePlayerId: 'p1', overwatchPasses: 0 });
+    expect(second.state.phase).toBe('OVERWATCH');
+  });
+
+  it('relance d\'initiative (OQ-OVERWATCH-011) : possible tant qu\'aucune décision n\'a eu lieu', () => {
+    const rng = new ScriptedRng([3, 8, 9, 2]);
+    const state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+    expect(state.turn).toMatchObject({ activePlayerId: 'p2', overwatchDecisions: 0 });
+    const res = run(state, rng, { type: 'REROLL_INITIATIVE', playerId: 'p2' });
+    expect(pendingTypes(res.events)).toEqual(['COMMAND_POINTS_SPENT', 'INITIATIVE_ROLLED', 'INITIATIVE_CHANGED']);
+    expect(res.state.turn).toMatchObject({ initiativePlayerId: 'p1', activePlayerId: 'p1', overwatchDecisions: 0 });
+  });
+
+  it('relance d\'initiative : impossible si le gagnant a dû passer automatiquement dès le début du tour', () => {
+    // p2 gagne mais n'a aucun personnage vivant éligible : sa passe automatique est une décision, la relance est refusée.
+    const { rng, res } = start((s) => s.characters.map((c) => (c.playerId === 'p2' ? { ...c, alive: false } : c)));
+    expect(res.state.turn.overwatchDecisions).toBe(1);
+    const reroll = applyCommand(res.state, { type: 'REROLL_INITIATIVE', playerId: 'p2' }, rng);
+    expect(reroll.accepted).toBe(false);
+    expect(reroll.errors[0]?.code).toBe('OVERWATCH_DECISIONS_STARTED');
+  });
+
+  it('relance d\'initiative : si le gagnant dépense son dernier PC puis regagne, il passe aussitôt seul', () => {
+    // 1 PC par tour : la relance vide la réserve de p2 ; il regagne (2 vs 9) et ne peut plus rien placer.
+    const { rng, res } = start((s) => s.characters, 1, [3, 8, 2, 9]);
+    const rerolled = run(res.state, rng, { type: 'REROLL_INITIATIVE', playerId: 'p2' });
+    expect(pendingTypes(rerolled.events)).toEqual(['COMMAND_POINTS_SPENT', 'INITIATIVE_ROLLED', 'OVERWATCH_PASSED']);
+    expect(rerolled.events.at(-1)).toEqual({ type: 'OVERWATCH_PASSED', playerId: 'p2', auto: true });
+    expect(rerolled.state.turn).toMatchObject({ initiativePlayerId: 'p2', activePlayerId: 'p1', overwatchPasses: 1 });
+    // L'adversaire décide ensuite, puis la phase se ferme à sa passe.
+    const closed = run(rerolled.state, rng, passOverwatch('p1'));
+    expect(closed.state.phase).toBe('ACTIVATION');
   });
 });
 

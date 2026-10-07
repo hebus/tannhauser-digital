@@ -37,9 +37,15 @@ describe('modèle du HUD', () => {
     const m = statusModel({ ...s, characters: s.characters.map((c) => (c.id === 'h1' ? { ...c, health: 1, movementLeft: 2 } : c)) }, createLabeler(s));
     expect(m).toMatchObject({ turnNumber: 2, activePlayerName: 'Joueur 1', actionUsed: true, finished: false });
     expect(m.players).toEqual([
-      { id: 'p1', name: 'Joueur 1', commandPoints: 2, active: true },
-      { id: 'p2', name: 'Joueur 2', commandPoints: 2, active: false },
+      { id: 'p1', name: 'Joueur 1', commandPoints: 2, active: true, initiative: expect.any(Boolean) },
+      { id: 'p2', name: 'Joueur 2', commandPoints: 2, active: false, initiative: expect.any(Boolean) },
     ]);
+    // Initiative : un seul joueur la porte (le gagnant du tour), hors mise en place et fin de partie.
+    const withInit = (id: string | null, phase: 'OVERWATCH' | 'SETUP' | 'FINISHED') => statusModel({ ...s, phase, turn: { ...s.turn, initiativePlayerId: id } }, createLabeler(s)).players.map((p) => p.initiative);
+    expect(withInit('p2', 'OVERWATCH')).toEqual([false, true]);
+    expect(withInit('p2', 'SETUP')).toEqual([false, false]);
+    expect(withInit('p2', 'FINISHED')).toEqual([false, false]);
+    expect(withInit(null, 'OVERWATCH')).toEqual([false, false]);
     // Santé 1/2 : la ligne de caractéristiques courante est la dernière (6/4/4).
     expect(m.character).toMatchObject({ health: 1, maxHealth: 2, combat: 6, physical: 4, mental: 4, movementLeft: 2, movementMax: 3 });
   });

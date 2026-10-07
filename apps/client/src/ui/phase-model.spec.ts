@@ -5,7 +5,7 @@ import type { BannerKind, BannerPlan } from '@tannhauser/renderer';
 import { bannerText } from './banner-text';
 import { EN, FR, setLocale, t } from './i18n';
 import { createLabeler } from './labels';
-import { PHASE_STEP_IDS, currentStepIndex, phaseContext, phaseModel } from './phase-model';
+import { PHASE_STEP_IDS, currentStepIndex, lastInitiativeRolls, phaseContext, phaseModel } from './phase-model';
 
 const rows = [{ combat: 7, physical: 5, mental: 5, movement: 4 }];
 const char = (id: string, playerId: string, nodeId: string, extra: Partial<CharacterState> = {}): CharacterState => ({
@@ -70,6 +70,19 @@ describe('frise des phases : étapes déduites de GameState.phase', () => {
     expect(m.steps.find((x) => x.id === 'initiative')).toMatchObject({ detail: 'Joueur 2 d’abord', fresh: true });
     expect(m.steps.find((x) => x.id === 'overwatch')).toMatchObject({ detail: '1 en Overwatch', fresh: false });
     expect(m.steps.find((x) => x.id === 'activation')?.detail).toBeNull();
+  });
+
+  it('l’étape Initiative nomme le gagnant, donne son marqueur (index du joueur) et les jets, gagnant d’abord', () => {
+    const base = game('OVERWATCH', { initiativePlayerId: 'p2' }, [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')]);
+    const s = { ...base, history: [{ type: 'TURN_STARTED', turn: 1 }, { type: 'INITIATIVE_ROLLED', rolls: { p1: 3, p2: 8 }, winnerId: 'p2' }] } as typeof base;
+    const step = phaseModel(s, createLabeler(s)).steps.find((x) => x.id === 'initiative')!;
+    expect(step.detail).toBe('Joueur 2 commence (jets 8 – 3)');
+    expect(step.detailPlayerIndex).toBe(1);
+    expect(lastInitiativeRolls(s)).toBe('8 – 3');
+    // Après une relance, le dernier tirage fait foi ; un nouveau tour sans tirage n'affiche pas de jets périmés.
+    const rerolled = { ...base, history: [...s.history, { type: 'INITIATIVE_ROLLED', rolls: { p1: 9, p2: 2 }, winnerId: 'p1' }] } as typeof base;
+    expect(lastInitiativeRolls(rerolled)).toBe('9 – 2');
+    expect(lastInitiativeRolls({ ...base, history: [...s.history, { type: 'TURN_STARTED', turn: 2 }] } as typeof base)).toBeNull();
   });
 });
 

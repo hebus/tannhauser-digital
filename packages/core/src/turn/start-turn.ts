@@ -1,6 +1,7 @@
 import type { GameEvent } from '../events/events';
 import type { RandomSource } from '../rng/rng';
 import type { GameState, PlayerId, TurnState } from '../state/types';
+import { CommandPointService } from './command-points';
 import { rollInitiative } from './initiative';
 import { refreshTurn } from './refresh';
 
@@ -43,14 +44,62 @@ export function startTurn(
   );
   events.push({ type: 'INITIATIVE_ROLLED', rolls, winnerId });
 
-  return {
-    events,
-    state: {
-      ...refreshed.state,
-      phase: 'OVERWATCH',
-      turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
-    },
+  const overwatchState: GameState = {
+    ...refreshed.state,
+    phase: 'OVERWATCH',
+    turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
   };
+  return { events, state: settleOverwatchPhase(overwatchState, events, rng) };
+}
+
+/** Coût en PC d'un Overwatch (règle du product owner) : défini ici pour éviter une dépendance circulaire. */
+export const OVERWATCH_PLACEMENT_COST = 1;
+
+/** Joueur suivant dans l'ordre des joueurs (cyclique) à partir du joueur qui décide actuellement. */
+export function nextOverwatchDecider(state: GameState): PlayerId | null {
+  const current = state.players.findIndex((p) => p.id === state.turn.activePlayerId);
+  return state.players[(current + 1) % state.players.length]?.id ?? null;
+}
+
+/**
+ * Le joueur peut-il encore placer un personnage en Overwatch ? Il faut au moins 1 PC ET un personnage éligible
+ * (vivant, ni en Overwatch ni déjà non activable). Sinon il passe automatiquement.
+ */
+export function canPlaceOverwatch(state: GameState, playerId: PlayerId): boolean {
+  if (!CommandPointService.canSpend(state, playerId, OVERWATCH_PLACEMENT_COST).ok) return false;
+  return state.characters.some((c) => c.playerId === playerId && c.alive && !c.overwatch && !c.activated);
+}
+
+/**
+ * Applique la passe du joueur qui décide : si tous les joueurs ont passé consécutivement la phase s'achève et les
+ * activations commencent, sinon la main passe à l'autre joueur.
+ */
+export function passOverwatchDecision(state: GameState, events: GameEvent[], rng: RandomSource, auto = false): GameState {
+  const playerId = state.turn.activePlayerId;
+  if (playerId === null) return state;
+  events.push(auto ? { type: 'OVERWATCH_PASSED', playerId, auto: true } : { type: 'OVERWATCH_PASSED', playerId });
+  const passes = (state.turn.overwatchPasses ?? 0) + 1;
+  const decisions = (state.turn.overwatchDecisions ?? 0) + 1;
+  if (passes >= state.players.length) {
+    events.push({ type: 'OVERWATCH_PHASE_ENDED' });
+    return beginActivations(state, events, rng);
+  }
+  return { ...state, turn: { ...state.turn, activePlayerId: nextOverwatchDecider(state), overwatchPasses: passes, overwatchDecisions: decisions } };
+}
+
+/**
+ * Tant que le joueur qui doit décider ne peut plus placer personne (plus de PC ou plus de personnage éligible), il
+ * passe automatiquement (événement `OVERWATCH_PASSED` avec `auto`). S'arrête dès qu'un joueur peut décider ou que la
+ * phase d'Overwatch est terminée.
+ */
+export function settleOverwatchPhase(state: GameState, events: GameEvent[], rng: RandomSource): GameState {
+  // Sans aucun personnage vivant, rien à décider ni à activer : pas de passage automatique (évite une boucle de tours vides).
+  if (!state.characters.some((c) => c.alive)) return state;
+  let current = state;
+  while (current.phase === 'OVERWATCH' && current.turn.activePlayerId !== null && !canPlaceOverwatch(current, current.turn.activePlayerId)) {
+    current = passOverwatchDecision(current, events, rng, true);
+  }
+  return current;
 }
 
 /**

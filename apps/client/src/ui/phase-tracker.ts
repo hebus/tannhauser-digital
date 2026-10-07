@@ -50,8 +50,17 @@ export function createPhaseTracker(): PhaseTracker {
         it.check.textContent = step.status === 'done' ? '✓ ' : '';
         it.label.textContent = step.label;
         it.sr.textContent = ` (${step.statusText})`;
-        it.detail.textContent = step.detail ?? '';
+        it.detail.textContent = '';
+        if (step.detailPlayerIndex !== null) {
+          const mark = playerMarkStyle(step.detailPlayerIndex);
+          it.detail.append(h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), ' ');
+          it.detail.style.setProperty('--pc', mark.color);
+        } else {
+          it.detail.style.removeProperty('--pc');
+        }
+        if (step.detail !== null) it.detail.append(step.detail);
         it.detail.hidden = step.detail === null;
+        it.li.classList.toggle('has-detail', step.detail !== null);
       });
       context.textContent = model.context;
       if (model.activePlayerIndex === null) {
