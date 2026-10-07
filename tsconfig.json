@@ -5,6 +5,7 @@
     { "path": "packages/content" },
     { "path": "packages/renderer" },
     { "path": "packages/ai" },
+    { "path": "tools/board-generator" },
     { "path": "apps/client" }
   ]
 }

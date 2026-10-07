@@ -121,6 +121,35 @@ function distancesFrom(board: BoardState, from: NodeId): Map<NodeId, number> {
   return dist;
 }
 
+/**
+ * Cases où un personnage posé en `from` peut se rendre, PM illimités (état initial des portes) : arêtes orientées
+ * (sens unique respecté), portes fermées et cases impraticables infranchissables, portails dans les deux sens.
+ * Sert à ne pas poser un personnage dans une zone verrouillée (ex. salle d'armes derrière une porte renforcée).
+ */
+function movementReachable(board: BoardState, from: NodeId): Set<NodeId> {
+  const next = new Map<NodeId, NodeId[]>();
+  const add = (a: NodeId, b: NodeId) => (next.get(a) ?? next.set(a, []).get(a)!).push(b);
+  for (const e of board.edges) {
+    if (e.doorId !== undefined && board.doors[e.doorId]?.state !== 'OPEN') continue;
+    add(e.from, e.to);
+    if (!e.oneWay) add(e.to, e.from);
+  }
+  for (const p of board.portals) {
+    add(p.from, p.to);
+    add(p.to, p.from);
+  }
+  const seen = new Set<NodeId>([from]);
+  const queue = [from];
+  while (queue.length > 0) {
+    for (const m of next.get(queue.shift()!) ?? []) {
+      if (seen.has(m) || !board.nodes[m]?.properties.passable) continue;
+      seen.add(m);
+      queue.push(m);
+    }
+  }
+  return seen;
+}
+
 const INF = Number.POSITIVE_INFINITY;
 /** Comparaison numérique sûre avec Infinity (évite NaN). */
 const cmp = (x: number, y: number): number => (x === y ? 0 : x < y ? -1 : 1);
@@ -135,6 +164,8 @@ const cmp = (x: number, y: number): number => (x === y ? 0 : x < y ? -1 : 1);
  * 2. Tour à tour, chaque équipe prend d'abord les points d'entrée libres dont son ancre est la plus proche.
  * 3. S'il n'y en a pas assez, elle complète avec les cases libres les plus éloignées des ancres adverses
  *    (à égalité : les plus proches de sa propre ancre, puis l'id), en évitant les points d'entrée adverses.
+ * 4. Une équipe ne reçoit que des cases joignables depuis son ancre (portes fermées, sens uniques et cases impraticables
+ *    respectés) : jamais de personnage enfermé dans une zone verrouillée. Sur un plateau sans zone verrouillée, sans effet.
  * Retourne `null` si le plateau n'a pas assez de cases praticables.
  */
 export function placeTeams(board: BoardState, teams: readonly { readonly playerId: string; readonly count: number }[]): Record<string, NodeId[]> | null {
@@ -170,13 +201,18 @@ export function placeTeams(board: BoardState, teams: readonly { readonly playerI
     return best;
   };
 
+  const zones = anchors.map((a) => movementReachable(board, a));
   const claimed = new Set<NodeId>();
   const result: Record<string, NodeId[]> = Object.fromEntries(teams.map((t) => [t.playerId, [] as NodeId[]]));
   const rounds = Math.max(0, ...teams.map((t) => t.count));
   for (let round = 0; round < rounds; round += 1) {
     teams.forEach((team, i) => {
       if (team.count <= round) return;
-      const free = passable.filter((id) => !claimed.has(id));
+      const unclaimed = passable.filter((id) => !claimed.has(id));
+      // Zone jouable de l'équipe : cases joignables depuis son ancre ; à défaut (plateau très verrouillé), toutes les libres.
+      const reachable = zones[i] ?? zones[0]!;
+      const reachableFree = unclaimed.filter((id) => reachable.has(id));
+      const free = reachableFree.length > 0 ? reachableFree : unclaimed;
       const ownEntries = free.filter((id) => entries.includes(id) && nearestTeam(id) === i).sort((a, b) => cmp(distTo(i, a), distTo(i, b)) || a.localeCompare(b));
       let pick = ownEntries[0];
       if (pick === undefined) {

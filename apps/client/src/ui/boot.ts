@@ -25,7 +25,7 @@ export async function startFromSetup(): Promise<GameFacade> {
     const previous = lastSetup();
     const base = defaultSetup(available, randomSeed());
     const initial: SetupConfig = previous && validateSetup(previous, available).length === 0 ? { ...previous, seed: base.seed } : base;
-    config = await showSetupScreen(document.body, { boards: [content.board], characters: content.characters }, initial);
+    config = await showSetupScreen(document.body, { boards: content.boards, characters: content.characters }, initial);
   }
   writeSetupToLocation(config);
   return createGameFromSetup(config, content);

@@ -27,3 +27,9 @@ Règles confirmées par le product owner. La ligne de vue (LdM) est calculée su
 - Fumée sur un nœud intermédiaire : visibilité coupée ; équipement anti-fumée : visibilité du porteur conservée.
 - Porte fermée coupe, porte ouverte non.
 - Arête à sens unique : même résultat de visibilité dans les deux directions.
+
+## Cartes non orthogonales (château)
+
+La ligne de vue ne dépend que des couleurs, jamais de la géométrie : une carte aux pièces polygonales et aux couloirs diagonaux obéit aux mêmes règles. Convention de couleurs appliquée par le générateur de cartes (voir `../boards.md`) : une couleur par pièce, une couleur par segment de couloir, seuil de porte bicolore (pièce + couloir), coudes bicolores qui coupent la vue.
+
+Tests (`packages/content/src/castle.spec.ts`) : toute la pièce visible depuis un de ses nœuds ; vue le long d'un couloir depuis son seuil, pas au-delà du coude ni depuis le reste de la pièce ; aucune vue d'une pièce à l'autre ; porte fermée coupe, ouverte non ; sens unique et portail sans effet sur la vue ; réciprocité sur toutes les paires (portes fermées puis toutes ouvertes).

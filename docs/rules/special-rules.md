@@ -49,3 +49,7 @@ Détail et traçabilité : `traceability-overwatch.md` (RULE-OVERWATCH-*) ; stru
 | RULE-OVERWATCH-002 | Un adversaire qui entre dans la ligne de vue d'un Overwatch en se déplaçant s'arrête sur cette case. | `OVERWATCH_TRIGGERED` |
 | RULE-OVERWATCH-010 | Un adversaire déjà dans la ligne de vue qui tente de se déplacer ou d'agir déclenche l'opportunité avant l'exécution de sa commande, qui est exécutée ensuite. | `OVERWATCH_TRIGGERED` (`announced`) |
 | RULE-OVERWATCH-005 | L'attaque d'opportunité est optionnelle ; refusée, l'Overwatch reste actif sans se redéclencher contre cet adversaire pendant son activation ; réalisée, le personnage quitte l'Overwatch. | `OVERWATCH_RESOLVED` |
+
+## Application au plateau « Château »
+
+Le plateau `castle` (généré, voir `../boards.md`) illustre ces règles : portes de bois et renforcées, ouvertes et fermées (une porte ne coûte rien) ; portail `SECRET_DOOR` bibliothèque ↔ chapelle (1 PM, sans vue) ; case impraticable (puits de la cour) ; surcoût +1 (gravats de la cuisine) ; arête à sens unique (escalier bibliothèque → hall) ; deux `ENTRY_POINT` (grande porte au sud, poterne au nord-est). Chaque cas est couvert par `packages/content/src/castle.spec.ts`.

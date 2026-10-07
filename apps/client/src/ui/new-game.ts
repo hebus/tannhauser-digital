@@ -7,7 +7,7 @@ type DevContent = ReturnType<typeof loadDevContent>;
 
 /** Vue « mise en place » du contenu chargé (plateaux et personnages disponibles). */
 export function setupContentOf(content: DevContent): SetupContent {
-  return { boards: [content.board], characters: content.characters };
+  return { boards: content.boards, characters: content.characters };
 }
 
 export class InvalidSetupError extends Error {
@@ -26,7 +26,9 @@ export function createGameFromSetup(config: SetupConfig, content: DevContent = l
   const issues = validateSetup(config, setupContentOf(content));
   if (issues.length > 0) throw new InvalidSetupError(issues.map((i) => i.code));
 
-  const board = content.board.board;
+  // Plateau CHOISI (et sa mise en page d'affichage) : validateSetup a déjà vérifié que l'id existe.
+  const chosen = content.boards.find((b) => b.id === config.boardId)!;
+  const board = chosen.board;
   const placement = placeTeams(
     board,
     config.teams.map((t) => ({ playerId: t.playerId, count: t.characterIds.length })),
@@ -63,6 +65,6 @@ export function createGameFromSetup(config: SetupConfig, content: DevContent = l
   // START_GAME consomme l'aléa (initiative) ; le snapshot du nouvel état reprend la séquence là où elle s'arrête.
   const started = applyCommand(initial, { type: 'START_GAME' }, rng);
   if (!started.accepted) throw new InvalidSetupError(started.errors.map((e) => e.code));
-  return new GameFacade(started.state, config.seed, undefined);
+  return new GameFacade(started.state, config.seed, chosen.layout);
 }
 
