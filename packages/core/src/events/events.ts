@@ -1,3 +1,5 @@
+import type { CombatLog } from '../combat/log';
+
 /** Événements émis par le moteur (§83). Source unique pour animations, audio, replay, IA. */
 export type GameEvent =
   | { readonly type: 'GAME_STARTED'; readonly scenarioId: string }
@@ -9,7 +11,7 @@ export type GameEvent =
   | { readonly type: 'CHARACTER_ACTIVATION_ENDED'; readonly characterId: string }
   | { readonly type: 'TEST_RESOLVED'; readonly characterId: string; readonly dice: readonly number[]; readonly difficulty: number; readonly successes: number }
   | { readonly type: 'ATTACK_DECLARED'; readonly attackerId: string; readonly targetId: string; readonly weaponId: string }
-  | { readonly type: 'COMBAT_ROLLED'; readonly attackerId: string; readonly dice: readonly number[]; readonly successes: number }
+  | { readonly type: 'COMBAT_ROLLED'; readonly attackerId: string; readonly dice: readonly number[]; readonly successes: number; readonly difficulty?: number; readonly log?: CombatLog }
   | { readonly type: 'ATTACK_HIT'; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'ATTACK_MISSED'; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'DAMAGE_APPLIED'; readonly targetId: string; readonly wounds: number; readonly healthLeft: number }
