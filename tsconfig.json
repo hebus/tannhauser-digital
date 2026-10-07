@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/content" },
+    { "path": "packages/renderer" },
+    { "path": "packages/ai" },
+    { "path": "apps/client" }
+  ]
+}
