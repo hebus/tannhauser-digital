@@ -6,6 +6,8 @@ export type GameEvent =
   | { readonly type: 'INITIATIVE_ROLLED'; readonly rolls: Readonly<Record<string, number>>; readonly winnerId: string }
   | { readonly type: 'CHARACTER_ACTIVATION_STARTED'; readonly characterId: string }
   | { readonly type: 'CHARACTER_MOVED'; readonly characterId: string; readonly path: readonly string[]; readonly cost: number }
+  | { readonly type: 'DOOR_OPENED'; readonly characterId: string; readonly doorId: string; readonly cost: number }
+  | { readonly type: 'DOOR_CLOSED'; readonly characterId: string; readonly doorId: string; readonly cost: number }
   | { readonly type: 'CHARACTER_ACTIVATION_ENDED'; readonly characterId: string }
   | { readonly type: 'TEST_RESOLVED'; readonly characterId: string; readonly dice: readonly number[]; readonly difficulty: number; readonly successes: number }
   | { readonly type: 'ATTACK_DECLARED'; readonly attackerId: string; readonly targetId: string; readonly weaponId: string }

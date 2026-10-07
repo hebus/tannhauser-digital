@@ -9,3 +9,4 @@ export * from './events/events';
 export * from './commands/commands';
 export * from './engine/apply-command';
 import './engine/start-game';
+export * from './movement/index';
