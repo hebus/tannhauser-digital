@@ -192,7 +192,7 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Rule:** RULE-TURN-004 (§66 : Overwatch entre initiative et activations), RULE-OVERWATCH-001…
 - **Source:** §66, §67
 - **Résolution actuelle (product owner, redéfinition de l'Overwatch) :** le tour enchaîne refresh, initiative, phase `OVERWATCH` (placements), phase `ACTIVATION`. Mettre un personnage en Overwatch coûte 1 PC et se décide APRÈS l'initiative, AVANT les activations (voir OQ-OVERWATCH-009 pour le détail). La relance d'initiative (1 PC) reste possible avant les placements.
-- **Reste ouvert :** si le gagnant n'a aucun personnage à activer, le joueur suivant commence (inchangé). La relance d'initiative est désormais possible jusqu'au premier placement ou à la confirmation du gagnant (hypothèse, OQ-OVERWATCH-009).
+- **Reste ouvert :** si le gagnant n'a aucun personnage à activer, le joueur suivant commence (inchangé). La relance d'initiative est possible tant qu'aucun placement ni aucune passe d'Overwatch n'a eu lieu (décision du PO, OQ-OVERWATCH-009).
 - **Historique (décision précédente, abandonnée) :** l'Overwatch était une ACTION du personnage actif, prise pendant son activation (commande `OVERWATCH` consommant l'unique action, sans PC) et non une phase ; la phase passait de l'initiative à `ACTIVATION`.
 - **Historique (avant toute décision) :** l'étape Overwatch n'était pas implémentée ; la phase passait directement de l'initiative à `ACTIVATION`.
 - **Test:** `overwatch.spec.ts`, `turn.spec.ts` et tests d'intégration.
@@ -333,14 +333,16 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** un joueur peut perdre une action annoncée si le tir l'a rendue impossible.
 - **Test required:** `overwatch.spec.ts` (reprise, cible tuée, reprise refusée).
 
-## OQ-OVERWATCH-009 — Phase de placement : déroulement exact
+## OQ-OVERWATCH-009 — Phase de placement : déroulement exact (RÉSOLUE)
 
 - **Rule:** RULE-OVERWATCH-001, RULE-OVERWATCH-008, RULE-OVERWATCH-009
-- **Source:** décision PO (règles 1 à 3 de la redéfinition).
-- **Interpretation:** (1) la phase `OVERWATCH` se déroule à chaque tour, après l'initiative ; le joueur d'initiative décide d'abord puis les autres, dans l'ordre des joueurs ; chacun place autant de personnages qu'il veut tant qu'il a des PC (1 PC chacun) puis confirme avec `END_OVERWATCH_PLACEMENT`, même sans rien placer ni PC (aucune confirmation automatique). (2) La relance d'initiative reste possible tant qu'aucun personnage n'est placé et que le gagnant n'a pas confirmé ; le nouveau gagnant décide alors en premier. (3) Un personnage placé est marqué `overwatch` ET `activated` : non activable (`IN_OVERWATCH`), traité comme déjà activé pour la fin de tour ; après son tir il reste non activable (`ALREADY_ACTIVATED`). (4) Si plus aucun personnage n'est activable après les placements, le tour se termine aussitôt et le suivant démarre. (5) Seuls les personnages vivants et non déjà placés peuvent être placés.
-- **Reason:** la décision ne précise pas la confirmation, la fenêtre de relance, ni le cas « plus rien à activer ».
-- **Impact:** rythme du tour ; stratégie sur la dépense des 2 PC par tour entre relance, Overwatch et autres usages futurs.
-- **Test required:** `overwatch.spec.ts` (placement, ordre), `turn.spec.ts` (phase, relance, fin de tour sans bloquer), `legal-actions.spec.ts`.
+- **Source:** décision PO (redéfinition de l'Overwatch, puis rectification de l'ordre du tour).
+- **Résolution (product owner) :** l'ordre d'un tour est : (1) refresh : tous les joueurs reçoivent leurs 2 PC et tous les personnages en Overwatch cessent de l'être ; (2) initiative pour déterminer qui commence ; (3) phase d'Overwatch : à tour de rôle, en commençant par le gagnant de l'initiative, le joueur décide soit de placer UN SEUL personnage en Overwatch (1 PC), soit de PASSER ; puis c'est à l'autre joueur de décider (un seul personnage ou passer), et ainsi de suite jusqu'à ce que les DEUX joueurs passent (deux passes consécutives ; si un joueur passe puis que l'autre place un personnage, la main revient au premier, qui peut encore placer) ; (4) phase d'activation des personnages qui ne sont pas en Overwatch.
+- **Implémentation :** commandes `OVERWATCH` (un personnage, la main passe à l'autre joueur) et `PASS_OVERWATCH` (anciennement `END_OVERWATCH_PLACEMENT`) ; événements `OVERWATCH_PLACED`, `OVERWATCH_PASSED` (anciennement `OVERWATCH_PLACEMENT_ENDED`, un par passe) et `OVERWATCH_PHASE_ENDED` ; `turn.activePlayerId` = joueur qui doit décider ; `turn.overwatchPasses` (passes consécutives, remis à 0 par un placement) et `turn.overwatchDecisions` (placements + passes). La relance d'initiative (1 PC) reste possible tant que `overwatchDecisions` vaut 0 ; le nouveau gagnant décide alors en premier. Aucun passage automatique : un joueur sans PC ou sans personnage éligible doit passer explicitement. Un personnage placé est marqué `overwatch` ET `activated` : non activable (`IN_OVERWATCH`), traité comme déjà activé pour la fin de tour ; après son tir il reste non activable (`ALREADY_ACTIVATED`). Si plus aucun personnage n'est activable après la phase, le tour se termine aussitôt et le suivant démarre. Voir OQ-OVERWATCH-010 pour les points laissés ouverts.
+- **Test:** `overwatch.spec.ts` (alternance stricte, refus hors tour de décision, passe puis placement adverse, deux passes, aucun PC), `turn.spec.ts` (phase, relance avant/après décision, tour suivant), `legal-actions.spec.ts`, `tests/integration/full-turn.spec.ts`.
+- **Historique (version précédente, remplacée par la rectification du PO) :** chaque joueur décidait EN ENTIER à la suite : le gagnant de l'initiative plaçait autant de personnages qu'il voulait tant qu'il avait des PC puis confirmait avec `END_OVERWATCH_PLACEMENT` (`OVERWATCH_PLACEMENT_ENDED`), puis l'autre joueur faisait de même ; la relance d'initiative restait possible tant qu'aucun personnage n'était placé et que le gagnant n'avait pas confirmé.
+- **Historique (interprétation initiale) :** voir ci-dessus pour (3) et (5) : placé = `overwatch` + `activated` ; seuls les personnages vivants et non déjà placés peuvent être placés.
+
 ## OQ-COMBAT-008 — Taille de la réserve de défense (RÉSOLUE)
 
 - **Résolution (product owner) :** depuis la règle v2, la réserve de défense est TOUJOURS de 4 dés ; elle ne dépend d'aucune caractéristique (seule la difficulté dépend du Physique). La valeur reste exposée en configuration (`config.defensePoolSize`, défaut 4) pour d'éventuelles variantes de règles.
@@ -373,3 +375,12 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Reason:** le tableau v2 donne 2 dés sans arme mais pas la portée.
 - **Impact:** tout personnage peut toujours attaquer un adversaire adjacent.
 - **Test required:** `runtime.spec.ts` (arme ajoutée), `attack.spec.ts` (corps à corps).
+
+## OQ-OVERWATCH-010 — Phase Overwatch : cas limites de l'alternance
+
+- **Rule:** RULE-OVERWATCH-008
+- **Source:** rectification du PO sur l'ordre du tour (OQ-OVERWATCH-009).
+- **Interpretation (actuelle) :** (1) l'alternance est cyclique dans l'ordre des joueurs ; la phase se termine quand le nombre de passes consécutives atteint le nombre de joueurs (deux passes pour deux joueurs) ; un placement remet le compteur à 0. (2) Un joueur qui n'a plus de PC ou plus de personnage éligible reste dans l'alternance et doit passer explicitement à chaque fois que la main lui revient (aucun passage automatique) ; la phase peut donc compter plusieurs tours de décision tant que l'adversaire continue de placer. (3) Un joueur qui a passé conserve le droit de placer quand la main lui revient après un placement adverse (conforme à la décision). (4) La relance d'initiative est refusée dès la première décision (placement ou passe) prise par n'importe quel joueur, pas seulement par le gagnant.
+- **Reason:** la décision traite le cas à deux joueurs ; le cas à plus de deux joueurs et la passe automatique d'un joueur sans option ne sont pas précisés.
+- **Impact:** nombre de clics en phase Overwatch ; parties à plus de deux joueurs (hors périmètre actuel).
+- **Test required:** `overwatch.spec.ts` (aucun PC des deux côtés, passe puis placement adverse), `turn.spec.ts` (relance après une passe).

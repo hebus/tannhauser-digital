@@ -45,6 +45,7 @@ Détail et traçabilité : `traceability-overwatch.md` (RULE-OVERWATCH-*) ; stru
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-OVERWATCH-001 | Mettre un personnage en Overwatch coûte 1 PC ; décision après l'initiative, avant les activations, dans la limite des PC ; le personnage n'est pas activable ce tour. | `COMMAND_POINTS_SPENT`, `OVERWATCH_PLACED` |
+| RULE-OVERWATCH-008 | Phase Overwatch : à tour de rôle, en commençant par le gagnant de l'initiative, le joueur place UN SEUL personnage en Overwatch ou PASSE ; puis c'est à l'autre joueur de décider. Après une passe suivie d'un placement adverse, la main revient au premier, qui peut encore placer. La phase s'achève quand les deux joueurs passent consécutivement ; les activations commencent alors. | `OVERWATCH_PLACED`, `OVERWATCH_PASSED`, `OVERWATCH_PHASE_ENDED` |
 | RULE-OVERWATCH-002 | Un adversaire qui entre dans la ligne de vue d'un Overwatch en se déplaçant s'arrête sur cette case. | `OVERWATCH_TRIGGERED` |
 | RULE-OVERWATCH-010 | Un adversaire déjà dans la ligne de vue qui tente de se déplacer ou d'agir déclenche l'opportunité avant l'exécution de sa commande, qui est exécutée ensuite. | `OVERWATCH_TRIGGERED` (`announced`) |
 | RULE-OVERWATCH-005 | L'attaque d'opportunité est optionnelle ; refusée, l'Overwatch reste actif sans se redéclencher contre cet adversaire pendant son activation ; réalisée, le personnage quitte l'Overwatch. | `OVERWATCH_RESOLVED` |

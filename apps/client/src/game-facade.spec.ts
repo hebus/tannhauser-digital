@@ -15,10 +15,10 @@ function setup(enemyNode = 'n2'): { facade: GameFacade; player: string; hero: st
     return { ...c, nodeId: c.playerId === player ? 'n5' : 'n16' };
   });
   const facade = new GameFacade({ ...base.state, characters }, 3);
-  // Phase de placement de l'Overwatch : chaque joueur confirme sans placer, puis les activations commencent.
+  // Phase de placement de l'Overwatch : les deux joueurs passent consécutivement, puis les activations commencent.
   const other = base.state.players.find((p) => p.id !== player)!.id;
-  expect(facade.dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: player }).accepted).toBe(true);
-  expect(facade.dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: other }).accepted).toBe(true);
+  expect(facade.dispatch({ type: 'PASS_OVERWATCH', playerId: player }).accepted).toBe(true);
+  expect(facade.dispatch({ type: 'PASS_OVERWATCH', playerId: other }).accepted).toBe(true);
   return { facade, player, hero: hero.id, enemyHero: enemyHero.id };
 }
 
@@ -33,6 +33,15 @@ describe('GameFacade : phase de placement', () => {
     expect(facade.state.players.find((p) => p.id === player)?.commandPoints).toBe(1);
     expect(facade.state.characters.find((c) => c.id === hero.id)).toMatchObject({ overwatch: true, activated: true });
     expect(facade.targetable(hero.id)).toEqual([]);
+    // Un placement redonne la main à l'autre joueur (qui peut passer), puis le premier peut encore décider.
+    const other = facade.state.players.find((p) => p.id !== player)!.id;
+    expect(facade.state.turn.activePlayerId).toBe(other);
+    expect(facade.dispatch({ type: 'PASS_OVERWATCH', playerId: player }).errors[0]?.code).toBe('NOT_YOUR_DECISION_TURN');
+    expect(facade.dispatch({ type: 'PASS_OVERWATCH', playerId: other }).accepted).toBe(true);
+    expect(facade.state.phase).toBe('OVERWATCH');
+    expect(facade.state.turn).toMatchObject({ activePlayerId: player, overwatchPasses: 1 });
+    expect(facade.dispatch({ type: 'PASS_OVERWATCH', playerId: player }).accepted).toBe(true);
+    expect(facade.state.phase).toBe('ACTIVATION');
   });
 });
 

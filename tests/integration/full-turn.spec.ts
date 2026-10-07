@@ -57,7 +57,10 @@ function flatBoard() {
     .build();
 }
 
-/** Partie démarrée puis phase de placement de l'Overwatch : `placements` sont appliqués, puis chaque joueur confirme. */
+/**
+ * Partie démarrée puis phase d'Overwatch : les `placements` (un personnage par décision, en alternance) sont appliqués,
+ * puis les joueurs passent tour à tour jusqu'à deux passes consécutives.
+ */
 function start(rng: ScriptedRng, characters: CharacterState[], flat = false, placements: GameCommand[] = []): GameState {
   const initial = createInitialState({
     gameId: 'it',
@@ -72,14 +75,13 @@ function start(rng: ScriptedRng, characters: CharacterState[], flat = false, pla
   });
   let state = applyCommand(initial, { type: 'START_GAME' }, rng).state;
   expect(state.phase).toBe('OVERWATCH');
-  const winner = state.turn.initiativePlayerId!;
-  const other = winner === 'p1' ? 'p2' : 'p1';
-  const script: GameCommand[] = [...placements, { type: 'END_OVERWATCH_PLACEMENT', playerId: winner }, { type: 'END_OVERWATCH_PLACEMENT', playerId: other }];
-  for (const command of script) {
+  const apply = (command: GameCommand) => {
     const res = applyCommand(state, command, rng);
     expect(res.errors, JSON.stringify(res.errors)).toEqual([]);
     state = res.state;
-  }
+  };
+  for (const command of placements) apply(command);
+  while (state.phase === 'OVERWATCH') apply({ type: 'PASS_OVERWATCH', playerId: state.turn.activePlayerId! });
   expect(state.phase).toBe('ACTIVATION');
   return state;
 }
@@ -236,6 +238,46 @@ describe('parcours Overwatch complet', () => {
     expect(d.state.phase).toBe('FINISHED');
     expect(d.state.victory.winnerId).toBe('p1');
     expect(rng.snapshot().draws).toBe(18);
+  });
+
+  it('phase d\'Overwatch : alternance stricte, passe puis placement adverse, deux passes consécutives, replay identique', () => {
+    const play = () => {
+      const rng = new ScriptedRng([2, 9]);
+      const initial = createInitialState({
+        gameId: 'it',
+        scenarioId: 'it',
+        board: board(),
+        players: [
+          { id: 'p1', factionId: 'f1', commandPoints: 0 },
+          { id: 'p2', factionId: 'f2', commandPoints: 0 },
+        ],
+        characters: [character('h1', 'p1', 'a'), character('h3', 'p1', 'b'), character('h4', 'p1', 'b'), character('h2', 'p2', 'e')],
+        rng: new SeededRng(1).snapshot(),
+      });
+      const d = driver(applyCommand(initial, { type: 'START_GAME' }, rng).state, rng);
+      expect(d.state.turn).toMatchObject({ initiativePlayerId: 'p2', activePlayerId: 'p2' });
+      d.refuse({ type: 'PASS_OVERWATCH', playerId: 'p1' }, 'NOT_YOUR_DECISION_TURN');
+      d.run({ type: 'PASS_OVERWATCH', playerId: 'p2' }); // p2 passe
+      d.refuse(place('p2', 'h2'), 'NOT_YOUR_DECISION_TURN');
+      d.run(place('p1', 'h1')); // p1 place un seul personnage : la main revient à p2
+      expect(d.state.turn).toMatchObject({ activePlayerId: 'p2', overwatchPasses: 0 });
+      d.refuse(place('p1', 'h3'), 'NOT_YOUR_DECISION_TURN');
+      d.run(place('p2', 'h2')); // p2, qui avait passé, peut encore placer
+      d.run(place('p1', 'h3')); // p1 place un second personnage (2e PC)
+      d.refuse(place('p1', 'h1'), 'NOT_YOUR_DECISION_TURN');
+      d.run({ type: 'PASS_OVERWATCH', playerId: 'p2' });
+      expect(d.state.phase).toBe('OVERWATCH');
+      const end = d.run({ type: 'PASS_OVERWATCH', playerId: 'p1' });
+      expect(end.events.map((e) => e.type)).toEqual(['OVERWATCH_PASSED', 'OVERWATCH_PHASE_ENDED']);
+      expect(d.state.phase).toBe('ACTIVATION');
+      return d.state;
+    };
+    const first = play();
+    expect(first.players.map((p) => p.commandPoints)).toEqual([0, 1]);
+    expect(first.characters.filter((c) => c.overwatch).map((c) => c.id)).toEqual(['h1', 'h3', 'h2']);
+    expect(first.characters.find((c) => c.id === 'h4')).toMatchObject({ overwatch: false, activated: false });
+    expect(play()).toEqual(first);
+    expect(JSON.parse(JSON.stringify(first))).toEqual(first);
   });
 
   it('adversaire déjà en vue qui tente une attaque : la réaction passe avant, puis l\'attaque annoncée est exécutée', () => {

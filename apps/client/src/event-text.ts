@@ -35,8 +35,10 @@ export function describeEvent(e: GameEvent): string | null {
       return `${e.characterId} se met en Overwatch.`;
     case 'COMMAND_POINTS_SPENT':
       return `${e.playerId} dépense ${e.amount} PC (${e.purpose}).`;
-    case 'OVERWATCH_PLACEMENT_ENDED':
-      return `${e.playerId} a terminé ses placements d'Overwatch.`;
+    case 'OVERWATCH_PASSED':
+      return `${e.playerId} passe (aucun Overwatch).`;
+    case 'OVERWATCH_PHASE_ENDED':
+      return "Phase Overwatch terminée : les activations commencent.";
     case 'OVERWATCH_RESUME_REFUSED':
       return `Action annoncée annulée (${e.command}) : ${e.message}`;
     case 'OVERWATCH_TRIGGERED':

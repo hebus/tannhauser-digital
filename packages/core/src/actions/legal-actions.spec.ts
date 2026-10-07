@@ -69,7 +69,7 @@ const by = (actions: LegalAction[], id: ActionId): LegalAction => actions.find((
 describe('getLegalActions', () => {
   it('renvoie toutes les actions, chacune avec un motif français quand elle est indisponible', () => {
     const actions = getLegalActions(makeState(), 'h1');
-    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS', 'END_OVERWATCH_PLACEMENT']);
+    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS', 'PASS_OVERWATCH']);
     for (const a of actions) if (!a.available) expect(a.reason).toMatch(/\S/);
   });
 
@@ -206,7 +206,7 @@ describe('getLegalActions', () => {
     for (const s of states) {
       const actions = getLegalActions(s, 'h1');
       expect(by(actions, 'OVERWATCH').available).toBe(accepts(s, { type: 'OVERWATCH', playerId: 'p1', characterId: 'h1' }));
-      expect(by(actions, 'END_OVERWATCH_PLACEMENT').available).toBe(accepts(s, { type: 'END_OVERWATCH_PLACEMENT', playerId: 'p1' }));
+      expect(by(actions, 'PASS_OVERWATCH').available).toBe(accepts(s, { type: 'PASS_OVERWATCH', playerId: 'p1' }));
       expect(by(actions, 'END_ACTIVATION').available).toBe(accepts(s, { type: 'END_TURN', playerId: 'p1' }));
       expect(by(actions, 'PASS').available).toBe(accepts(s, { type: 'PASS', playerId: 'p1' }));
       expect(by(actions, 'SELECT').available).toBe(accepts(s, { type: 'SELECT_CHARACTER', playerId: 'p1', characterId: 'h1' }));
@@ -237,7 +237,7 @@ describe('getLegalActions : phase de placement de l\'Overwatch', () => {
   it('Overwatch disponible avec au moins 1 PC pour le joueur qui décide', () => {
     const actions = getLegalActions(placementState(), 'h1');
     expect(by(actions, 'OVERWATCH')).toEqual({ id: 'OVERWATCH', available: true });
-    expect(by(actions, 'END_OVERWATCH_PLACEMENT').available).toBe(true);
+    expect(by(actions, 'PASS_OVERWATCH').available).toBe(true);
   });
 
   it('sans PC : « Impossible : 1 PC requis. »', () => {
@@ -252,9 +252,30 @@ describe('getLegalActions : phase de placement de l\'Overwatch', () => {
     const placed = placementState({ characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('e1', 'p2', 'e')] });
     expect(by(getLegalActions(placed, 'h1'), 'OVERWATCH')).toMatchObject({ available: false, code: 'ALREADY_OVERWATCH' });
     const waiting = placementState({ activePlayerId: 'p2' });
-    expect(by(getLegalActions(waiting, 'h1'), 'OVERWATCH')).toMatchObject({ available: false, code: 'NOT_YOUR_PLACEMENT_TURN' });
-    expect(by(getLegalActions(waiting, 'h1'), 'END_OVERWATCH_PLACEMENT')).toMatchObject({ available: false, code: 'NOT_YOUR_PLACEMENT_TURN' });
+    expect(by(getLegalActions(waiting, 'h1'), 'OVERWATCH')).toMatchObject({
+      available: false,
+      code: 'NOT_YOUR_DECISION_TURN',
+      reason: "Impossible : ce n'est pas votre tour de décider.",
+    });
+    expect(by(getLegalActions(waiting, 'h1'), 'PASS_OVERWATCH')).toMatchObject({ available: false, code: 'NOT_YOUR_DECISION_TURN' });
     expect(by(getLegalActions(waiting, 'e1'), 'OVERWATCH').available).toBe(true);
+  });
+
+  it('sans PC ou sans personnage éligible : seule la passe est possible (aucun passage automatique)', () => {
+    const broke = getLegalActions(placementState({ commandPoints: 0 }), 'h1');
+    expect(by(broke, 'OVERWATCH').available).toBe(false);
+    expect(by(broke, 'PASS_OVERWATCH').available).toBe(true);
+    const none = placementState({ characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('e1', 'p2', 'e')] });
+    expect(by(getLegalActions(none, 'h1'), 'OVERWATCH').available).toBe(false);
+    expect(by(getLegalActions(none, 'h1'), 'PASS_OVERWATCH').available).toBe(true);
+  });
+
+  it('un placement redonne la main : OVERWATCH/passe passent à l\'autre joueur', () => {
+    const state = placementState();
+    const after = applyCommand(state, { type: 'OVERWATCH', playerId: 'p1', characterId: 'h1' }, new SeededRng(3)).state;
+    expect(by(getLegalActions(after, 'e1'), 'OVERWATCH').available).toBe(true);
+    expect(by(getLegalActions(after, 'e1'), 'PASS_OVERWATCH').available).toBe(true);
+    expect(by(getLegalActions(after, 'h1'), 'PASS_OVERWATCH')).toMatchObject({ available: false, code: 'NOT_YOUR_DECISION_TURN' });
   });
 
   it('les actions d\'activation sont toutes refusées pendant le placement', () => {

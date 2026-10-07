@@ -275,7 +275,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     actionsPanel.append(list);
   }
 
-  // --- Phase de placement de l'Overwatch ---
+  // --- Phase d'Overwatch : un personnage par décision, ou passer ---
   function placeOverwatch(characterId: string, playerId: string): void {
     dispatch({ type: 'OVERWATCH', playerId, characterId });
   }
@@ -313,19 +313,19 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       h(
         'button',
         {
-          class: `hud-btn hud-btn-primary${p.endAvailable ? '' : ' is-unavailable'}`,
-          attrs: { type: 'button', 'data-fid': 'end-placement', 'aria-disabled': p.endAvailable ? undefined : 'true', title: p.endReason ?? t('placement.endHint') },
+          class: `hud-btn hud-btn-primary${p.passAvailable ? '' : ' is-unavailable'}`,
+          attrs: { type: 'button', 'data-fid': 'pass-overwatch', 'aria-disabled': p.passAvailable ? undefined : 'true', title: p.passReason ?? t('placement.passHint') },
           on: {
             click: () => {
-              if (!p.endAvailable) toast(p.endReason ?? '', 'error');
-              else dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: p.playerId });
+              if (!p.passAvailable) toast(p.passReason ?? '', 'error');
+              else dispatch({ type: 'PASS_OVERWATCH', playerId: p.playerId });
             },
           },
         },
-        h('span', { class: 'hud-btn-label' }, h('span', { text: t('placement.end') }), h('kbd', { text: 'E' })),
-        p.endAvailable ? null : h('span', { class: 'hud-btn-reason', text: p.endReason }),
+        h('span', { class: 'hud-btn-label' }, h('span', { text: t('placement.pass') }), h('kbd', { text: 'P' })),
+        p.passAvailable ? null : h('span', { class: 'hud-btn-reason', text: p.passReason }),
       ),
-      h('p', { class: 'hud-note', text: t('placement.endHint') }),
+      h('p', { class: 'hud-note', text: t('placement.passHint') }),
     );
   }
 
@@ -335,7 +335,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     banner.textContent = '';
     if (!p) return;
     banner.append(
-      h('strong', { text: `◉ ${t('placement.banner', { cost: p.cost })}` }),
+      h('strong', { text: `◉ ${t('placement.banner', { player: p.playerName, cost: p.cost })}` }),
       h('span', { text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
     );
   }

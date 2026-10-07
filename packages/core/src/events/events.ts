@@ -19,7 +19,9 @@ export type GameEvent =
   | { readonly type: 'COMBAT_ROLLED'; readonly attackerId: string; readonly dice: readonly number[]; readonly successes: number; readonly difficulty?: number; readonly log?: CombatLog }
   | { readonly type: 'DEFENSE_ROLLED'; readonly defenderId: string; readonly dice: readonly number[]; readonly successes: number; readonly difficulty: number }
   | { readonly type: 'OVERWATCH_PLACED'; readonly characterId: string }
-  | { readonly type: 'OVERWATCH_PLACEMENT_ENDED'; readonly playerId: string }
+  | { readonly type: 'OVERWATCH_PASSED'; readonly playerId: string }
+  /** Les deux joueurs ont passé consécutivement : la phase d'Overwatch est terminée, les activations commencent. */
+  | { readonly type: 'OVERWATCH_PHASE_ENDED' }
   | {
       readonly type: 'OVERWATCH_TRIGGERED';
       readonly overwatcherId: string;

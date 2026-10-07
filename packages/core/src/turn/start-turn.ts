@@ -14,7 +14,7 @@ export function nextPlayerWithActivation(state: GameState, fromIndex: number): P
   return null;
 }
 
-/** Copie du tour sans activation en cours (ni action, réaction, ni refus d'attaque d'opportunité). */
+/** Copie du tour sans activation en cours (ni action, réaction, refus d'attaque d'opportunité, ni compteurs de la phase OVERWATCH). */
 export function turnWithoutActivation(turn: TurnState, activePlayerId: PlayerId | null): TurnState {
   return {
     number: turn.number,
@@ -24,8 +24,9 @@ export function turnWithoutActivation(turn: TurnState, activePlayerId: PlayerId 
 }
 
 /**
- * Démarre le tour `turnNumber` : TURN_STARTED, refresh, initiative, puis phase OVERWATCH (placement des
- * Overwatch avant les activations). Le joueur d'initiative décide en premier, puis les autres dans l'ordre.
+ * Démarre le tour `turnNumber` : TURN_STARTED, refresh (PC, fin des Overwatch), initiative, puis phase OVERWATCH
+ * (un personnage par décision, avant les activations). Le gagnant de l'initiative décide en premier, puis les
+ * joueurs alternent jusqu'à ce que tous passent consécutivement.
  */
 export function startTurn(
   state: GameState,
@@ -47,13 +48,13 @@ export function startTurn(
     state: {
       ...refreshed.state,
       phase: 'OVERWATCH',
-      turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId: winnerId },
+      turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
     },
   };
 }
 
 /**
- * Fin de la phase de placement : ouvre les activations (le joueur d'initiative, ou le suivant s'il n'a rien à
+ * Fin de la phase d'Overwatch (deux passes consécutives) : ouvre les activations (le joueur d'initiative, ou le suivant s'il n'a rien à
  * activer) ; si plus aucun personnage n'est activable, le tour se termine aussitôt.
  */
 export function beginActivations(state: GameState, events: GameEvent[], rng: RandomSource): GameState {
@@ -65,5 +66,5 @@ export function beginActivations(state: GameState, events: GameEvent[], rng: Ran
     events.push(...started.events);
     return started.state;
   }
-  return { ...state, phase: 'ACTIVATION', turn: { ...state.turn, activePlayerId: first } };
+  return { ...state, phase: 'ACTIVATION', turn: turnWithoutActivation(state.turn, first) };
 }

@@ -34,7 +34,7 @@ describe('applyCommand / START_GAME', () => {
     const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([3, 8]));
     expect(res.accepted).toBe(true);
     expect(res.state.phase).toBe('OVERWATCH');
-    expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2' });
+    expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2', overwatchPasses: 0, overwatchDecisions: 0 });
     expect(res.state.players.map((p) => p.commandPoints)).toEqual([2, 2]);
     expect(res.events.map((e) => e.type)).toEqual([
       'GAME_STARTED', 'TURN_STARTED', 'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED',

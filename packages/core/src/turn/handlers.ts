@@ -128,18 +128,18 @@ registerHandler('PASS', (state, command, rng) => {
 
 /**
  * REROLL_INITIATIVE : le gagnant de l'initiative dépense 1 PC pour relancer, pendant la phase OVERWATCH et avant
- * tout placement (OQ-TURN-006). Le nouveau gagnant décide alors en premier.
+ * toute décision, placement ou passe (OQ-TURN-006). Le nouveau gagnant décide alors en premier.
  */
 registerHandler('REROLL_INITIATIVE', (state, command, rng) => {
   if (state.phase !== 'OVERWATCH') {
-    return reject('WRONG_PHASE', "L'initiative ne peut être relancée que dans la phase Overwatch, avant les placements.");
+    return reject('WRONG_PHASE', "L'initiative ne peut être relancée que dans la phase Overwatch, avant toute décision.");
   }
   const previousWinnerId = state.turn.initiativePlayerId;
   if (previousWinnerId !== command.playerId) {
     return reject('NOT_INITIATIVE_WINNER', 'Seul le gagnant de l\'initiative peut la relancer.');
   }
-  if (state.turn.activePlayerId !== command.playerId || state.characters.some((c) => c.alive && c.activated)) {
-    return reject('PLACEMENT_STARTED', "L'initiative ne peut plus être relancée : les placements d'Overwatch ont commencé.");
+  if ((state.turn.overwatchDecisions ?? 0) > 0) {
+    return reject('OVERWATCH_DECISIONS_STARTED', "L'initiative ne peut plus être relancée : un placement ou une passe d'Overwatch a eu lieu.");
   }
   const spent = CommandPointService.spend(state, command.playerId, REROLL_INITIATIVE_COST, 'REROLL_INITIATIVE');
   if (!spent.ok) return reject(spent.reason, spent.message);
@@ -156,7 +156,7 @@ registerHandler('REROLL_INITIATIVE', (state, command, rng) => {
     events,
     state: {
       ...spent.state,
-      turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId: winnerId },
+      turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId: winnerId, overwatchPasses: 0, overwatchDecisions: 0 },
     },
   };
 });

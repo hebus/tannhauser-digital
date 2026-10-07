@@ -10,7 +10,7 @@ export type GameCommand =
   | { readonly type: 'CLOSE_DOOR'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly doorId: DoorId }
   | { readonly type: 'ATTACK'; readonly playerId: PlayerId; readonly attackerId: CharacterId; readonly targetId: CharacterId; readonly weaponId: string }
   | { readonly type: 'OVERWATCH'; readonly playerId: PlayerId; readonly characterId: CharacterId }
-  | { readonly type: 'END_OVERWATCH_PLACEMENT'; readonly playerId: PlayerId }
+  | { readonly type: 'PASS_OVERWATCH'; readonly playerId: PlayerId }
   | { readonly type: 'OVERWATCH_FIRE'; readonly playerId: PlayerId; readonly weaponId: string }
   | { readonly type: 'OVERWATCH_DECLINE'; readonly playerId: PlayerId }
   | { readonly type: 'REROLL_INITIATIVE'; readonly playerId: PlayerId }

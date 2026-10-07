@@ -16,8 +16,15 @@ export interface TurnState {
   readonly number: number;
   /** Joueur qui a l'initiative (à jouer en premier) ce tour-ci. */
   readonly initiativePlayerId: PlayerId | null;
-  /** Joueur dont c'est actuellement le tour d'activer un personnage. */
+  /**
+   * Joueur dont c'est actuellement le tour : en phase OVERWATCH, celui qui doit décider (placer UN personnage en
+   * Overwatch ou passer) ; en phase ACTIVATION, celui qui active un personnage.
+   */
   readonly activePlayerId: PlayerId | null;
+  /** Phase OVERWATCH : nombre de passes consécutives (remis à 0 par un placement ; la phase s'achève quand tous ont passé). */
+  readonly overwatchPasses?: number;
+  /** Phase OVERWATCH : nombre de décisions prises (placements + passes) ; la relance d'initiative exige 0. */
+  readonly overwatchDecisions?: number;
   /** Personnage en cours d'activation (absent hors activation). */
   readonly activeCharacterId?: CharacterId;
   /** Le personnage actif a déjà effectué son unique action de l'activation. */

@@ -152,11 +152,17 @@ export interface PlacementModel {
   readonly commandPoints: number;
   readonly cost: number;
   readonly rows: readonly PlacementRow[];
-  readonly endAvailable: boolean;
-  readonly endReason: string | undefined;
+  /** Passer (ne placer personne) : toujours possible pour le joueur qui décide. */
+  readonly passAvailable: boolean;
+  readonly passReason: string | undefined;
+  /** Joueur qui décidera après celui-ci (affichage « en attente »). */
+  readonly otherPlayerName: string | null;
+  /** Passes consécutives déjà enregistrées (la phase se ferme quand tous les joueurs ont passé). */
+  readonly consecutivePasses: number;
+  readonly playersCount: number;
 }
 
-/** Phase de placement : personnages du joueur qui décide, avec disponibilité/raison issues de `getLegalActions`. `null` hors phase. */
+/** Phase d'Overwatch : personnages du joueur qui décide (UN placement ou une passe), avec disponibilité/raison issues de `getLegalActions`. `null` hors phase. */
 export function placementModel(state: GameState, labels: Labeler): PlacementModel | null {
   if (!isPlacementPhase(state) || !state.turn.activePlayerId) return null;
   const playerId = state.turn.activePlayerId;
@@ -172,15 +178,18 @@ export function placementModel(state: GameState, labels: Labeler): PlacementMode
       reason: ow.available ? undefined : reasonText(ow.code, ow.reason),
     };
   });
-  const end = own[0] ? getLegalActions(state, own[0].id).find((a) => a.id === 'END_OVERWATCH_PLACEMENT') : undefined;
+  const pass = own[0] ? getLegalActions(state, own[0].id).find((a) => a.id === 'PASS_OVERWATCH') : undefined;
   return {
     playerId,
     playerName: labels.player(playerId),
     commandPoints: state.players.find((p) => p.id === playerId)?.commandPoints ?? 0,
     cost: OVERWATCH_COST,
     rows,
-    endAvailable: end?.available ?? true,
-    endReason: end && !end.available ? reasonText(end.code, end.reason) : undefined,
+    passAvailable: pass?.available ?? true,
+    passReason: pass && !pass.available ? reasonText(pass.code, pass.reason) : undefined,
+    otherPlayerName: state.players.length > 1 ? labels.player(state.players[(state.players.findIndex((x) => x.id === playerId) + 1) % state.players.length]!.id) : null,
+    consecutivePasses: state.turn.overwatchPasses ?? 0,
+    playersCount: state.players.length,
   };
 }
 

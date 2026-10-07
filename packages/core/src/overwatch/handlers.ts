@@ -19,14 +19,13 @@ import { findOverwatchTrigger } from './trigger';
 /** Coût en PC pour placer un personnage en Overwatch (règle du product owner). */
 export const OVERWATCH_COST = 1;
 
-/** Joueur suivant dans l'ordre de décision (à partir du joueur d'initiative), ou `null` si le tour de décision est bouclé. */
-function nextPlacementPlayer(state: GameState): string | null {
-  const n = state.players.length;
-  const start = Math.max(0, state.players.findIndex((p) => p.id === state.turn.initiativePlayerId));
+/** Joueur suivant dans l'ordre des joueurs (cyclique) à partir du joueur qui vient de décider. */
+function nextDecider(state: GameState): string | null {
   const current = state.players.findIndex((p) => p.id === state.turn.activePlayerId);
-  const next = (current + 1) % n;
-  return next === start ? null : state.players[next]!.id;
+  return state.players[(current + 1) % state.players.length]?.id ?? null;
 }
+
+const notYourDecision: RuleError = { code: 'NOT_YOUR_DECISION_TURN', message: "Impossible : ce n'est pas votre tour de décider." };
 
 export type OverwatchPlacementCheck =
   | { readonly ok: true; readonly character: CharacterState }
@@ -36,9 +35,7 @@ export type OverwatchPlacementCheck =
 export function checkOverwatchPlacement(state: GameState, playerId: string, characterId: string): OverwatchPlacementCheck {
   const no = (code: string, message: string): OverwatchPlacementCheck => ({ ok: false, errors: [{ code, message }] });
   if (state.phase !== 'OVERWATCH') return no('OVERWATCH_BEFORE_ACTIVATIONS', "Impossible : l'Overwatch se place avant les activations.");
-  if (state.turn.activePlayerId !== playerId) {
-    return no('NOT_YOUR_PLACEMENT_TURN', "Impossible : ce n'est pas à vous de placer vos Overwatch.");
-  }
+  if (state.turn.activePlayerId !== playerId) return no(notYourDecision.code, notYourDecision.message);
   const character = state.characters.find((c) => c.id === characterId);
   if (!character) return no('UNKNOWN_CHARACTER', `Personnage inconnu : ${characterId}.`);
   if (character.playerId !== playerId) return no('NOT_OWN_CHARACTER', "Impossible : ce personnage n'est pas à vous.");
@@ -54,8 +51,9 @@ export function checkOverwatchPlacement(state: GameState, playerId: string, char
 }
 
 /**
- * OVERWATCH : pendant la phase de placement, le joueur dépense 1 PC pour mettre un de ses personnages en
- * Overwatch. Le personnage est traité comme déjà activé (non activable ce tour). Ne consomme aucune action.
+ * OVERWATCH : à son tour de décider, le joueur dépense 1 PC pour mettre UN de ses personnages en Overwatch. Le
+ * personnage est traité comme déjà activé (non activable ce tour). Ne consomme aucune action. La main passe à
+ * l'autre joueur et le compteur de passes consécutives retombe à 0.
  */
 registerHandler('OVERWATCH', (state, command) => {
   const checked = checkOverwatchPlacement(state, command.playerId, command.characterId);
@@ -63,40 +61,54 @@ registerHandler('OVERWATCH', (state, command) => {
   const { character } = checked;
   const spent = CommandPointService.spend(state, command.playerId, OVERWATCH_COST, 'OVERWATCH');
   if (!spent.ok) return reject(spent.reason, spent.message);
+  const placed: GameState = {
+    ...spent.state,
+    characters: spent.state.characters.map((c) => (c.id === character.id ? { ...c, overwatch: true, activated: true } : c)),
+  };
   return {
     ok: true,
     events: [spent.event, { type: 'OVERWATCH_PLACED', characterId: character.id }],
     state: {
-      ...spent.state,
-      characters: spent.state.characters.map((c) => (c.id === character.id ? { ...c, overwatch: true, activated: true } : c)),
+      ...placed,
+      turn: {
+        ...placed.turn,
+        activePlayerId: nextDecider(placed),
+        overwatchPasses: 0,
+        overwatchDecisions: (placed.turn.overwatchDecisions ?? 0) + 1,
+      },
     },
   };
 });
 
-/** Conditions de END_OVERWATCH_PLACEMENT (partagées avec `getLegalActions`). */
-export function checkEndPlacement(state: GameState, playerId: string): { ok: true } | { ok: false; error: RuleError } {
+/** Conditions de PASS_OVERWATCH (partagées avec `getLegalActions`). Aucun PC ni personnage requis : passer est toujours possible. */
+export function checkPassOverwatch(state: GameState, playerId: string): { ok: true } | { ok: false; error: RuleError } {
   if (state.phase !== 'OVERWATCH') {
-    return { ok: false, error: { code: 'NOT_PLACEMENT_PHASE', message: "Impossible : ce n'est pas la phase de placement de l'Overwatch." } };
+    return { ok: false, error: { code: 'NOT_OVERWATCH_PHASE', message: "Impossible : ce n'est pas la phase d'Overwatch." } };
   }
-  if (state.turn.activePlayerId !== playerId) {
-    return { ok: false, error: { code: 'NOT_YOUR_PLACEMENT_TURN', message: "Impossible : ce n'est pas à vous de placer vos Overwatch." } };
-  }
+  if (state.turn.activePlayerId !== playerId) return { ok: false, error: notYourDecision };
   return { ok: true };
 }
 
 /**
- * END_OVERWATCH_PLACEMENT : le joueur a fini de placer ses Overwatch. Le joueur suivant décide à son tour ;
- * après le dernier, la phase d'activation commence.
+ * PASS_OVERWATCH : le joueur dont c'est le tour de décider ne place personne. Si tous les joueurs ont passé
+ * consécutivement, la phase s'achève (OVERWATCH_PHASE_ENDED) et les activations commencent ; sinon la main passe
+ * à l'autre joueur.
  */
-registerHandler('END_OVERWATCH_PLACEMENT', (state, command, rng) => {
-  const checked = checkEndPlacement(state, command.playerId);
+registerHandler('PASS_OVERWATCH', (state, command, rng) => {
+  const checked = checkPassOverwatch(state, command.playerId);
   if (!checked.ok) return { ok: false, errors: [checked.error] };
-  const events: GameEvent[] = [{ type: 'OVERWATCH_PLACEMENT_ENDED', playerId: command.playerId }];
-  const next = nextPlacementPlayer(state);
-  if (next !== null) {
-    return { ok: true, events, state: { ...state, turn: { ...state.turn, activePlayerId: next } } };
+  const events: GameEvent[] = [{ type: 'OVERWATCH_PASSED', playerId: command.playerId }];
+  const passes = (state.turn.overwatchPasses ?? 0) + 1;
+  const decisions = (state.turn.overwatchDecisions ?? 0) + 1;
+  if (passes >= state.players.length) {
+    events.push({ type: 'OVERWATCH_PHASE_ENDED' });
+    return { ok: true, events, state: beginActivations(state, events, rng) };
   }
-  return { ok: true, events, state: beginActivations(state, events, rng) };
+  return {
+    ok: true,
+    events,
+    state: { ...state, turn: { ...state.turn, activePlayerId: nextDecider(state), overwatchPasses: passes, overwatchDecisions: decisions } },
+  };
 });
 
 // --- Attaque d'opportunité ---------------------------------------------------------------------------------------

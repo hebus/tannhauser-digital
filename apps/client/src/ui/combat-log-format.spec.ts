@@ -94,6 +94,8 @@ describe('journal de combat', () => {
     expect(formatEvent({ type: 'CHARACTER_MOVED', characterId: 'char.alpha.hero', path: ['a', 'b'], cost: 1 }, labels)?.text).toBe('Héros Alpha se déplace (1 PM) vers b.');
     expect(formatEvent({ type: 'TURN_STARTED', turn: 3 }, labels)).toMatchObject({ kind: 'turn', text: 'Tour 3.' });
     expect(formatEvent({ type: 'OVERWATCH_RESOLVED', overwatcherId: 'char.beta.hero', fired: false }, labels)?.text).toBe('Héros Bêta renonce à tirer.');
+    expect(formatEvent({ type: 'OVERWATCH_PASSED', playerId: 'p2' }, labels)?.text).toContain('passe');
+    expect(formatEvent({ type: 'OVERWATCH_PHASE_ENDED' }, labels)?.text).toBe('Phase Overwatch terminée : les activations commencent.');
     expect(formatEvent({ type: 'COMMAND_POINTS_REFRESHED', playerId: 'p1', amount: 2 }, labels)).toBeNull();
     expect(formatEvent({ type: 'VICTORY', winnerId: 'p1', reason: 'x' }, labels)).toMatchObject({ tone: 'victory', text: 'Victoire de Joueur 1 !' });
   });

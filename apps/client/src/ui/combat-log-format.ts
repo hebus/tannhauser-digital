@@ -59,8 +59,10 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
         : info('log.event.OVERWATCH_TRIGGERED', { overwatcher: labels.character(e.overwatcherId), target: labels.character(e.targetId), node: e.nodeId });
     case 'COMMAND_POINTS_SPENT':
       return info('log.event.COMMAND_POINTS_SPENT', { player: labels.player(e.playerId), amount: e.amount, purpose: e.purpose, remaining: e.remaining });
-    case 'OVERWATCH_PLACEMENT_ENDED':
-      return info('log.event.OVERWATCH_PLACEMENT_ENDED', { player: labels.player(e.playerId) });
+    case 'OVERWATCH_PASSED':
+      return info('log.event.OVERWATCH_PASSED', { player: labels.player(e.playerId) });
+    case 'OVERWATCH_PHASE_ENDED':
+      return info('log.event.OVERWATCH_PHASE_ENDED', {});
     case 'OVERWATCH_RESUME_REFUSED':
       return info('log.event.OVERWATCH_RESUME_REFUSED', { command: e.command, message: e.message });
     case 'OVERWATCH_RESOLVED':

@@ -3,7 +3,7 @@ import { checkCommandGate } from '../engine/apply-command';
 import type { RuleError } from '../events/events';
 import { checkActor, checkDoorToggle, doorsAdjacentTo } from '../movement/handlers';
 import { reachableNodes } from '../movement/reachable';
-import { checkEndPlacement, checkOverwatchPlacement } from '../overwatch/handlers';
+import { checkPassOverwatch, checkOverwatchPlacement } from '../overwatch/handlers';
 import type { CharacterState, GameState } from '../state/types';
 import { checkEndActivation, checkPass, checkSelectCharacter } from '../turn/handlers';
 import type { GameCommand, GameCommandType } from '../commands/commands';
@@ -12,7 +12,7 @@ import type { GameCommand, GameCommandType } from '../commands/commands';
  * Actions qu'un personnage peut tenter. `SELECT` (début d'activation) s'ajoute aux actions de jeu
  * pour que l'interface explique aussi pourquoi un personnage ne peut pas être activé.
  */
-export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'END_OVERWATCH_PLACEMENT';
+export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
 
 export interface AttackOption {
   readonly targetId: string;
@@ -54,7 +54,7 @@ const GAME_COMMAND_OF: Record<ActionId, GameCommandType> = {
   CLOSE_DOOR: 'CLOSE_DOOR',
   END_ACTIVATION: 'END_TURN',
   PASS: 'PASS',
-  END_OVERWATCH_PLACEMENT: 'END_OVERWATCH_PLACEMENT',
+  PASS_OVERWATCH: 'PASS_OVERWATCH',
 };
 
 const ok = (id: ActionId, details?: ActionDetails): LegalAction => (details ? { id, available: true, details } : { id, available: true });
@@ -147,8 +147,8 @@ export function getLegalActions(state: GameState, characterId: string): LegalAct
         const c = checkOverwatchPlacement(state, character.playerId, character.id);
         return c.ok ? ok(id) : refuse(id, c.errors[0]!);
       }
-      case 'END_OVERWATCH_PLACEMENT': {
-        const c = checkEndPlacement(state, character.playerId);
+      case 'PASS_OVERWATCH': {
+        const c = checkPassOverwatch(state, character.playerId);
         return c.ok ? ok(id) : refuse(id, c.error);
       }
       case 'OPEN_DOOR':

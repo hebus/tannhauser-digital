@@ -112,7 +112,7 @@ async function main(): Promise<void> {
     updatePath();
     const cp = s.players.map((p) => `${p.id}: ${p.commandPoints} PC`).join(' · ');
     const reaction = s.turn.reaction ? ` — RÉACTION : ${s.turn.reaction.forPlayerId} (T = tirer, D = refuser)` : '';
-    const phaseText = s.phase === 'OVERWATCH' ? ' — PHASE OVERWATCH : placements (E = terminer)' : '';
+    const phaseText = s.phase === 'OVERWATCH' ? ' — PHASE OVERWATCH : un personnage ou passer (P = passer)' : '';
     const activeText = active ? ` · actif : ${active.id}${s.turn.actionUsed ? ' (action utilisée)' : ''}` : '';
     const text =
       s.phase === 'FINISHED'
@@ -160,7 +160,7 @@ async function main(): Promise<void> {
     const active = activeCharacter();
     const own = here.find((c) => c.playerId === player);
     if (s.phase === 'OVERWATCH') {
-      // Phase de placement : cliquer un de ses personnages tente de le mettre en Overwatch (1 PC) ; le moteur explique les refus.
+      // Phase d'Overwatch : cliquer un de ses personnages tente de le mettre en Overwatch (1 PC, un seul par décision) ; le moteur explique les refus.
       if (own) send({ type: 'OVERWATCH', playerId: player, characterId: own.id });
       return;
     }
@@ -276,11 +276,11 @@ async function main(): Promise<void> {
         }
       }
     } else if (player && key === 'e') {
-      // Phase de placement : E confirme la fin des placements ; sinon fin d'activation.
-      send(s.phase === 'OVERWATCH' ? { type: 'END_OVERWATCH_PLACEMENT', playerId: player } : { type: 'END_TURN', playerId: player });
-    } else if (player && key === 'p') send({ type: 'PASS', playerId: player });
+      // Phase d'Overwatch : E passe (comme P) ; sinon fin d'activation.
+      send(s.phase === 'OVERWATCH' ? { type: 'PASS_OVERWATCH', playerId: player } : { type: 'END_TURN', playerId: player });
+    } else if (player && key === 'p') send(s.phase === 'OVERWATCH' ? { type: 'PASS_OVERWATCH', playerId: player } : { type: 'PASS', playerId: player });
     else if (player && key === 'o') {
-      // O n'agit qu'en phase de placement : on tente le premier personnage disponible ; hors phase, le moteur refuse
+      // O n'agit qu'en phase d'Overwatch : on tente le premier personnage disponible ; hors phase, le moteur refuse
       // (avec le motif « l'Overwatch se place avant les activations ») et le HUD l'affiche.
       const own = s.characters.filter((c) => c.playerId === player && c.alive);
       const candidate = own.find((c) => getLegalActions(s, c.id).some((a) => a.id === 'OVERWATCH' && a.available)) ?? own[0];

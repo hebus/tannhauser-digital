@@ -76,15 +76,29 @@ describe('modèle du HUD', () => {
 
 function placement(extra: Partial<GameState> = {}): GameState {
   const base = game();
-  return { ...base, ...extra, phase: 'OVERWATCH', turn: { number: 2, initiativePlayerId: 'p2', activePlayerId: 'p2' } };
+  return { ...base, phase: 'OVERWATCH', turn: { number: 2, initiativePlayerId: 'p2', activePlayerId: 'p2', overwatchPasses: 0, overwatchDecisions: 0 }, ...extra };
 }
 
 describe('phase de placement de l\'Overwatch', () => {
-  it('modèle : joueur qui décide, PC, boutons par personnage, fin possible', () => {
+  it('modèle : joueur qui décide, PC, boutons par personnage, passe possible', () => {
     const s = placement();
     const m = placementModel(s, createLabeler(s))!;
-    expect(m).toMatchObject({ playerId: 'p2', playerName: 'Joueur 2', commandPoints: 2, cost: 1, endAvailable: true });
+    expect(m).toMatchObject({ playerId: 'p2', playerName: 'Joueur 2', commandPoints: 2, cost: 1, passAvailable: true, consecutivePasses: 0 });
     expect(m.rows).toEqual([{ characterId: 'e1', name: 'e1', key: '1', placed: false, available: true, reason: undefined }]);
+  });
+
+  it('sans PC : seule la passe reste possible ; la main de l\'autre joueur n\'offre rien tant que ce n\'est pas son tour', () => {
+    const broke = placement({ players: game().players.map((p) => ({ ...p, commandPoints: 0 })) });
+    const m = placementModel(broke, createLabeler(broke))!;
+    expect(m.rows.every((r) => !r.available)).toBe(true);
+    expect(m.passAvailable).toBe(true);
+    expect(m.passReason).toBeUndefined();
+  });
+
+  it('indique qui décide, qui décidera ensuite et le nombre de passes consécutives', () => {
+    const s = placement({ turn: { number: 2, initiativePlayerId: 'p2', activePlayerId: 'p1', overwatchPasses: 1, overwatchDecisions: 1 } });
+    const m = placementModel(s, createLabeler(s))!;
+    expect(m).toMatchObject({ playerId: 'p1', playerName: 'Joueur 1', otherPlayerName: 'Joueur 2', consecutivePasses: 1, playersCount: 2 });
   });
 
   it('raisons visibles : sans PC, personnage déjà placé', () => {
