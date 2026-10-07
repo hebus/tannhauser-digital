@@ -37,3 +37,14 @@ Tous les éléments ci-dessous sont des entités ou propriétés **dans le modè
 | RULE-FX-001 | La fumée est un `TimedBoardEffect` (`origin`, `remainingTurns`) ; elle coupe la ligne de vue (RULE-LOS-002). | `SMOKE_STARTED`, `SMOKE_EXPIRED` |
 | RULE-FX-002 | Le feu est un effet persistant ou piloté par scénario : entrer dans la zone inflige des succès automatiques et un test physique, pour une durée définie. Un objectif d'incendie peut déclencher un mouvement sans PM. | `FIRE_STARTED` |
 | RULE-FX-003 | Les gravats sont placés comme marqueur de nœud avec surcoût de déplacement. | `GRAVATS_PLACED` |
+
+## Overwatch (sur le qui-vive)
+
+Détail et traçabilité : `traceability-overwatch.md` (RULE-OVERWATCH-*) ; structure du tour : `turn-structure.md`.
+
+| ID | Règle testable | Événements |
+|---|---|---|
+| RULE-OVERWATCH-001 | Mettre un personnage en Overwatch coûte 1 PC ; décision après l'initiative, avant les activations, dans la limite des PC ; le personnage n'est pas activable ce tour. | `COMMAND_POINTS_SPENT`, `OVERWATCH_PLACED` |
+| RULE-OVERWATCH-002 | Un adversaire qui entre dans la ligne de vue d'un Overwatch en se déplaçant s'arrête sur cette case. | `OVERWATCH_TRIGGERED` |
+| RULE-OVERWATCH-010 | Un adversaire déjà dans la ligne de vue qui tente de se déplacer ou d'agir déclenche l'opportunité avant l'exécution de sa commande, qui est exécutée ensuite. | `OVERWATCH_TRIGGERED` (`announced`) |
+| RULE-OVERWATCH-005 | L'attaque d'opportunité est optionnelle ; refusée, l'Overwatch reste actif sans se redéclencher contre cet adversaire pendant son activation ; réalisée, le personnage quitte l'Overwatch. | `OVERWATCH_RESOLVED` |

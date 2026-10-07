@@ -35,6 +35,7 @@ export function describeRefusals(refused: readonly RefusedCommand[], state: Game
 export function explainIgnoredClick(state: GameState): string {
   if (state.phase === 'FINISHED') return t('input.gameFinished');
   if (state.turn.reaction) return t('input.reactionPending');
+  if (state.phase === 'OVERWATCH') return t('input.placement');
   if (!state.turn.activeCharacterId) return t('input.noActive');
   return t('input.nothingHere');
 }

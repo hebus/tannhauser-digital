@@ -7,6 +7,7 @@ import { ScriptedRng, SeededRng } from '../rng/rng';
 import { createInitialState } from '../state/initial-state';
 import { currentStats, type CharacterState, type GameState } from '../state/types';
 import { deathmatchWinner } from '../victory/deathmatch';
+import '../overwatch/handlers';
 import '../turn/handlers';
 import './attack';
 import { explainCombat } from './log';
@@ -352,6 +353,42 @@ describe('ATTACK : action unique', () => {
       turn: { ...base.turn, reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } },
     };
     expect(applyCommand(state, attack(), new ScriptedRng([9])).errors[0]?.code).toBe('REACTION_PENDING');
+  });
+});
+
+describe('ATTACK : attaque d\'opportunité d\'un Overwatch adverse', () => {
+  const watched = () =>
+    makeState({
+      characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { overwatch: true, activated: true }), char('e2', 'p2', 'd')],
+    });
+
+  it('une attaque tentée sous le regard d\'un Overwatch adverse ouvre la réaction AVANT d\'être exécutée', () => {
+    const rng = new ScriptedRng([]);
+    const res = applyCommand(watched(), attack('pistol', 'e2'), rng);
+    expect(res.accepted).toBe(true);
+    expect(types(res.events)).toEqual(['OVERWATCH_TRIGGERED']);
+    expect(res.events[0]).toMatchObject({ overwatcherId: 'e1', targetId: 'h1', announced: 'ATTACK' });
+    expect(res.state.turn.reaction?.resume).toEqual(attack('pistol', 'e2'));
+    expect(res.state.turn.actionUsed).toBe(false);
+    expect(rng.snapshot().draws).toBe(0);
+    expect(hp(res.state, 'e2').health).toBe(3);
+  });
+
+  it('une attaque invalide n\'ouvre aucune réaction (refus habituel, aucun tirage)', () => {
+    const rng = new ScriptedRng([]);
+    const state = watched();
+    const res = applyCommand(state, attack('knife', 'e2'), rng);
+    expect(res.accepted).toBe(false);
+    expect(res.errors[0]?.code).toBe('NOT_ADJACENT');
+    expect(res.state).toBe(state);
+    expect(rng.snapshot().draws).toBe(0);
+  });
+
+  it('Overwatch allié ou absent : l\'attaque s\'exécute directement', () => {
+    const noOverwatch = makeState();
+    expect(types(applyCommand(noOverwatch, attack(), new ScriptedRng(MISS4)).events)[0]).toBe('ATTACK_DECLARED');
+    const ally = makeState({ characters: [char('h1', 'p1', 'a'), char('h2', 'p1', 'b', { overwatch: true, activated: true }), char('e1', 'p2', 'c')] });
+    expect(types(applyCommand(ally, attack(), new ScriptedRng(MISS4)).events)[0]).toBe('ATTACK_DECLARED');
   });
 });
 

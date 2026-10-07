@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRng, applyCommand, createInitialState, type CharacterState, type GameState } from '@tannhauser/core';
 import { BoardBuilder } from '@tannhauser/core';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, rosterRows, statusModel } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, announcedText, placementModel, reactionContext, rosterRows, statusModel } from './hud-model';
 import { setLocale } from './i18n';
 import { describeRefusals, explainIgnoredClick, explainIgnoredKey } from './input-feedback';
 import { createLabeler } from './labels';
@@ -48,7 +48,7 @@ describe('modèle du HUD', () => {
     const s = game({ activeCharacterId: 'h1', actionUsed: true });
     const byId = Object.fromEntries(actionRows(s, 'h1').map((r) => [r.id, r]));
     expect(byId.ATTACK).toMatchObject({ available: false, reason: expect.stringContaining('déjà utilisée') });
-    expect(byId.OVERWATCH?.available).toBe(false);
+    expect(byId.OVERWATCH).toMatchObject({ available: false, reason: "Impossible : l'Overwatch se place avant les activations." });
     expect(byId.MOVE).toMatchObject({ available: true, key: 'M' });
     expect(byId.MOVE?.reason).toBeUndefined();
     expect(actionRows(s, 'h1').every((r) => r.available || (r.reason ?? '').length > 0)).toBe(true);
@@ -71,6 +71,49 @@ describe('modèle du HUD', () => {
     const hudKeys = Object.values(ACTION_KEYS).map((k) => k!.toLowerCase());
     const own = hudKeys.filter((k) => !MAIN_HANDLED_KEYS.has(k));
     expect(own.sort()).toEqual(['a', 'f', 'm', 'u']);
+  });
+});
+
+function placement(extra: Partial<GameState> = {}): GameState {
+  const base = game();
+  return { ...base, ...extra, phase: 'OVERWATCH', turn: { number: 2, initiativePlayerId: 'p2', activePlayerId: 'p2' } };
+}
+
+describe('phase de placement de l\'Overwatch', () => {
+  it('modèle : joueur qui décide, PC, boutons par personnage, fin possible', () => {
+    const s = placement();
+    const m = placementModel(s, createLabeler(s))!;
+    expect(m).toMatchObject({ playerId: 'p2', playerName: 'Joueur 2', commandPoints: 2, cost: 1, endAvailable: true });
+    expect(m.rows).toEqual([{ characterId: 'e1', name: 'e1', key: '1', placed: false, available: true, reason: undefined }]);
+  });
+
+  it('raisons visibles : sans PC, personnage déjà placé', () => {
+    const broke = placement({ players: game().players.map((p) => ({ ...p, commandPoints: 0 })) });
+    expect(placementModel(broke, createLabeler(broke))!.rows[0]).toMatchObject({ available: false, reason: 'Impossible : 1 PC requis.' });
+    const done = placement({ characters: game().characters.map((c) => (c.id === 'e1' ? { ...c, overwatch: true, activated: true } : c)) });
+    expect(placementModel(done, createLabeler(done))!.rows[0]).toMatchObject({ placed: true, available: false });
+  });
+
+  it('hors phase de placement : aucun modèle ; le statut indique la phase', () => {
+    expect(placementModel(game(), createLabeler(game()))).toBeNull();
+    expect(statusModel(placement(), createLabeler(placement())).placement).toBe(true);
+  });
+
+  it('touche O / clic : explications en français selon l\'état', () => {
+    expect(explainIgnoredClick(placement())).toContain('Phase Overwatch');
+  });
+
+  it('réaction : action annoncée en attente, ou entrée dans la ligne de vue', () => {
+    const base = game({ activeCharacterId: 'h1' });
+    const labels = createLabeler(base);
+    expect(announcedText({ type: 'MOVE_CHARACTER', playerId: 'p1', characterId: 'h1', path: ['b'] }, labels)).toBe('h1 veut se déplacer vers b');
+    expect(announcedText({ type: 'ATTACK', playerId: 'p1', attackerId: 'h1', targetId: 'e1', weaponId: 'weapon.pistol' }, labels)).toBe('h1 veut attaquer e1');
+    expect(announcedText(undefined, labels)).toBeNull();
+    const resume = { type: 'OPEN_DOOR', playerId: 'p1', characterId: 'h1', doorId: 'D' } as const;
+    const pending = { ...base, characters: base.characters.map((c) => (c.id === 'e1' ? { ...c, overwatch: true, activated: true } : c)), turn: { ...base.turn, reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2', resume } } };
+    expect(reactionContext(pending, createLabeler(pending))).toBe('h1 veut ouvrir la porte D');
+    const entered = { ...pending, turn: { ...pending.turn, reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } } };
+    expect(reactionContext(entered, createLabeler(entered))).toContain('ligne de vue');
   });
 });
 

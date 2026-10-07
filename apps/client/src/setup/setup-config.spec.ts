@@ -105,7 +105,7 @@ describe('createGameFromSetup', () => {
     const config = defaultSetup(available, 7);
     const a = createGameFromSetup(config, content);
     const b = createGameFromSetup(config, content);
-    expect(a.state.phase).toBe('ACTIVATION');
+    expect(a.state.phase).toBe('OVERWATCH');
     expect(a.state.characters).toHaveLength(4);
     expect(a.replaySeed).toBe(7);
     expect(a.state).toEqual(b.state);

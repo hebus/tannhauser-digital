@@ -57,7 +57,8 @@ function flatBoard() {
     .build();
 }
 
-function start(rng: ScriptedRng, characters: CharacterState[], flat = false): GameState {
+/** Partie démarrée puis phase de placement de l'Overwatch : `placements` sont appliqués, puis chaque joueur confirme. */
+function start(rng: ScriptedRng, characters: CharacterState[], flat = false, placements: GameCommand[] = []): GameState {
   const initial = createInitialState({
     gameId: 'it',
     scenarioId: 'it',
@@ -69,7 +70,18 @@ function start(rng: ScriptedRng, characters: CharacterState[], flat = false): Ga
     characters,
     rng: new SeededRng(1).snapshot(),
   });
-  return applyCommand(initial, { type: 'START_GAME' }, rng).state;
+  let state = applyCommand(initial, { type: 'START_GAME' }, rng).state;
+  expect(state.phase).toBe('OVERWATCH');
+  const winner = state.turn.initiativePlayerId!;
+  const other = winner === 'p1' ? 'p2' : 'p1';
+  const script: GameCommand[] = [...placements, { type: 'END_OVERWATCH_PLACEMENT', playerId: winner }, { type: 'END_OVERWATCH_PLACEMENT', playerId: other }];
+  for (const command of script) {
+    const res = applyCommand(state, command, rng);
+    expect(res.errors, JSON.stringify(res.errors)).toEqual([]);
+    state = res.state;
+  }
+  expect(state.phase).toBe('ACTIVATION');
+  return state;
 }
 
 /** Petit pilote : applique une commande qui doit être acceptée et met à jour l'état courant. */
@@ -177,22 +189,19 @@ describe('parcours move → action → move', () => {
 });
 
 describe('parcours Overwatch complet', () => {
-  it('pose, déclenchement avec arrêt, blocage, tir de réaction, reprise du mouvement, attaque et victoire', () => {
+  const place = (playerId: string, characterId: string): GameCommand => ({ type: 'OVERWATCH', playerId, characterId });
+
+  it('placement (1 PC), déclenchement avec arrêt, tir de réaction, reprise, attaque et victoire', () => {
     // Initiative : p2 = 9 gagne (p1 = 2). h1 a 2 de santé, h2 (en e) n'en a qu'une.
     // Tir de réaction de h2 : attaque [10,10,1,1] (2 blessures), défense de h1 [10,1,1,1] (1 parée) -> 1 dégât.
     // Attaque de h1 : [10,10,10,10] ; défense de h2 [1,1,1,1] -> h2 meurt.
     const rng = new ScriptedRng([2, 9, 10, 10, 1, 1, 10, 1, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
-    const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e')]), rng);
-    expect(d.state.turn.activePlayerId).toBe('p2');
-
-    // p2 pose l'Overwatch (son unique action) puis termine l'activation.
-    d.run(select('p2', 'h2'));
-    const placed = d.run({ type: 'OVERWATCH', playerId: 'p2', characterId: 'h2' });
-    expect(placed.events.map((e) => e.type)).toEqual(['OVERWATCH_PLACED']);
-    expect(d.hero('h2').overwatch).toBe(true);
-    d.refuse(shoot('p2', 'h2', 'h1'), 'ACTION_ALREADY_USED');
-    d.run(endTurn('p2'));
+    const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e')], false, [place('p2', 'h2')]), rng);
+    expect(d.hero('h2')).toMatchObject({ overwatch: true, activated: true });
+    expect(d.state.players.find((p) => p.id === 'p2')?.commandPoints).toBe(1);
+    // h2 est en Overwatch : p2 n'a rien à activer, p1 commence (et enchaîne).
     expect(d.state.turn.activePlayerId).toBe('p1');
+    d.refuse(select('p2', 'h2'), 'NOT_YOUR_TURN');
 
     // p1 avance : le déplacement s'arrête en c, première case vue de h2.
     d.run(select('p1', 'h1'));
@@ -211,7 +220,7 @@ describe('parcours Overwatch complet', () => {
       'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'OVERWATCH_RESOLVED',
     ]);
     expect(d.hero('h1').health).toBe(1);
-    expect(d.hero('h2').overwatch).toBe(false);
+    expect(d.hero('h2')).toMatchObject({ overwatch: false, activated: true });
     expect(d.state.turn.reaction).toBeUndefined();
 
     // L'activation de h1 reprend : mouvement restant, puis action (son attaque), sans nouvelle réaction.
@@ -229,24 +238,48 @@ describe('parcours Overwatch complet', () => {
     expect(rng.snapshot().draws).toBe(18);
   });
 
-  it('renoncer à la réaction : le mouvement reprend et le tour se poursuit jusqu\'au refresh qui efface l\'Overwatch', () => {
-    // Initiative p2 ; puis, au tour 2, nouvelle initiative [4, 3].
+  it('adversaire déjà en vue qui tente une attaque : la réaction passe avant, puis l\'attaque annoncée est exécutée', () => {
+    // Initiative p2 = 9. h2 (en e, Overwatch) voit d ; h1 est en d (vu). h1 annonce une attaque sur h2.
+    // Réaction : h2 tire [1,1,1,1] (raté). Puis l'attaque de h1 : [10,10,10,10] ; défense [1,1,1,1] -> h2 meurt.
+    const rng = new ScriptedRng([2, 9, 1, 1, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
+    const d = driver(start(rng, [character('h1', 'p1', 'd', 2), character('h2', 'p2', 'e')], false, [place('p2', 'h2')]), rng);
+    d.run(select('p1', 'h1'));
+    const announce = d.run(shoot('p1', 'h1', 'h2'));
+    expect(announce.events.map((e) => e.type)).toEqual(['OVERWATCH_TRIGGERED']);
+    expect(announce.events[0]).toMatchObject({ announced: 'ATTACK', overwatcherId: 'h2', targetId: 'h1' });
+    expect(rng.snapshot().draws).toBe(2);
+    expect(d.state.turn.actionUsed).toBeFalsy();
+
+    const fire = d.run({ type: 'OVERWATCH_FIRE', playerId: 'p2', weaponId: 'pistol' });
+    expect(fire.events.map((e) => e.type)).toEqual([
+      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_MISSED', 'OVERWATCH_RESOLVED',
+      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'CHARACTER_DEFEATED', 'VICTORY',
+    ]);
+    expect(d.state.phase).toBe('FINISHED');
+    expect(rng.snapshot().draws).toBe(14);
+  });
+
+  it('renoncer : le mouvement reprend, l\'Overwatch reste, et il est retiré au refresh du tour suivant (PC rendus)', () => {
+    // Tour 1 : p2 gagne. Tour 2 : initiative [4, 3] -> p1 gagne.
     const rng = new ScriptedRng([2, 9, 4, 3]);
-    const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e', 2)]), rng);
-    d.run(select('p2', 'h2'));
-    d.run({ type: 'OVERWATCH', playerId: 'p2', characterId: 'h2' });
+    const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e', 2), character('h3', 'p2', 'a', 2)], false, [place('p2', 'h2')]), rng);
+    // p2 a encore h3 à activer : il commence.
+    d.run(select('p2', 'h3'));
     d.run(endTurn('p2'));
 
     d.run(select('p1', 'h1'));
     d.run(move('p1', 'h1', ['b', 'c']));
+    expect(d.state.turn.reaction?.overwatcherId).toBe('h2');
     d.run({ type: 'OVERWATCH_DECLINE', playerId: 'p2' });
-    expect(d.hero('h2').overwatch).toBe(false);
+    expect(d.hero('h2').overwatch).toBe(true);
     d.run(move('p1', 'h1', ['d']));
     expect(d.hero('h1').nodeId).toBe('d');
     const end = d.run(endTurn('p1'));
     expect(end.events.map((e) => e.type)).toContain('TURN_STARTED');
     expect(d.state.turn.number).toBe(2);
-    expect(d.hero('h1')).toMatchObject({ activated: false, movementLeft: 3 });
-    expect(d.hero('h2').overwatch).toBe(false);
+    expect(d.state.phase).toBe('OVERWATCH');
+    // Le refresh retire l'Overwatch et rend 2 PC : p2 peut le replacer pendant la phase de placement.
+    expect(d.hero('h2')).toMatchObject({ overwatch: false, activated: false });
+    expect(d.state.players.map((p) => p.commandPoints)).toEqual([2, 2]);
   });
 });

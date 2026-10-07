@@ -24,4 +24,5 @@ export * from './combat/attack';
 export * from './victory/deathmatch';
 export * from './actions/legal-actions';
 export * from './overwatch/trigger';
+export { OVERWATCH_COST } from './overwatch/handlers';
 import './overwatch/handlers';

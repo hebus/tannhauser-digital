@@ -33,7 +33,7 @@ describe('applyCommand / START_GAME', () => {
   it('démarre la partie, attribue les PC et désigne le joueur d\'initiative', () => {
     const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([3, 8]));
     expect(res.accepted).toBe(true);
-    expect(res.state.phase).toBe('ACTIVATION');
+    expect(res.state.phase).toBe('OVERWATCH');
     expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2' });
     expect(res.state.players.map((p) => p.commandPoints)).toEqual([2, 2]);
     expect(res.events.map((e) => e.type)).toEqual([

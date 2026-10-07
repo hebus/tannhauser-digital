@@ -54,7 +54,15 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
     case 'OVERWATCH_PLACED':
       return info('log.event.OVERWATCH_PLACED', { character: labels.character(e.characterId) });
     case 'OVERWATCH_TRIGGERED':
-      return info('log.event.OVERWATCH_TRIGGERED', { overwatcher: labels.character(e.overwatcherId), target: labels.character(e.targetId), node: e.nodeId });
+      return e.announced
+        ? info('log.event.OVERWATCH_TRIGGERED.announced', { overwatcher: labels.character(e.overwatcherId), target: labels.character(e.targetId), node: e.nodeId, action: e.announced })
+        : info('log.event.OVERWATCH_TRIGGERED', { overwatcher: labels.character(e.overwatcherId), target: labels.character(e.targetId), node: e.nodeId });
+    case 'COMMAND_POINTS_SPENT':
+      return info('log.event.COMMAND_POINTS_SPENT', { player: labels.player(e.playerId), amount: e.amount, purpose: e.purpose, remaining: e.remaining });
+    case 'OVERWATCH_PLACEMENT_ENDED':
+      return info('log.event.OVERWATCH_PLACEMENT_ENDED', { player: labels.player(e.playerId) });
+    case 'OVERWATCH_RESUME_REFUSED':
+      return info('log.event.OVERWATCH_RESUME_REFUSED', { command: e.command, message: e.message });
     case 'OVERWATCH_RESOLVED':
       return info(e.fired ? 'log.event.OVERWATCH_RESOLVED.fired' : 'log.event.OVERWATCH_RESOLVED.declined', { overwatcher: labels.character(e.overwatcherId) });
     case 'DOOR_OPENED':

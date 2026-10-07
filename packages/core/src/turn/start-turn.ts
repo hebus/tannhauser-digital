@@ -1,6 +1,6 @@
 import type { GameEvent } from '../events/events';
 import type { RandomSource } from '../rng/rng';
-import type { GameState, PlayerId } from '../state/types';
+import type { GameState, PlayerId, TurnState } from '../state/types';
 import { rollInitiative } from './initiative';
 import { refreshTurn } from './refresh';
 
@@ -14,9 +14,18 @@ export function nextPlayerWithActivation(state: GameState, fromIndex: number): P
   return null;
 }
 
+/** Copie du tour sans activation en cours (ni action, réaction, ni refus d'attaque d'opportunité). */
+export function turnWithoutActivation(turn: TurnState, activePlayerId: PlayerId | null): TurnState {
+  return {
+    number: turn.number,
+    initiativePlayerId: turn.initiativePlayerId,
+    activePlayerId,
+  };
+}
+
 /**
- * Démarre le tour `turnNumber` : TURN_STARTED, refresh, initiative.
- * Le joueur d'initiative commence (ou, s'il n'a rien à activer, le suivant dans l'ordre).
+ * Démarre le tour `turnNumber` : TURN_STARTED, refresh, initiative, puis phase OVERWATCH (placement des
+ * Overwatch avant les activations). Le joueur d'initiative décide en premier, puis les autres dans l'ordre.
  */
 export function startTurn(
   state: GameState,
@@ -33,15 +42,28 @@ export function startTurn(
   );
   events.push({ type: 'INITIATIVE_ROLLED', rolls, winnerId });
 
-  const winnerIndex = refreshed.state.players.findIndex((p) => p.id === winnerId);
-  const activePlayerId = nextPlayerWithActivation(refreshed.state, winnerIndex) ?? winnerId;
-
   return {
     events,
     state: {
       ...refreshed.state,
-      phase: 'ACTIVATION',
-      turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId },
+      phase: 'OVERWATCH',
+      turn: { number: turnNumber, initiativePlayerId: winnerId, activePlayerId: winnerId },
     },
   };
+}
+
+/**
+ * Fin de la phase de placement : ouvre les activations (le joueur d'initiative, ou le suivant s'il n'a rien à
+ * activer) ; si plus aucun personnage n'est activable, le tour se termine aussitôt.
+ */
+export function beginActivations(state: GameState, events: GameEvent[], rng: RandomSource): GameState {
+  const initiativeIndex = Math.max(0, state.players.findIndex((p) => p.id === state.turn.initiativePlayerId));
+  const first = nextPlayerWithActivation(state, initiativeIndex);
+  if (first === null) {
+    events.push({ type: 'TURN_ENDED', turn: state.turn.number });
+    const started = startTurn(state, state.turn.number + 1, rng);
+    events.push(...started.events);
+    return started.state;
+  }
+  return { ...state, phase: 'ACTIVATION', turn: { ...state.turn, activePlayerId: first } };
 }

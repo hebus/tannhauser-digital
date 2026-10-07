@@ -1,18 +1,13 @@
 import type { GameEvent, RuleError } from '../events/events';
 import { registerHandler, reject } from '../engine/apply-command';
-import type { CharacterState, GameState, PlayerId, TurnState } from '../state/types';
+import type { CharacterState, GameState, PlayerId } from '../state/types';
 import { CommandPointService } from './command-points';
 import { rollInitiative } from './initiative';
-import { nextPlayerWithActivation, startTurn } from './start-turn';
+import { nextPlayerWithActivation, startTurn, turnWithoutActivation } from './start-turn';
 import type { RandomSource } from '../rng/rng';
 
 /** Coût en PC de la relance d'initiative (§66.2, §75). */
 export const REROLL_INITIATIVE_COST = 1;
-
-/** Copie du tour sans personnage actif. */
-function withoutActiveCharacter(turn: TurnState, activePlayerId: PlayerId | null): TurnState {
-  return { number: turn.number, initiativePlayerId: turn.initiativePlayerId, activePlayerId };
-}
 
 /**
  * Après une activation (ou un PASS) : donne la main au joueur suivant qui a encore des
@@ -22,7 +17,7 @@ function advance(state: GameState, events: GameEvent[], rng: RandomSource): Game
   const current = state.players.findIndex((p) => p.id === state.turn.activePlayerId);
   const next = nextPlayerWithActivation(state, current + 1);
   if (next !== null) {
-    return { ...state, turn: withoutActiveCharacter(state.turn, next) };
+    return { ...state, turn: turnWithoutActivation(state.turn, next) };
   }
   events.push({ type: 'TURN_ENDED', turn: state.turn.number });
   const started = startTurn(state, state.turn.number + 1, rng);
@@ -62,6 +57,10 @@ export function checkSelectCharacter(state: GameState, playerId: PlayerId, chara
     return no('NOT_YOUR_CHARACTER', `Le personnage ${character.id} n'appartient pas au joueur ${playerId}.`);
   }
   if (!character.alive) return no('CHARACTER_DEAD', `Le personnage ${character.id} est hors de combat.`);
+  // Placé en Overwatch ce tour-ci (marqué `activated`) : non activable.
+  if (character.activated && character.overwatch) {
+    return no('IN_OVERWATCH', `Impossible : le personnage ${character.id} est en Overwatch ce tour-ci.`);
+  }
   if (character.activated) {
     return no('ALREADY_ACTIVATED', `Le personnage ${character.id} a déjà été activé ce tour.`);
   }
@@ -78,7 +77,7 @@ registerHandler('SELECT_CHARACTER', (state, command) => {
     state: {
       ...state,
       characters: state.characters.map((c) => (c.id === character.id ? { ...c, activated: true } : c)),
-      turn: { ...state.turn, activeCharacterId: character.id },
+      turn: { ...turnWithoutActivation(state.turn, state.turn.activePlayerId), activeCharacterId: character.id },
     },
   };
 });
@@ -127,15 +126,20 @@ registerHandler('PASS', (state, command, rng) => {
   return { ok: true, events, state: advance(passed, events, rng) };
 });
 
-/** REROLL_INITIATIVE : le gagnant de l'initiative dépense 1 PC pour relancer, avant toute activation (OQ-TURN-006). */
+/**
+ * REROLL_INITIATIVE : le gagnant de l'initiative dépense 1 PC pour relancer, pendant la phase OVERWATCH et avant
+ * tout placement (OQ-TURN-006). Le nouveau gagnant décide alors en premier.
+ */
 registerHandler('REROLL_INITIATIVE', (state, command, rng) => {
-  if (state.phase !== 'ACTIVATION') return reject('WRONG_PHASE', 'Aucune initiative à relancer.');
+  if (state.phase !== 'OVERWATCH') {
+    return reject('WRONG_PHASE', "L'initiative ne peut être relancée que dans la phase Overwatch, avant les placements.");
+  }
   const previousWinnerId = state.turn.initiativePlayerId;
   if (previousWinnerId !== command.playerId) {
     return reject('NOT_INITIATIVE_WINNER', 'Seul le gagnant de l\'initiative peut la relancer.');
   }
-  if (state.turn.activeCharacterId !== undefined || state.characters.some((c) => c.alive && c.activated)) {
-    return reject('ACTIVATIONS_STARTED', 'L\'initiative ne peut plus être relancée : les activations ont commencé.');
+  if (state.turn.activePlayerId !== command.playerId || state.characters.some((c) => c.alive && c.activated)) {
+    return reject('PLACEMENT_STARTED', "L'initiative ne peut plus être relancée : les placements d'Overwatch ont commencé.");
   }
   const spent = CommandPointService.spend(state, command.playerId, REROLL_INITIATIVE_COST, 'REROLL_INITIATIVE');
   if (!spent.ok) return reject(spent.reason, spent.message);
@@ -147,14 +151,12 @@ registerHandler('REROLL_INITIATIVE', (state, command, rng) => {
   const events: GameEvent[] = [spent.event, { type: 'INITIATIVE_ROLLED', rolls, winnerId }];
   if (winnerId !== previousWinnerId) events.push({ type: 'INITIATIVE_CHANGED', previousWinnerId, winnerId });
 
-  const winnerIndex = spent.state.players.findIndex((p) => p.id === winnerId);
-  const activePlayerId = nextPlayerWithActivation(spent.state, winnerIndex) ?? winnerId;
   return {
     ok: true,
     events,
     state: {
       ...spent.state,
-      turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId },
+      turn: { number: state.turn.number, initiativePlayerId: winnerId, activePlayerId: winnerId },
     },
   };
 });

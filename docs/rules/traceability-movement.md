@@ -13,7 +13,7 @@
 | RULE-MOVE-009 | `MOVE_CHARACTER` : joueur actif, propriétaire, vivant, activation (OQ-MOVE-003), déduit les PM, émet CHARACTER_MOVED | §68 | `movement/handlers.ts` | describe `MOVE_CHARACTER` |
 | RULE-MOVE-010 | Déterminisme et immutabilité de l'état | §0.1 | `reachable.ts` (tri par coût puis id) | déterministe / immutabilité |
 | RULE-MOVE-011 | Mouvement permis après et avant l'unique action ; `movementLeft` conservé (OQ-COMBAT-007) | §66 | `movement/handlers.ts` (aucun contrôle sur `actionUsed`) | « mouvement possible après une action, avant une action, et entre deux » |
-| RULE-MOVE-012 | Arrêt sur la première case vue par un adversaire en Overwatch ; activation suspendue (`turn.reaction`) | décision PO | `movement/handlers.ts`, `overwatch/trigger.ts` | `overwatch.spec.ts`, tests d'intégration |
+| RULE-MOVE-012 | Arrêt sur la première case vue par un adversaire en Overwatch ; activation suspendue (`turn.reaction`) ; déplacement tenté depuis une case déjà vue : réaction avant exécution | décision PO | `movement/handlers.ts`, `overwatch/trigger.ts` | `overwatch.spec.ts`, tests d'intégration |
 | RULE-DOOR-001 | Ouvrir une porte depuis une case adjacente, 0 PM (OQ-DOOR-001, résolue) | §76.5 | `handlers.ts` (`OPEN_DOOR`) | OPEN_DOOR |
 | RULE-DOOR-002 | Fermer une porte ouverte depuis une case adjacente : 0 PM, même à 0 PM restant | §76.6 | `handlers.ts` (`CLOSE_DOOR`, `CLOSE_DOOR_COST = 0`) | CLOSE_DOOR, « une porte ne coûte rien » |
 | RULE-DOOR-003 | Porte fermée bloque le déplacement ; ouverte laisse passer | §76.5 | `checkStep` (DOOR_CLOSED) | porte fermée/ouverte |

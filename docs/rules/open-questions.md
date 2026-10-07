@@ -191,10 +191,11 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 
 - **Rule:** RULE-TURN-004 (§66 : Overwatch entre initiative et activations), RULE-OVERWATCH-001…
 - **Source:** §66, §67
-- **Résolution (product owner) :** l'Overwatch est une ACTION du personnage actif, prise pendant son activation (commande `OVERWATCH`, qui consomme l'unique action), et non une phase dédiée. Quand un adversaire entre ensuite dans sa ligne de vue pendant un déplacement, le joueur en Overwatch a droit à une réaction (voir `traceability-overwatch.md`). La phase passe donc de l'initiative à `ACTIVATION`.
-- **Reste ouvert :** si le gagnant n'a aucun personnage à activer, le joueur suivant commence (inchangé) ; jusqu'à quand la relance d'initiative reste-t-elle possible ?
-- **Historique (avant décision) :** l'étape Overwatch n'était pas implémentée ; la phase passait directement de l'initiative à `ACTIVATION`.
-- **Test:** `overwatch.spec.ts` et tests d'intégration.
+- **Résolution actuelle (product owner, redéfinition de l'Overwatch) :** le tour enchaîne refresh, initiative, phase `OVERWATCH` (placements), phase `ACTIVATION`. Mettre un personnage en Overwatch coûte 1 PC et se décide APRÈS l'initiative, AVANT les activations (voir OQ-OVERWATCH-009 pour le détail). La relance d'initiative (1 PC) reste possible avant les placements.
+- **Reste ouvert :** si le gagnant n'a aucun personnage à activer, le joueur suivant commence (inchangé). La relance d'initiative est désormais possible jusqu'au premier placement ou à la confirmation du gagnant (hypothèse, OQ-OVERWATCH-009).
+- **Historique (décision précédente, abandonnée) :** l'Overwatch était une ACTION du personnage actif, prise pendant son activation (commande `OVERWATCH` consommant l'unique action, sans PC) et non une phase ; la phase passait de l'initiative à `ACTIVATION`.
+- **Historique (avant toute décision) :** l'étape Overwatch n'était pas implémentée ; la phase passait directement de l'initiative à `ACTIVATION`.
+- **Test:** `overwatch.spec.ts`, `turn.spec.ts` et tests d'intégration.
 
 ## OQ-COMBAT-001 — Corps à corps : adjacence et portes (RÉSOLUE)
 
@@ -262,7 +263,8 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 
 ## OQ-COMBAT-007 — Garde-fous d'activation (RÉSOLUE)
 
-- **Résolution (product owner) :** une attaque ne coûte rien (ni PC ni PM). Chaque activation permet UNE seule action (attaquer, Overwatch, etc.) et autant de déplacement que les PM le permettent : bouger+agir, agir+bouger, bouger+agir+bouger, bouger seul, agir seul. Le moteur suit `turn.actionUsed` (refus `ACTION_ALREADY_USED`) ; ATTACK et OVERWATCH exigent le personnage actif.
+- **Mise à jour :** l'Overwatch n'est plus une action d'activation (OQ-TURN-007, OQ-OVERWATCH-009) ; seule l'attaque, l'ouverture/fermeture de porte… consomment ou non l'action selon la règle ci-dessous.
+- **Résolution (product owner) :** une attaque ne coûte rien (ni PC ni PM). Chaque activation permet UNE seule action (attaquer, Overwatch, etc. — l'Overwatch a depuis été retiré de cette liste) et autant de déplacement que les PM le permettent : bouger+agir, agir+bouger, bouger+agir+bouger, bouger seul, agir seul. Le moteur suit `turn.actionUsed` (refus `ACTION_ALREADY_USED`) ; ATTACK et OVERWATCH exigent le personnage actif.
 - **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
 
 - **Rule:** RULE-COMBAT-001
@@ -270,30 +272,75 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** à raccorder avec le coût/limite d'actions par activation.
 - **Test required:** `attack.spec.ts` (validation).
 
-## OQ-OVERWATCH-001 — Durée de l'Overwatch et réactions multiples
+## OQ-OVERWATCH-001 — Durée de l'Overwatch et réactions multiples (RÉSOLUE)
 
-- **Rule:** RULE-OVERWATCH-003, RULE-OVERWATCH-006
-- **Interpretation (actuelle) :** l'Overwatch dure jusqu'à la réaction (tir ou renoncement), qui l'efface ; sinon il est effacé au refresh du tour suivant. Une seule réaction par Overwatch : un même adversaire ne peut pas être déclenché plusieurs fois par le même Overwatch.
-- **Reason:** hypothèse du moteur, non confirmée par le product owner.
-- **Impact:** valeur défensive de l'Overwatch ; un Overwatch inutilisé protège-t-il aussi pendant le tour adverse suivant ?
-- **Test required:** `overwatch.spec.ts` (effacement après réaction, effacement au refresh).
+- **Rule:** RULE-OVERWATCH-003, RULE-OVERWATCH-013
+- **Résolution (product owner) :** un Overwatch non tiré dure tout le tour (il couvre les activations adverses du tour entier) et est retiré au refresh du tour suivant, au moment où chaque joueur reçoit ses nouveaux PC ; il peut alors dépenser ces PC pour replacer ses personnages pendant la phase de placement. Une fois l'attaque d'opportunité réalisée, le personnage n'est plus en Overwatch. Un Overwatch refusé reste actif (OQ-OVERWATCH-005).
+- **Historique :** « l'Overwatch dure jusqu'à la réaction (tir ou renoncement), qui l'efface ; sinon il est effacé au refresh du tour suivant. Une seule réaction par Overwatch » (hypothèse du moteur, non confirmée) ; le refus effaçait aussi l'Overwatch.
+- **Test:** `overwatch.spec.ts` (cycle de vie, refresh), `full-turn.spec.ts`.
 
 ## OQ-OVERWATCH-002 — Plusieurs personnages en Overwatch voient le mouvement
 
 - **Rule:** RULE-OVERWATCH-004
-- **Interpretation (actuelle) :** le premier personnage en Overwatch, dans l'ordre de l'état, qui voit la case réagit ; un seul déclencheur par pas. Le déplacement s'arrête sur cette case.
+- **Interpretation (actuelle) :** le premier personnage en Overwatch, dans l'ordre de l'état, qui voit l'adversaire réagit ; un seul déclencheur à la fois. Les autres réagissent ensuite (voir OQ-OVERWATCH-007).
 - **Reason:** la règle ne précise ni le choix du réagissant (joueur, proximité) ni les réactions en chaîne.
 - **Impact:** choix potentiellement arbitraire ; les autres Overwatch restent intacts.
 - **Test required:** `overwatch.spec.ts` (deux personnages en Overwatch).
 
-## OQ-OVERWATCH-003 — Déclencheurs de l'Overwatch autres que le déplacement
+## OQ-OVERWATCH-003 — Déclencheurs de l'Overwatch autres que le déplacement (RÉSOLUE)
 
-- **Rule:** RULE-OVERWATCH-002
-- **Interpretation (actuelle) :** seul un déplacement qui entre dans la ligne de vue déclenche l'Overwatch ; les attaques et autres actions adverses ne le déclenchent pas.
-- **Reason:** la règle confirmée ne mentionne que l'entrée dans la ligne de vue pendant un déplacement.
-- **Impact:** un adversaire immobile peut agir sans réaction.
-- **Test required:** à ajouter si l'Overwatch s'étend aux actions.
+- **Rule:** RULE-OVERWATCH-002, RULE-OVERWATCH-010
+- **Résolution (product owner) :** deux déclencheurs : (a) un adversaire ENTRE dans la ligne de vue pendant un déplacement (il s'arrête) ; (b) un adversaire DÉJÀ dans la ligne de vue (au moment de l'Overwatch ou au début de son activation) qui tente de se déplacer OU de faire une action (attaque, ouverture/fermeture de porte…) : l'opportunité se déclenche avant l'exécution de la commande annoncée (voir OQ-OVERWATCH-004).
+- **Historique :** « seul un déplacement qui entre dans la ligne de vue déclenche l'Overwatch ; les attaques et autres actions adverses ne le déclenchent pas » (un adversaire immobile pouvait agir sans réaction).
+- **Test:** `overwatch.spec.ts` (déclencheur a et b).
 
+## OQ-OVERWATCH-004 — Périmètre exact du déclencheur « action » (b)
+
+- **Rule:** RULE-OVERWATCH-010
+- **Source:** décision PO (« se déplacer OU faire une action (ATTACK, OPEN_DOOR, CLOSE_DOOR…) »).
+- **Interpretation:** sont concernées les commandes `MOVE_CHARACTER`, `ATTACK`, `OPEN_DOOR`, `CLOSE_DOOR` du personnage ACTIF ; `END_TURN`, `PASS`, la sélection et les commandes de phase n'ouvrent aucune réaction. La ligne de vue est évaluée sur la case du personnage au moment de la commande (fumée et portes comprises), pas sur sa case d'arrivée. La commande est validée à blanc (`DryRng`, qui renvoie toujours la borne basse, aucun tirage de la partie) : une commande invalide ne déclenche pas la réaction et reçoit son refus habituel.
+- **Reason:** la liste d'actions n'est pas exhaustive dans la décision ; la validation à blanc évite un déclenchement à tort.
+- **Impact:** la validité d'une commande dépendant d'un jet n'est évaluée qu'avec des dés au minimum (aucune commande actuelle ne dépend d'un jet pour être valide). Toute future action (grenade, fumée…) devra être ajoutée à la liste des commandes annonçables.
+- **Test required:** `overwatch.spec.ts` (déplacement, attaque, portes, commande invalide sans réaction), `attack.spec.ts`.
+
+## OQ-OVERWATCH-005 — Refus de l'attaque d'opportunité (RÉSOLUE)
+
+- **Rule:** RULE-OVERWATCH-012
+- **Résolution (product owner) :** l'attaque d'opportunité est toujours optionnelle (`OVERWATCH_FIRE` ou `OVERWATCH_DECLINE`). Refusée, l'Overwatch reste actif mais cet overwatcher ne se redéclenche pas contre ce même adversaire pendant son activation courante.
+- **Implémentation :** `turn.overwatchWaived` (liste d'overwatchers), remis à zéro à chaque changement d'activation ; il vaut pour (a) comme pour (b), même si l'adversaire sort puis rentre dans la ligne de vue. L'overwatcher réagit de nouveau pour l'activation suivante (autre personnage, ou même joueur).
+- **Test:** `overwatch.spec.ts` (DECLINE).
+
+## OQ-OVERWATCH-006 — Retrait des Overwatch (RÉSOLUE)
+
+- **Rule:** RULE-OVERWATCH-013
+- **Résolution (product owner) :** les Overwatch sont retirés au DÉBUT DU TOUR, au refresh, quand chaque joueur reçoit ses nouveaux PC ; il peut dépenser ces PC pour remettre ses personnages en Overwatch pendant la phase de placement qui suit l'initiative.
+- **Historique :** une interprétation intermédiaire (« début du tour d'une équipe » = première activation de l'équipe dans le tour, `turn.startedPlayers`) a été envisagée puis abandonnée ; le comportement d'origine de `refreshTurn` (`overwatch: false` pour tous) est conservé.
+- **Test:** `overwatch.spec.ts` (cycle de vie), `full-turn.spec.ts`.
+
+## OQ-OVERWATCH-007 — Plusieurs overwatchers : enchaînement des réactions
+
+- **Rule:** RULE-OVERWATCH-004, RULE-OVERWATCH-011
+- **Interpretation:** quand plusieurs overwatchers voient le même adversaire sur une commande annoncée (b), ils réagissent l'un après l'autre (ordre de l'état) avant que la commande ne soit exécutée ; chaque réponse (tir ou refus) l'exclut des suivants. Pour le déclencheur (a), un seul overwatcher réagit au pas d'arrêt ; les autres qui voient aussi cette case réagissent à la commande suivante via (b).
+- **Reason:** la décision ne précise pas la gestion de plusieurs réactions simultanées.
+- **Impact:** un adversaire très exposé peut subir plusieurs attaques d'opportunité avant d'agir.
+- **Test required:** `overwatch.spec.ts` (plusieurs overwatchers, FIRE puis DECLINE).
+
+## OQ-OVERWATCH-008 — Reprise de la commande annoncée
+
+- **Rule:** RULE-OVERWATCH-011
+- **Interpretation:** après la réaction, la commande mémorisée (`PendingReaction.resume`) est rejouée telle quelle si l'adversaire est vivant (même chemin de déplacement, mêmes cible et arme) ; si l'adversaire est tué, son activation se termine sans reprise ; si la commande est refusée à la reprise (le tir a modifié l'état : Combat tombé à 0, etc.), elle est abandonnée avec l'événement `OVERWATCH_RESUME_REFUSED` et l'activation continue. Pour le déclencheur (a), le déplacement est tronqué à la case d'arrêt et le reste du chemin est perdu (le joueur peut en émettre un nouveau).
+- **Reason:** la décision demande la reprise mais pas le cas d'une commande devenue invalide.
+- **Impact:** un joueur peut perdre une action annoncée si le tir l'a rendue impossible.
+- **Test required:** `overwatch.spec.ts` (reprise, cible tuée, reprise refusée).
+
+## OQ-OVERWATCH-009 — Phase de placement : déroulement exact
+
+- **Rule:** RULE-OVERWATCH-001, RULE-OVERWATCH-008, RULE-OVERWATCH-009
+- **Source:** décision PO (règles 1 à 3 de la redéfinition).
+- **Interpretation:** (1) la phase `OVERWATCH` se déroule à chaque tour, après l'initiative ; le joueur d'initiative décide d'abord puis les autres, dans l'ordre des joueurs ; chacun place autant de personnages qu'il veut tant qu'il a des PC (1 PC chacun) puis confirme avec `END_OVERWATCH_PLACEMENT`, même sans rien placer ni PC (aucune confirmation automatique). (2) La relance d'initiative reste possible tant qu'aucun personnage n'est placé et que le gagnant n'a pas confirmé ; le nouveau gagnant décide alors en premier. (3) Un personnage placé est marqué `overwatch` ET `activated` : non activable (`IN_OVERWATCH`), traité comme déjà activé pour la fin de tour ; après son tir il reste non activable (`ALREADY_ACTIVATED`). (4) Si plus aucun personnage n'est activable après les placements, le tour se termine aussitôt et le suivant démarre. (5) Seuls les personnages vivants et non déjà placés peuvent être placés.
+- **Reason:** la décision ne précise pas la confirmation, la fenêtre de relance, ni le cas « plus rien à activer ».
+- **Impact:** rythme du tour ; stratégie sur la dépense des 2 PC par tour entre relance, Overwatch et autres usages futurs.
+- **Test required:** `overwatch.spec.ts` (placement, ordre), `turn.spec.ts` (phase, relance, fin de tour sans bloquer), `legal-actions.spec.ts`.
 ## OQ-COMBAT-008 — Taille de la réserve de défense (RÉSOLUE)
 
 - **Résolution (product owner) :** depuis la règle v2, la réserve de défense est TOUJOURS de 4 dés ; elle ne dépend d'aucune caractéristique (seule la difficulté dépend du Physique). La valeur reste exposée en configuration (`config.defensePoolSize`, défaut 4) pour d'éventuelles variantes de règles.

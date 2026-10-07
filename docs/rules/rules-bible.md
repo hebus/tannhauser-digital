@@ -14,7 +14,7 @@ Spécification technique des règles du jeu, reformulée pour l'implémentation.
 
 | Domaine | Préfixe | Fichier |
 |---|---|---|
-| Tour, initiative, activation, PC, overwatch | `RULE-TURN`, `RULE-PC`, `RULE-OW` | `turn-structure.md` |
+| Tour, initiative, activation, PC, overwatch | `RULE-TURN`, `RULE-PC`, `RULE-OW` (historique) | `turn-structure.md` ; Overwatch actuel : `RULE-OVERWATCH` (`special-rules.md`, `traceability-overwatch.md`) |
 | Déplacement, plateau, nœuds | `RULE-MOVE`, `RULE-NODE` | `movement.md` |
 | Tests, duels, combat, dégâts | `RULE-TEST`, `RULE-COMBAT` | `combat.md` |
 | Ligne de vue | `RULE-LOS` | `line-of-sight.md` |

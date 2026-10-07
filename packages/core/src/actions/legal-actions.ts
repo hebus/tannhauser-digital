@@ -3,16 +3,16 @@ import { checkCommandGate } from '../engine/apply-command';
 import type { RuleError } from '../events/events';
 import { checkActor, checkDoorToggle, doorsAdjacentTo } from '../movement/handlers';
 import { reachableNodes } from '../movement/reachable';
-import { checkOverwatchAction } from '../overwatch/handlers';
+import { checkEndPlacement, checkOverwatchPlacement } from '../overwatch/handlers';
 import type { CharacterState, GameState } from '../state/types';
 import { checkEndActivation, checkPass, checkSelectCharacter } from '../turn/handlers';
-import type { GameCommandType } from '../commands/commands';
+import type { GameCommand, GameCommandType } from '../commands/commands';
 
 /**
  * Actions qu'un personnage peut tenter. `SELECT` (début d'activation) s'ajoute aux actions de jeu
  * pour que l'interface explique aussi pourquoi un personnage ne peut pas être activé.
  */
-export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS';
+export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'END_OVERWATCH_PLACEMENT';
 
 export interface AttackOption {
   readonly targetId: string;
@@ -54,6 +54,7 @@ const GAME_COMMAND_OF: Record<ActionId, GameCommandType> = {
   CLOSE_DOOR: 'CLOSE_DOOR',
   END_ACTIVATION: 'END_TURN',
   PASS: 'PASS',
+  END_OVERWATCH_PLACEMENT: 'END_OVERWATCH_PLACEMENT',
 };
 
 const ok = (id: ActionId, details?: ActionDetails): LegalAction => (details ? { id, available: true, details } : { id, available: true });
@@ -121,7 +122,7 @@ function doorAction(state: GameState, character: CharacterState, id: 'OPEN_DOOR'
 /**
  * Actions d'un personnage avec leur disponibilité. Source unique pour l'interface : AUCUNE règle n'est
  * recopiée ici, chaque entrée appelle les mêmes validations que le handler de la commande correspondante
- * (`checkAttacker`/`checkTargeting`, `checkActor`/`reachableNodes`, `checkOverwatchAction`, `checkDoorToggle`,
+ * (`checkAttacker`/`checkTargeting`, `checkActor`/`reachableNodes`, `checkOverwatchPlacement`, `checkDoorToggle`,
  * `checkEndActivation`, `checkPass`, `checkSelectCharacter`) après la garde commune d'`applyCommand`
  * (partie terminée, réaction en attente). Pure : ne modifie pas l'état.
  */
@@ -143,8 +144,12 @@ export function getLegalActions(state: GameState, characterId: string): LegalAct
       case 'ATTACK':
         return attackAction(state, character);
       case 'OVERWATCH': {
-        const c = checkOverwatchAction(state, character.playerId, character.id);
+        const c = checkOverwatchPlacement(state, character.playerId, character.id);
         return c.ok ? ok(id) : refuse(id, c.errors[0]!);
+      }
+      case 'END_OVERWATCH_PLACEMENT': {
+        const c = checkEndPlacement(state, character.playerId);
+        return c.ok ? ok(id) : refuse(id, c.error);
       }
       case 'OPEN_DOOR':
       case 'CLOSE_DOOR':
@@ -171,6 +176,8 @@ export interface ReactionOptions {
   readonly overwatcherId: string;
   readonly targetId: string;
   readonly forPlayerId: string;
+  /** Commande adverse annoncée et suspendue, rejouée après la réaction (absente : entrée dans la ligne de vue). */
+  readonly announced?: GameCommand;
   /** Armes avec lesquelles tirer (même ciblage que l'attaque). Refuser est toujours possible. */
   readonly fire: readonly ReactionFireOption[];
   readonly canFire: boolean;
@@ -187,5 +194,6 @@ export function getReactionOptions(state: GameState): ReactionOptions | null {
     const refused = checkTargeting(state, overwatcher, target, w);
     return refused && !refused.ok ? { weaponId: w.id, available: false, reason: refused.errors[0]!.message } : { weaponId: w.id, available: true };
   });
-  return { ...reaction, fire, canFire: fire.some((f) => f.available) };
+  const { resume, ...rest } = reaction;
+  return { ...rest, ...(resume ? { announced: resume } : {}), fire, canFire: fire.some((f) => f.available) };
 }
