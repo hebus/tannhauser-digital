@@ -241,6 +241,9 @@ describe('textes des bannières et i18n des nouveaux libellés', () => {
 
   it('contenu attendu en français', () => {
     expect(bannerText({ kind: 'turnStart', turn: 2, playerId: 'p1' }, labels)).toEqual({ title: 'Tour 2', subtitle: 'Joueur 1 commence' });
+    // Victoire : sous-titre propre à la raison (drapeaux), générique sinon.
+    expect(bannerText({ kind: 'victory', turn: 2, playerId: 'p1', reason: 'CTF_FLAGS_PLANTED' }, labels).subtitle).toBe('Joueur 1 a planté les drapeaux ennemis dans son camp');
+    expect(bannerText({ kind: 'victory', turn: 2, playerId: 'p1', reason: 'DEATHMATCH_ELIMINATION' }, labels).subtitle).toBe('Joueur 1 remporte la partie');
     expect(bannerText({ kind: 'overwatchPhase', turn: 2, playerId: 'p2' }, labels)).toEqual({
       title: 'Phase d’Overwatch',
       subtitle: 'Joueur 2, placez un personnage ou passez',

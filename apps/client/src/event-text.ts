@@ -53,6 +53,14 @@ export function describeEvent(e: GameEvent): string | null {
       return `${e.playerId} passe.`;
     case 'TURN_ENDED':
       return `Fin du tour ${e.turn}.`;
+    case 'FLAG_PLACED':
+      return `Drapeau de ${e.ownerId} posé en ${e.nodeId}.`;
+    case 'FLAG_CAPTURED':
+      return `${e.characterId} récupère le drapeau ${e.flagId} (${e.nodeId}).`;
+    case 'FLAG_DROPPED':
+      return `${e.characterId} laisse tomber le drapeau ${e.flagId} en ${e.nodeId}.`;
+    case 'FLAG_PLANTED':
+      return `${e.characterId} plante le drapeau ${e.flagId} dans le camp de ${e.playerId} (${e.nodeId}).`;
     case 'VICTORY':
       return `Victoire de ${e.winnerId} !`;
     default:

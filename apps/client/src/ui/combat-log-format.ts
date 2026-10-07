@@ -75,6 +75,14 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
       return info('log.event.PLAYER_PASSED', { player: labels.player(e.playerId) });
     case 'TURN_ENDED':
       return info('log.event.TURN_ENDED', { turn: e.turn });
+    case 'FLAG_PLACED':
+      return info('log.event.FLAG_PLACED', { owner: labels.player(e.ownerId), node: e.nodeId });
+    case 'FLAG_CAPTURED':
+      return info('log.event.FLAG_CAPTURED', { character: labels.character(e.characterId), owner: labels.flagOwner(e.flagId), node: e.nodeId });
+    case 'FLAG_DROPPED':
+      return info('log.event.FLAG_DROPPED', { character: labels.character(e.characterId), owner: labels.flagOwner(e.flagId), node: e.nodeId });
+    case 'FLAG_PLANTED':
+      return info('log.event.FLAG_PLANTED', { character: labels.character(e.characterId), owner: labels.flagOwner(e.flagId), player: labels.player(e.playerId), node: e.nodeId });
     case 'CHARACTER_DEFEATED':
       return { kind: 'event', tone: 'kill', text: t('log.event.CHARACTER_DEFEATED', { character: labels.character(e.characterId) }), lines: [] };
     case 'VICTORY':

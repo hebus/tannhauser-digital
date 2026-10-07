@@ -1,18 +1,26 @@
-import { OVERWATCH_COST, currentStats, getLegalActions, getReactionOptions, type ActionId, type CharacterState, type GameCommand, type GameState } from '@tannhauser/core';
+import { FLAGS_TO_WIN, OVERWATCH_COST, carriedFlags, currentStats, plantedFlags, getLegalActions, getReactionOptions, isCaptureTheFlag, type ActionId, type CharacterState, type GameCommand, type GameState } from '@tannhauser/core';
 import { reasonText, t } from './i18n';
 import type { Labeler } from './labels';
 
 /** Modèle d'affichage du HUD : pur (état → données), sans DOM, testable. Aucune règle : tout vient du moteur. */
 
-export const ACTION_ORDER: readonly ActionId[] = ['MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS'];
+export const ACTION_ORDER: readonly ActionId[] = ['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS'];
+
+/** Actions propres au mode Capture du drapeau : elles n'apparaissent (barre d'actions, raccourcis) que dans ce mode. */
+export const FLAG_ACTIONS: readonly ActionId[] = ['CAPTURE_FLAG', 'PLANT_FLAG'];
+
+/** Actions affichées pour cette partie : `ACTION_ORDER` moins les actions de drapeau hors Capture du drapeau. */
+export const visibleActions = (state: GameState): readonly ActionId[] => (isCaptureTheFlag(state) ? ACTION_ORDER : ACTION_ORDER.filter((id) => !FLAG_ACTIONS.includes(id)));
 
 /**
  * Raccourcis clavier affichés. E/O/P (et T/D pour la réaction) sont traités par `main.ts` ; M/A/U/F, les chiffres
- * et Échap par le HUD (`MAIN_HANDLED_KEYS` évite le double traitement).
+ * (G / H : drapeaux), les chiffres et Échap par le HUD (`MAIN_HANDLED_KEYS` évite le double traitement).
  */
 export const ACTION_KEYS: Readonly<Partial<Record<ActionId, string>>> = {
   MOVE: 'M',
   ATTACK: 'A',
+  CAPTURE_FLAG: 'G',
+  PLANT_FLAG: 'H',
   OVERWATCH: 'O',
   OPEN_DOOR: 'U',
   CLOSE_DOOR: 'F',
@@ -37,12 +45,22 @@ export interface CharacterCard {
   readonly overwatch: boolean;
 }
 
+export interface StatusPlayer {
+  readonly id: string;
+  readonly name: string;
+  readonly commandPoints: number;
+  readonly active: boolean;
+  readonly initiative: boolean;
+  /** Capture du drapeau uniquement : drapeaux ennemis plantés dans le camp, objectif de victoire, drapeaux portés par l'équipe. */
+  readonly flags?: { readonly planted: number; readonly toWin: number; readonly carried: number };
+}
+
 export interface StatusModel {
   readonly finished: boolean;
   readonly turnNumber: number;
   readonly activePlayerId: string | null;
   readonly activePlayerName: string;
-  readonly players: readonly { readonly id: string; readonly name: string; readonly commandPoints: number; readonly active: boolean; readonly initiative: boolean }[];
+  readonly players: readonly StatusPlayer[];
   readonly character: CharacterCard | null;
   readonly actionUsed: boolean;
   readonly reactionFor: string | null;
@@ -80,6 +98,15 @@ export function statusModel(state: GameState, labels: Labeler): StatusModel {
       commandPoints: p.commandPoints,
       active: p.id === state.turn.activePlayerId,
       initiative: state.phase !== 'SETUP' && state.phase !== 'FINISHED' && p.id === state.turn.initiativePlayerId,
+      ...(isCaptureTheFlag(state)
+        ? {
+            flags: {
+              planted: plantedFlags(state, p.id).length,
+              toWin: FLAGS_TO_WIN,
+              carried: state.characters.filter((c) => c.playerId === p.id && c.alive).reduce((n, c) => n + carriedFlags(state, c.id).length, 0),
+            },
+          }
+        : {}),
     })),
     character: active ? characterCard(active, labels) : null,
     actionUsed: state.turn.actionUsed === true,
@@ -97,12 +124,14 @@ export interface ActionRow {
   /** Raison lisible (traduite si possible) quand l'action est indisponible. */
   readonly reason: string | undefined;
   readonly code: string | undefined;
+  /** Drapeaux utilisables (CAPTURE_FLAG / PLANT_FLAG, d'après `getLegalActions`). */
+  readonly flagIds: readonly string[] | undefined;
 }
 
 /** Lignes de la barre d'actions du personnage actif, dérivées de `getLegalActions`. */
 export function actionRows(state: GameState, characterId: string): ActionRow[] {
   const legal = getLegalActions(state, characterId);
-  return ACTION_ORDER.map((id): ActionRow => {
+  return visibleActions(state).map((id): ActionRow => {
     const a = legal.find((x) => x.id === id)!;
     return {
       id,
@@ -111,6 +140,7 @@ export function actionRows(state: GameState, characterId: string): ActionRow[] {
       available: a.available,
       reason: a.available ? undefined : reasonText(a.code, a.reason),
       code: a.code,
+      flagIds: a.details?.flagIds,
     };
   });
 }

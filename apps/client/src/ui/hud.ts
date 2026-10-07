@@ -1,7 +1,7 @@
 import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, type ActionRow } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';
 import { reasonText, t } from './i18n';
 import { createLabeler, type Labeler } from './labels';
 import { createPhaseTracker, playerMarkStyle } from './phase-tracker';
@@ -22,7 +22,7 @@ export interface Hud {
   handleKey(event: KeyboardEvent): boolean;
 }
 
-type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR';
+type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'CAPTURE_FLAG' | 'PLANT_FLAG';
 
 const TOAST_MS = 7000;
 
@@ -57,6 +57,12 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   }
 
   // --- Statut ---
+  /** Compteur de victoire (Capture du drapeau) : « Drapeaux plantés n / 2 », plus les drapeaux portés s'il y en a. */
+  function flagsText(f: { planted: number; toWin: number; carried: number }): string {
+    const planted = t('status.flags.planted', { n: f.planted, max: f.toWin });
+    return f.carried > 0 ? `${planted} · ${t('status.flags.carried', { n: f.carried })}` : planted;
+  }
+
   function renderStatus(state: GameState, labels: Labeler): void {
     const m = statusModel(state, labels);
     statusPanel.textContent = '';
@@ -76,7 +82,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         const li = h(
           'li',
           { class: `hud-pc${p.active ? ' is-active' : ''}`, attrs: { 'aria-current': p.active ? 'true' : undefined } },
-          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null, p.initiative ? h('span', { class: 'hud-pc-initiative', text: `⚑ ${t('status.initiative')}` }) : null, game.isAi(p.id) ? h('span', { class: 'hud-pc-ai', text: t('status.ai') }) : null),
+          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null, p.initiative ? h('span', { class: 'hud-pc-initiative', text: `⚑ ${t('status.initiative')}` }) : null, p.flags ? h('span', { class: 'hud-pc-flags', text: flagsText(p.flags) }) : null, game.isAi(p.id) ? h('span', { class: 'hud-pc-ai', text: t('status.ai') }) : null),
           h('b', { text: t('status.pc', { n: p.commandPoints }) }),
         );
         li.style.setProperty('--pc', mark.color);
@@ -171,6 +177,15 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
           dispatch({ type: 'ATTACK', playerId: state.turn.activePlayerId!, attackerId: characterId, targetId: o.targetId, weaponId: o.weaponId }),
         ),
       );
+    } else if (menu === 'CAPTURE_FLAG' || menu === 'PLANT_FLAG') {
+      titleKey = menu === 'CAPTURE_FLAG' ? 'actions.captureFlag.title' : 'actions.plantFlag.title';
+      const type = menu;
+      options = (legal?.details?.flagIds ?? []).map((flagId) => {
+        const flag = (state.flags ?? []).find((f) => f.id === flagId);
+        const owner = flag ? labels.player(flag.ownerId) : flagId;
+        const text = flag?.location.kind === 'NODE' ? t('actions.flag.optionAt', { owner, node: flag.location.nodeId }) : t('actions.flag.option', { owner });
+        return option(`flag-${flagId}`, text, () => dispatch({ type, playerId: state.turn.activePlayerId!, characterId, flagId }));
+      });
     } else {
       titleKey = 'actions.door.title';
       const type = menu === 'OPEN_DOOR' ? 'OPEN_DOOR' : 'CLOSE_DOOR';
@@ -220,6 +235,14 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       case 'CLOSE_DOOR': {
         const doors = action.details?.doorIds ?? [];
         if (doors.length === 1) dispatch({ type: id, playerId, characterId, doorId: doors[0]! });
+        else openMenu(id);
+        break;
+      }
+      case 'CAPTURE_FLAG':
+      case 'PLANT_FLAG': {
+        // Un seul drapeau utilisable : action directe ; plusieurs : menu de choix (comme les portes).
+        const usable = action.details?.flagIds ?? [];
+        if (usable.length === 1) dispatch({ type: id, playerId, characterId, flagId: usable[0]! });
         else openMenu(id);
         break;
       }
@@ -426,7 +449,8 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       else dispatch({ type: 'SELECT_CHARACTER', playerId: state.turn.activePlayerId!, characterId: row.characterId });
       return true;
     }
-    const id = (Object.keys(ACTION_KEYS) as ActionId[]).find((a) => ACTION_KEYS[a]?.toLowerCase() === key);
+    // Les actions de drapeau n'existent qu'en Capture du drapeau : leurs touches sont libres dans les autres modes.
+    const id = visibleActions(state).find((a) => ACTION_KEYS[a]?.toLowerCase() === key);
     if (id) {
       runAction(id);
       return true;

@@ -1,7 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { GameEvent, GameState } from '@tannhauser/core';
 import { NODE_RADIUS } from '../board-view';
-import type { CharacterLayer } from '../character-layer';
+import { createPennant, type CharacterLayer } from '../character-layer';
+import { playerColor } from '../palette';
 import { AnimationQueue, AnimationRunner, action, tween, type Animation } from './animation-queue';
 import { easeInOutQuad, easeOutCubic, lerp } from './easing';
 import { pointAlong, type Point } from './path-geometry';
@@ -20,6 +21,8 @@ export const TIMING = {
   defeat: 650,
   ring: 550,
   bolt: 650,
+  /** Vol d'un fanion (ramassage, dépôt, plantage). */
+  flagFlight: 550,
   /** Message court (changement d'option). Les durées des bannières sont dans `BANNER_DURATIONS`. */
   notice: 1400,
   /** Durée d'affichage statique des indicateurs en mouvement réduit (aucun mouvement). */
@@ -170,6 +173,26 @@ export class Presentation {
       case 'overwatchTriggered': {
         const target = next.board.nodes[step.nodeId];
         this.queue.enqueue(this.boltAnimation(step.overwatcherId, target ? { x: target.x, y: target.y } : null, step.targetId));
+        break;
+      }
+      case 'flagPlaced': {
+        const node = next.board.nodes[step.nodeId];
+        if (node) this.queue.enqueue(action(() => this.flagBurst({ x: node.x, y: node.y }, playerColor(step.ownerIndex))));
+        break;
+      }
+      case 'flagCaptured': {
+        const node = next.board.nodes[step.nodeId];
+        if (node) this.queue.enqueue(action(() => this.flagFlight({ x: node.x, y: node.y }, () => this.characters.tokenPosition(step.characterId), step.ownerIndex, false)));
+        break;
+      }
+      case 'flagDropped': {
+        const node = next.board.nodes[step.nodeId];
+        if (node) this.queue.enqueue(action(() => this.flagFlight(this.characters.tokenPosition(step.characterId) ?? { x: node.x, y: node.y }, () => ({ x: node.x, y: node.y }), step.ownerIndex, false)));
+        break;
+      }
+      case 'flagPlanted': {
+        const node = next.board.nodes[step.nodeId];
+        if (node) this.queue.enqueue(action(() => this.flagFlight(this.characters.tokenPosition(step.characterId) ?? { x: node.x, y: node.y }, () => ({ x: node.x, y: node.y }), step.ownerIndex, true)));
         break;
       }
       case 'banner': {
@@ -380,6 +403,66 @@ export class Presentation {
         bolt = null;
       },
     });
+  }
+
+  // ---- Drapeaux (Capture du drapeau) ------------------------------------------------------------------
+
+  /** Anneau qui s'élargit autour d'une case (apparition d'un drapeau, arrivée d'un fanion) ; fixe et bref en mouvement réduit. */
+  private flagBurst(at: Point, color: number, gold = false): void {
+    const ring = new Graphics();
+    ring.circle(0, 0, NODE_RADIUS * 0.8).stroke({ width: 4, color: gold ? 0xf0c040 : color });
+    ring.circle(0, 0, NODE_RADIUS * 0.8 + 6).stroke({ width: 2, color: 0xffffff, alpha: 0.8 });
+    ring.position.set(at.x, at.y);
+    this.worldLayer.addChild(ring);
+    if (this.reduced) {
+      this.runner.add({ duration: TIMING.staticHold, finish: () => ring.destroy() });
+      return;
+    }
+    this.runner.add(
+      tween({
+        duration: TIMING.ring,
+        ease: easeOutCubic,
+        onUpdate: (p) => {
+          if (ring.destroyed) return;
+          ring.scale.set(1 + 0.9 * p);
+          ring.alpha = 1 - p;
+        },
+        onFinish: () => ring.destroy(),
+      }),
+    );
+  }
+
+  /**
+   * Fanion fantôme qui vole de `from` vers `to` (ramassage : case → porteur ; dépôt : porteur → case ; plantage : porteur → camp),
+   * puis anneau à l'arrivée. Le vrai fanion est déjà dessiné d'après l'état : le fantôme n'est qu'un effet. En mouvement
+   * réduit : aucun vol, seul l'anneau d'arrivée reste affiché un instant.
+   */
+  private flagFlight(from: Point, to: () => Point | null, ownerIndex: number, planted: boolean): void {
+    const dest = to();
+    if (!dest) return;
+    const color = playerColor(ownerIndex);
+    if (this.reduced) {
+      this.flagBurst(dest, color, planted);
+      return;
+    }
+    const ghost = createPennant(ownerIndex, 1, planted);
+    ghost.position.set(from.x, from.y);
+    this.worldLayer.addChild(ghost);
+    this.runner.add(
+      tween({
+        duration: TIMING.flagFlight,
+        ease: easeInOutQuad,
+        onUpdate: (p) => {
+          if (ghost.destroyed) return;
+          ghost.position.set(lerp(from.x, dest.x, p), lerp(from.y, dest.y, p) - Math.sin(p * Math.PI) * 18);
+          ghost.alpha = p < 0.8 ? 1 : 1 - (p - 0.8) / 0.2;
+        },
+        onFinish: () => {
+          ghost.destroy({ children: true });
+          this.flagBurst(dest, color, planted);
+        },
+      }),
+    );
   }
 
   // ---- Bannière ---------------------------------------------------------------------------------------

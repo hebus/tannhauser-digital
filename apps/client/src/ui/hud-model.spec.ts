@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRng, applyCommand, createInitialState, type CharacterState, type GameState } from '@tannhauser/core';
 import { BoardBuilder } from '@tannhauser/core';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, announcedText, placementModel, reactionContext, rosterRows, statusModel } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, announcedText, placementModel, reactionContext, rosterRows, statusModel, visibleActions } from './hud-model';
 import { setLocale } from './i18n';
 import { describeRefusals, explainIgnoredClick, explainIgnoredKey } from './input-feedback';
 import { createLabeler } from './labels';
@@ -76,7 +76,56 @@ describe('modèle du HUD', () => {
   it('les raccourcis du HUD ne recoupent pas ceux traités par main.ts', () => {
     const hudKeys = Object.values(ACTION_KEYS).map((k) => k!.toLowerCase());
     const own = hudKeys.filter((k) => !MAIN_HANDLED_KEYS.has(k));
-    expect(own.sort()).toEqual(['a', 'f', 'm', 'u']);
+    expect(own.sort()).toEqual(['a', 'f', 'g', 'h', 'm', 'u']);
+  });
+});
+
+describe('Capture du drapeau (HUD)', () => {
+  /** h1 (p1, actif) en a ; drapeau ennemi f2 (de p2) au sol en b, voisin de a ; e1 (p2) loin, en d. */
+  function ctf(extra: Partial<GameState> = {}): GameState {
+    const s = game({ activeCharacterId: 'h1', actionUsed: false });
+    return { ...s, mode: 'CAPTURE_THE_FLAG', camps: { p1: ['a'], p2: ['d'] }, flags: [{ id: 'f2', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'b' } }], ...extra };
+  }
+
+  it('hors Capture du drapeau : ni lignes d’actions de drapeau, ni compteur de victoire', () => {
+    const s = game({ activeCharacterId: 'h1', actionUsed: false });
+    expect(actionRows(s, 'h1').map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
+    expect(visibleActions(s)).not.toContain('CAPTURE_FLAG');
+    expect(statusModel(s, createLabeler(s)).players.every((p) => p.flags === undefined)).toBe(true);
+  });
+
+  it('en mode : lignes Récupérer / Planter avec touches G / H, disponibilité et raison issues de getLegalActions', () => {
+    const s = ctf();
+    const rows = actionRows(s, 'h1');
+    expect(rows.map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+    expect(byId.CAPTURE_FLAG).toMatchObject({ label: 'Récupérer le drapeau', key: 'G', available: true, flagIds: ['f2'] });
+    expect(byId.PLANT_FLAG).toMatchObject({ label: 'Planter le drapeau', key: 'H', available: false, reason: 'Impossible : ce personnage ne porte aucun drapeau.' });
+    expect(rows.every((r) => r.available || (r.reason ?? '').length > 0)).toBe(true);
+  });
+
+  it('un drapeau planté ou porté se lit dans le compteur : plantés n / 2 par joueur, et drapeaux portés par l’équipe', () => {
+    const s = ctf({
+      flags: [
+        { id: 'f2', ownerId: 'p2', location: { kind: 'PLANTED', playerId: 'p1', nodeId: 'a' } },
+        { id: 'g1', ownerId: 'p1', location: { kind: 'CARRIED', characterId: 'e1' } },
+      ],
+    });
+    const players = statusModel(s, createLabeler(s)).players;
+    expect(players.map((p) => p.flags)).toEqual([
+      { planted: 1, toWin: 2, carried: 0 },
+      { planted: 0, toWin: 2, carried: 1 },
+    ]);
+  });
+
+  it('un drapeau à récupérer apparaît dans plusieurs options quand plusieurs sont utilisables', () => {
+    const s = ctf({
+      flags: [
+        { id: 'f2', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'b' } },
+        { id: 'f3', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'a' } },
+      ],
+    });
+    expect(actionRows(s, 'h1').find((r) => r.id === 'CAPTURE_FLAG')?.flagIds).toEqual(['f2', 'f3']);
   });
 });
 

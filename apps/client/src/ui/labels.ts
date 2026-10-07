@@ -6,6 +6,8 @@ export interface Labeler {
   character(id: string): string;
   weapon(id: string): string;
   player(id: string): string;
+  /** Nom du joueur propriétaire d'un drapeau (l'id du drapeau si inconnu). */
+  flagOwner(flagId: string): string;
   /** Remplace dans un texte du moteur les identifiants connus par leurs noms lisibles. */
   humanize(text: string): string;
 }
@@ -17,7 +19,7 @@ function baseName(character: CharacterState): string {
   return hasKey(key) ? t(key) : character.definitionId;
 }
 
-export function createLabeler(state: Pick<GameState, 'characters' | 'players'>): Labeler {
+export function createLabeler(state: Pick<GameState, 'characters' | 'players'> & Partial<Pick<GameState, 'flags'>>): Labeler {
   const player = (id: string): string => (hasKey(`player.${id}`) ? t(`player.${id}`) : id);
 
   // Deux personnages de même nom (même définition dans les deux équipes) : on précise le joueur.
@@ -30,6 +32,10 @@ export function createLabeler(state: Pick<GameState, 'characters' | 'players'>):
   }
 
   const character = (id: string): string => characterLabels.get(id) ?? id;
+  const flagOwner = (flagId: string): string => {
+    const ownerId = state.flags?.find((f) => f.id === flagId)?.ownerId;
+    return ownerId ? player(ownerId) : flagId;
+  };
   const weapon = (id: string): string => (hasKey(`${id}.name`) ? t(`${id}.name`) : id);
 
   const replacements: [string, string][] = [
@@ -43,6 +49,7 @@ export function createLabeler(state: Pick<GameState, 'characters' | 'players'>):
     character,
     weapon,
     player,
+    flagOwner,
     humanize: (text) => (pattern ? text.replace(pattern, (id) => byId.get(id) ?? id) : text),
   };
 }

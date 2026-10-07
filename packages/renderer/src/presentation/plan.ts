@@ -8,6 +8,11 @@ export type PresentationStep =
   | { readonly kind: 'defeat'; readonly characterId: string }
   | { readonly kind: 'overwatchPlaced'; readonly characterId: string }
   | { readonly kind: 'overwatchTriggered'; readonly overwatcherId: string; readonly targetId: string; readonly nodeId: string }
+  /** Capture du drapeau : `ownerIndex` = index (dans `players`) du propriétaire du drapeau, pour sa couleur et son emblème. */
+  | { readonly kind: 'flagPlaced'; readonly flagId: string; readonly ownerIndex: number; readonly nodeId: string }
+  | { readonly kind: 'flagCaptured'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
+  | { readonly kind: 'flagDropped'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
+  | { readonly kind: 'flagPlanted'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
   /** Bannière de grande transition (début de tour, phase, changement de main, réaction, victoire) : au plus une par lot. */
   | { readonly kind: 'banner'; readonly banner: BannerPlan };
 
@@ -29,6 +34,11 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
   for (const c of prev?.characters ?? []) positions.set(c.id, c.nodeId);
   const ownerOf = (characterId: string): string | null =>
     next.characters.find((c) => c.id === characterId)?.playerId ?? prev?.characters.find((c) => c.id === characterId)?.playerId ?? null;
+  // Propriétaire d'un drapeau (état suivant, sinon précédent) → index du joueur (0 si inconnu).
+  const flagOwnerIndex = (flagId: string): number => {
+    const ownerId = (next.flags ?? prev?.flags ?? []).find((f) => f.id === flagId)?.ownerId;
+    return Math.max(0, (next.players ?? []).findIndex((p) => p.id === ownerId));
+  };
 
   events.forEach((e, index) => {
     switch (e.type) {
@@ -56,6 +66,18 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
         });
         steps.push({ kind: 'overwatchTriggered', overwatcherId: e.overwatcherId, targetId: e.targetId, nodeId: e.nodeId });
         break;
+      case 'FLAG_PLACED':
+        steps.push({ kind: 'flagPlaced', flagId: e.flagId, ownerIndex: Math.max(0, (next.players ?? []).findIndex((p) => p.id === e.ownerId)), nodeId: e.nodeId });
+        break;
+      case 'FLAG_CAPTURED':
+        steps.push({ kind: 'flagCaptured', flagId: e.flagId, ownerIndex: flagOwnerIndex(e.flagId), characterId: e.characterId, nodeId: e.nodeId });
+        break;
+      case 'FLAG_DROPPED':
+        steps.push({ kind: 'flagDropped', flagId: e.flagId, ownerIndex: flagOwnerIndex(e.flagId), characterId: e.characterId, nodeId: e.nodeId });
+        break;
+      case 'FLAG_PLANTED':
+        steps.push({ kind: 'flagPlanted', flagId: e.flagId, ownerIndex: flagOwnerIndex(e.flagId), characterId: e.characterId, nodeId: e.nodeId });
+        break;
       case 'TURN_STARTED': {
         const rolled = events.slice(index + 1).find((x) => x.type === 'INITIATIVE_ROLLED');
         const playerId = next.turn.number === e.turn ? next.turn.activePlayerId : rolled?.type === 'INITIATIVE_ROLLED' ? rolled.winnerId : null;
@@ -63,7 +85,7 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
         break;
       }
       case 'VICTORY':
-        candidates.push({ plan: { kind: 'victory', turn: next.turn.number, playerId: e.winnerId }, at: Number.MAX_SAFE_INTEGER });
+        candidates.push({ plan: { kind: 'victory', turn: next.turn.number, playerId: e.winnerId, reason: e.reason }, at: Number.MAX_SAFE_INTEGER });
         break;
       default:
         break;
