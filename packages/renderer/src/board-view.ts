@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { BoardNode, BoardState } from '@tannhauser/core';
-import { colorHex } from './palette';
+import { buildColorMap, colorHex } from './palette';
 import {
   corridorSegments,
   doorGeometry,
@@ -35,11 +35,14 @@ export class BoardView extends Container {
   private readonly nodeLayer = new Container();
   private readonly labelLayer = new Container();
 
+  private readonly colorMap: Map<string, number>;
+
   constructor(
     private readonly board: BoardState,
     private readonly options: BoardViewOptions = {},
   ) {
     super();
+    this.colorMap = buildColorMap(Object.values(board.nodes).flatMap((n) => n.colors));
     this.label = 'BoardView';
     this.addChild(this.terrainLayer, this.edgeLayer, this.nodeLayer, this.labelLayer);
     this.draw();
@@ -241,7 +244,7 @@ export class BoardView extends Container {
       g.moveTo(node.x, node.y)
         .arc(node.x, node.y, R, start, start + sector)
         .lineTo(node.x, node.y)
-        .fill(colorHex(c));
+        .fill(this.colorMap.get(c) ?? colorHex(c));
     });
     g.circle(node.x, node.y, R).stroke({ width: 3, color: node.properties.passable ? 0x1c1f24 : 0xff4d4f });
 
