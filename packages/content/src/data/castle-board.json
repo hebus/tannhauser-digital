@@ -1,0 +1,1150 @@
+{
+  "id": "castle",
+  "nameKey": "board.castle.name",
+  "nodes": [
+    {
+      "id": "armurerie-01",
+      "x": 140,
+      "y": 600,
+      "zoneId": "armurerie",
+      "colors": [
+        "r.armurerie"
+      ]
+    },
+    {
+      "id": "armurerie-02",
+      "x": 240,
+      "y": 610,
+      "zoneId": "armurerie",
+      "colors": [
+        "c.ouest-b",
+        "r.armurerie"
+      ]
+    },
+    {
+      "id": "armurerie-03",
+      "x": 150,
+      "y": 690,
+      "zoneId": "armurerie",
+      "colors": [
+        "r.armurerie"
+      ]
+    },
+    {
+      "id": "armurerie-04",
+      "x": 250,
+      "y": 690,
+      "zoneId": "armurerie",
+      "colors": [
+        "r.armurerie"
+      ]
+    },
+    {
+      "id": "bibliotheque-01",
+      "x": 260,
+      "y": 140,
+      "zoneId": "bibliotheque",
+      "colors": [
+        "r.bibliotheque"
+      ]
+    },
+    {
+      "id": "bibliotheque-02",
+      "x": 160,
+      "y": 150,
+      "zoneId": "bibliotheque",
+      "colors": [
+        "r.bibliotheque"
+      ]
+    },
+    {
+      "id": "bibliotheque-03",
+      "x": 270,
+      "y": 230,
+      "zoneId": "bibliotheque",
+      "colors": [
+        "c.nord-ouest-b",
+        "r.bibliotheque"
+      ]
+    },
+    {
+      "id": "bibliotheque-04",
+      "x": 170,
+      "y": 240,
+      "zoneId": "bibliotheque",
+      "colors": [
+        "r.bibliotheque"
+      ]
+    },
+    {
+      "id": "chapelle-01",
+      "x": 940,
+      "y": 140,
+      "zoneId": "chapelle",
+      "colors": [
+        "r.chapelle"
+      ]
+    },
+    {
+      "id": "chapelle-02",
+      "x": 1040,
+      "y": 150,
+      "zoneId": "chapelle",
+      "colors": [
+        "c.poterne-a",
+        "r.chapelle"
+      ]
+    },
+    {
+      "id": "chapelle-03",
+      "x": 930,
+      "y": 230,
+      "zoneId": "chapelle",
+      "colors": [
+        "c.nord-est-b",
+        "r.chapelle"
+      ]
+    },
+    {
+      "id": "chapelle-04",
+      "x": 1030,
+      "y": 240,
+      "zoneId": "chapelle",
+      "colors": [
+        "r.chapelle"
+      ]
+    },
+    {
+      "id": "cor-est-01",
+      "x": 850,
+      "y": 530,
+      "zoneId": "cor-est",
+      "colors": [
+        "c.est-a"
+      ]
+    },
+    {
+      "id": "cor-est-02",
+      "x": 875,
+      "y": 580,
+      "zoneId": "cor-est",
+      "colors": [
+        "c.est-a",
+        "c.est-b"
+      ]
+    },
+    {
+      "id": "cor-est-03",
+      "x": 910,
+      "y": 620,
+      "zoneId": "cor-est",
+      "colors": [
+        "c.est-b"
+      ]
+    },
+    {
+      "id": "cor-nord-est-01",
+      "x": 760,
+      "y": 340,
+      "zoneId": "cor-nord-est",
+      "colors": [
+        "c.nord-est-a"
+      ]
+    },
+    {
+      "id": "cor-nord-est-02",
+      "x": 810,
+      "y": 280,
+      "zoneId": "cor-nord-est",
+      "colors": [
+        "c.nord-est-a",
+        "c.nord-est-b"
+      ]
+    },
+    {
+      "id": "cor-nord-est-03",
+      "x": 860,
+      "y": 235,
+      "zoneId": "cor-nord-est",
+      "colors": [
+        "c.nord-est-b"
+      ]
+    },
+    {
+      "id": "cor-nord-ouest-01",
+      "x": 440,
+      "y": 340,
+      "zoneId": "cor-nord-ouest",
+      "colors": [
+        "c.nord-ouest-a"
+      ]
+    },
+    {
+      "id": "cor-nord-ouest-02",
+      "x": 390,
+      "y": 280,
+      "zoneId": "cor-nord-ouest",
+      "colors": [
+        "c.nord-ouest-a",
+        "c.nord-ouest-b"
+      ]
+    },
+    {
+      "id": "cor-nord-ouest-03",
+      "x": 340,
+      "y": 235,
+      "zoneId": "cor-nord-ouest",
+      "colors": [
+        "c.nord-ouest-b"
+      ]
+    },
+    {
+      "id": "cor-ouest-01",
+      "x": 350,
+      "y": 530,
+      "zoneId": "cor-ouest",
+      "colors": [
+        "c.ouest-a"
+      ]
+    },
+    {
+      "id": "cor-ouest-02",
+      "x": 325,
+      "y": 580,
+      "zoneId": "cor-ouest",
+      "colors": [
+        "c.ouest-a",
+        "c.ouest-b"
+      ]
+    },
+    {
+      "id": "cor-ouest-03",
+      "x": 290,
+      "y": 620,
+      "zoneId": "cor-ouest",
+      "colors": [
+        "c.ouest-b"
+      ]
+    },
+    {
+      "id": "cor-poterne-01",
+      "x": 1110,
+      "y": 140,
+      "zoneId": "cor-poterne",
+      "colors": [
+        "c.poterne-a"
+      ]
+    },
+    {
+      "id": "cor-poterne-02",
+      "x": 1150,
+      "y": 90,
+      "zoneId": "cor-poterne",
+      "colors": [
+        "c.poterne-a",
+        "c.poterne-b"
+      ]
+    },
+    {
+      "id": "cor-poterne-03",
+      "x": 1190,
+      "y": 50,
+      "zoneId": "cor-poterne",
+      "colors": [
+        "c.poterne-b"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    },
+    {
+      "id": "cor-sud-01",
+      "x": 600,
+      "y": 700,
+      "zoneId": "cor-sud",
+      "colors": [
+        "c.sud-a"
+      ]
+    },
+    {
+      "id": "cor-sud-02",
+      "x": 660,
+      "y": 780,
+      "zoneId": "cor-sud",
+      "colors": [
+        "c.sud-a",
+        "c.sud-b"
+      ]
+    },
+    {
+      "id": "cor-sud-03",
+      "x": 570,
+      "y": 860,
+      "zoneId": "cor-sud",
+      "colors": [
+        "c.sud-b"
+      ]
+    },
+    {
+      "id": "cour-01",
+      "x": 500,
+      "y": 940,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ]
+    },
+    {
+      "id": "cour-02",
+      "x": 600,
+      "y": 940,
+      "zoneId": "cour",
+      "colors": [
+        "c.sud-b",
+        "r.cour"
+      ]
+    },
+    {
+      "id": "cour-03",
+      "x": 700,
+      "y": 940,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ],
+      "properties": {
+        "passable": false
+      }
+    },
+    {
+      "id": "cour-04",
+      "x": 450,
+      "y": 1040,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ]
+    },
+    {
+      "id": "cour-05",
+      "x": 550,
+      "y": 1040,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    },
+    {
+      "id": "cour-06",
+      "x": 650,
+      "y": 1040,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ]
+    },
+    {
+      "id": "cour-07",
+      "x": 750,
+      "y": 1040,
+      "zoneId": "cour",
+      "colors": [
+        "r.cour"
+      ]
+    },
+    {
+      "id": "cuisine-01",
+      "x": 1060,
+      "y": 600,
+      "zoneId": "cuisine",
+      "colors": [
+        "r.cuisine"
+      ]
+    },
+    {
+      "id": "cuisine-02",
+      "x": 960,
+      "y": 610,
+      "zoneId": "cuisine",
+      "colors": [
+        "c.est-b",
+        "r.cuisine"
+      ]
+    },
+    {
+      "id": "cuisine-03",
+      "x": 950,
+      "y": 690,
+      "zoneId": "cuisine",
+      "colors": [
+        "r.cuisine"
+      ],
+      "properties": {
+        "movementCostModifier": 1
+      }
+    },
+    {
+      "id": "cuisine-04",
+      "x": 1050,
+      "y": 690,
+      "zoneId": "cuisine",
+      "colors": [
+        "r.cuisine"
+      ]
+    },
+    {
+      "id": "hall-01",
+      "x": 490,
+      "y": 390,
+      "zoneId": "hall",
+      "colors": [
+        "c.nord-ouest-a",
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-02",
+      "x": 600,
+      "y": 390,
+      "zoneId": "hall",
+      "colors": [
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-03",
+      "x": 710,
+      "y": 390,
+      "zoneId": "hall",
+      "colors": [
+        "c.nord-est-a",
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-04",
+      "x": 490,
+      "y": 500,
+      "zoneId": "hall",
+      "colors": [
+        "c.ouest-a",
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-05",
+      "x": 600,
+      "y": 500,
+      "zoneId": "hall",
+      "colors": [
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-06",
+      "x": 710,
+      "y": 500,
+      "zoneId": "hall",
+      "colors": [
+        "c.est-a",
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-07",
+      "x": 490,
+      "y": 610,
+      "zoneId": "hall",
+      "colors": [
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-08",
+      "x": 600,
+      "y": 610,
+      "zoneId": "hall",
+      "colors": [
+        "c.sud-a",
+        "r.hall"
+      ]
+    },
+    {
+      "id": "hall-09",
+      "x": 710,
+      "y": 610,
+      "zoneId": "hall",
+      "colors": [
+        "r.hall"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "armurerie-01",
+      "to": "armurerie-02"
+    },
+    {
+      "from": "armurerie-01",
+      "to": "armurerie-03"
+    },
+    {
+      "from": "armurerie-01",
+      "to": "armurerie-04"
+    },
+    {
+      "from": "armurerie-02",
+      "to": "armurerie-03"
+    },
+    {
+      "from": "armurerie-02",
+      "to": "armurerie-04"
+    },
+    {
+      "from": "armurerie-02",
+      "to": "cor-ouest-03"
+    },
+    {
+      "from": "armurerie-03",
+      "to": "armurerie-04"
+    },
+    {
+      "from": "bibliotheque-01",
+      "to": "bibliotheque-02"
+    },
+    {
+      "from": "bibliotheque-01",
+      "to": "bibliotheque-03"
+    },
+    {
+      "from": "bibliotheque-01",
+      "to": "bibliotheque-04"
+    },
+    {
+      "from": "bibliotheque-02",
+      "to": "bibliotheque-03"
+    },
+    {
+      "from": "bibliotheque-02",
+      "to": "bibliotheque-04"
+    },
+    {
+      "from": "bibliotheque-03",
+      "to": "bibliotheque-04"
+    },
+    {
+      "from": "bibliotheque-03",
+      "to": "cor-nord-ouest-03"
+    },
+    {
+      "from": "chapelle-01",
+      "to": "chapelle-02"
+    },
+    {
+      "from": "chapelle-01",
+      "to": "chapelle-03"
+    },
+    {
+      "from": "chapelle-01",
+      "to": "chapelle-04"
+    },
+    {
+      "from": "chapelle-02",
+      "to": "chapelle-03"
+    },
+    {
+      "from": "chapelle-02",
+      "to": "chapelle-04"
+    },
+    {
+      "from": "chapelle-02",
+      "to": "cor-poterne-01",
+      "doorId": "door-poterne"
+    },
+    {
+      "from": "chapelle-03",
+      "to": "chapelle-04"
+    },
+    {
+      "from": "chapelle-03",
+      "to": "cor-nord-est-03"
+    },
+    {
+      "from": "cor-est-01",
+      "to": "cor-est-02"
+    },
+    {
+      "from": "cor-est-01",
+      "to": "hall-06",
+      "doorId": "door-hall-est"
+    },
+    {
+      "from": "cor-est-02",
+      "to": "cor-est-03"
+    },
+    {
+      "from": "cor-est-03",
+      "to": "cuisine-02"
+    },
+    {
+      "from": "cor-nord-est-01",
+      "to": "cor-nord-est-02"
+    },
+    {
+      "from": "cor-nord-est-01",
+      "to": "hall-03",
+      "doorId": "door-hall-nord-est"
+    },
+    {
+      "from": "cor-nord-est-02",
+      "to": "cor-nord-est-03"
+    },
+    {
+      "from": "cor-nord-ouest-01",
+      "to": "cor-nord-ouest-02"
+    },
+    {
+      "from": "cor-nord-ouest-01",
+      "to": "hall-01",
+      "doorId": "door-hall-nord-ouest"
+    },
+    {
+      "from": "cor-nord-ouest-03",
+      "to": "cor-nord-ouest-02",
+      "oneWay": true
+    },
+    {
+      "from": "cor-ouest-01",
+      "to": "cor-ouest-02"
+    },
+    {
+      "from": "cor-ouest-01",
+      "to": "hall-04",
+      "doorId": "door-hall-ouest"
+    },
+    {
+      "from": "cor-ouest-02",
+      "to": "cor-ouest-03"
+    },
+    {
+      "from": "cor-poterne-01",
+      "to": "cor-poterne-02"
+    },
+    {
+      "from": "cor-poterne-02",
+      "to": "cor-poterne-03"
+    },
+    {
+      "from": "cor-sud-01",
+      "to": "cor-sud-02"
+    },
+    {
+      "from": "cor-sud-01",
+      "to": "hall-08",
+      "doorId": "door-hall-sud"
+    },
+    {
+      "from": "cor-sud-02",
+      "to": "cor-sud-03"
+    },
+    {
+      "from": "cor-sud-03",
+      "to": "cour-02"
+    },
+    {
+      "from": "cour-01",
+      "to": "cour-02"
+    },
+    {
+      "from": "cour-01",
+      "to": "cour-04"
+    },
+    {
+      "from": "cour-01",
+      "to": "cour-05"
+    },
+    {
+      "from": "cour-02",
+      "to": "cour-03"
+    },
+    {
+      "from": "cour-02",
+      "to": "cour-05"
+    },
+    {
+      "from": "cour-02",
+      "to": "cour-06"
+    },
+    {
+      "from": "cour-03",
+      "to": "cour-06"
+    },
+    {
+      "from": "cour-03",
+      "to": "cour-07"
+    },
+    {
+      "from": "cour-04",
+      "to": "cour-05"
+    },
+    {
+      "from": "cour-05",
+      "to": "cour-06"
+    },
+    {
+      "from": "cour-06",
+      "to": "cour-07"
+    },
+    {
+      "from": "cuisine-01",
+      "to": "cuisine-02"
+    },
+    {
+      "from": "cuisine-01",
+      "to": "cuisine-03"
+    },
+    {
+      "from": "cuisine-01",
+      "to": "cuisine-04"
+    },
+    {
+      "from": "cuisine-02",
+      "to": "cuisine-03"
+    },
+    {
+      "from": "cuisine-02",
+      "to": "cuisine-04"
+    },
+    {
+      "from": "cuisine-03",
+      "to": "cuisine-04"
+    },
+    {
+      "from": "hall-01",
+      "to": "hall-02"
+    },
+    {
+      "from": "hall-01",
+      "to": "hall-04"
+    },
+    {
+      "from": "hall-01",
+      "to": "hall-05"
+    },
+    {
+      "from": "hall-02",
+      "to": "hall-03"
+    },
+    {
+      "from": "hall-02",
+      "to": "hall-04"
+    },
+    {
+      "from": "hall-02",
+      "to": "hall-05"
+    },
+    {
+      "from": "hall-02",
+      "to": "hall-06"
+    },
+    {
+      "from": "hall-03",
+      "to": "hall-05"
+    },
+    {
+      "from": "hall-03",
+      "to": "hall-06"
+    },
+    {
+      "from": "hall-04",
+      "to": "hall-05"
+    },
+    {
+      "from": "hall-04",
+      "to": "hall-07"
+    },
+    {
+      "from": "hall-04",
+      "to": "hall-08"
+    },
+    {
+      "from": "hall-05",
+      "to": "hall-06"
+    },
+    {
+      "from": "hall-05",
+      "to": "hall-07"
+    },
+    {
+      "from": "hall-05",
+      "to": "hall-08"
+    },
+    {
+      "from": "hall-05",
+      "to": "hall-09"
+    },
+    {
+      "from": "hall-06",
+      "to": "hall-08"
+    },
+    {
+      "from": "hall-06",
+      "to": "hall-09"
+    },
+    {
+      "from": "hall-07",
+      "to": "hall-08"
+    },
+    {
+      "from": "hall-08",
+      "to": "hall-09"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door-hall-est",
+      "type": "WOODEN",
+      "state": "OPEN"
+    },
+    {
+      "id": "door-hall-nord-est",
+      "type": "WOODEN",
+      "state": "CLOSED"
+    },
+    {
+      "id": "door-hall-nord-ouest",
+      "type": "WOODEN",
+      "state": "OPEN"
+    },
+    {
+      "id": "door-hall-ouest",
+      "type": "REINFORCED",
+      "state": "CLOSED"
+    },
+    {
+      "id": "door-hall-sud",
+      "type": "WOODEN",
+      "state": "OPEN"
+    },
+    {
+      "id": "door-poterne",
+      "type": "REINFORCED",
+      "state": "OPEN"
+    }
+  ],
+  "portals": [
+    {
+      "id": "portal-secret",
+      "from": "bibliotheque-04",
+      "to": "chapelle-04",
+      "type": "SECRET_DOOR"
+    }
+  ],
+  "layout": {
+    "rooms": [
+      {
+        "id": "hall",
+        "nameKey": "room.hall",
+        "polygon": [
+          {
+            "x": 470,
+            "y": 360
+          },
+          {
+            "x": 730,
+            "y": 360
+          },
+          {
+            "x": 840,
+            "y": 500
+          },
+          {
+            "x": 730,
+            "y": 640
+          },
+          {
+            "x": 470,
+            "y": 640
+          },
+          {
+            "x": 360,
+            "y": 500
+          }
+        ],
+        "fill": "#5b4a3a"
+      },
+      {
+        "id": "armurerie",
+        "nameKey": "room.armurerie",
+        "polygon": [
+          {
+            "x": 310,
+            "y": 570
+          },
+          {
+            "x": 100,
+            "y": 540
+          },
+          {
+            "x": 70,
+            "y": 710
+          },
+          {
+            "x": 270,
+            "y": 750
+          }
+        ],
+        "fill": "#4a4f57"
+      },
+      {
+        "id": "bibliotheque",
+        "nameKey": "room.bibliotheque",
+        "polygon": [
+          {
+            "x": 110,
+            "y": 100
+          },
+          {
+            "x": 320,
+            "y": 90
+          },
+          {
+            "x": 340,
+            "y": 260
+          },
+          {
+            "x": 120,
+            "y": 290
+          }
+        ],
+        "fill": "#4b3f55"
+      },
+      {
+        "id": "cuisine",
+        "nameKey": "room.cuisine",
+        "polygon": [
+          {
+            "x": 890,
+            "y": 570
+          },
+          {
+            "x": 1100,
+            "y": 540
+          },
+          {
+            "x": 1130,
+            "y": 710
+          },
+          {
+            "x": 930,
+            "y": 750
+          }
+        ],
+        "fill": "#5a4437"
+      },
+      {
+        "id": "chapelle",
+        "nameKey": "room.chapelle",
+        "polygon": [
+          {
+            "x": 1090,
+            "y": 100
+          },
+          {
+            "x": 880,
+            "y": 90
+          },
+          {
+            "x": 860,
+            "y": 260
+          },
+          {
+            "x": 1080,
+            "y": 290
+          }
+        ],
+        "fill": "#4a5560"
+      },
+      {
+        "id": "cour",
+        "nameKey": "room.cour",
+        "polygon": [
+          {
+            "x": 430,
+            "y": 880
+          },
+          {
+            "x": 770,
+            "y": 880
+          },
+          {
+            "x": 880,
+            "y": 1100
+          },
+          {
+            "x": 320,
+            "y": 1100
+          }
+        ],
+        "fill": "#3f5240"
+      }
+    ],
+    "corridors": [
+      {
+        "id": "cor-ouest",
+        "points": [
+          {
+            "x": 490,
+            "y": 500
+          },
+          {
+            "x": 350,
+            "y": 530
+          },
+          {
+            "x": 325,
+            "y": 580
+          },
+          {
+            "x": 290,
+            "y": 620
+          },
+          {
+            "x": 240,
+            "y": 610
+          }
+        ],
+        "width": 60
+      },
+      {
+        "id": "cor-nord-ouest",
+        "points": [
+          {
+            "x": 490,
+            "y": 390
+          },
+          {
+            "x": 440,
+            "y": 340
+          },
+          {
+            "x": 390,
+            "y": 280
+          },
+          {
+            "x": 340,
+            "y": 235
+          },
+          {
+            "x": 270,
+            "y": 230
+          }
+        ],
+        "width": 60
+      },
+      {
+        "id": "cor-nord-est",
+        "points": [
+          {
+            "x": 710,
+            "y": 390
+          },
+          {
+            "x": 760,
+            "y": 340
+          },
+          {
+            "x": 810,
+            "y": 280
+          },
+          {
+            "x": 860,
+            "y": 235
+          },
+          {
+            "x": 930,
+            "y": 230
+          }
+        ],
+        "width": 60
+      },
+      {
+        "id": "cor-est",
+        "points": [
+          {
+            "x": 710,
+            "y": 500
+          },
+          {
+            "x": 850,
+            "y": 530
+          },
+          {
+            "x": 875,
+            "y": 580
+          },
+          {
+            "x": 910,
+            "y": 620
+          },
+          {
+            "x": 960,
+            "y": 610
+          }
+        ],
+        "width": 60
+      },
+      {
+        "id": "cor-sud",
+        "points": [
+          {
+            "x": 600,
+            "y": 610
+          },
+          {
+            "x": 600,
+            "y": 700
+          },
+          {
+            "x": 660,
+            "y": 780
+          },
+          {
+            "x": 570,
+            "y": 860
+          },
+          {
+            "x": 600,
+            "y": 940
+          }
+        ],
+        "width": 60
+      },
+      {
+        "id": "cor-poterne",
+        "points": [
+          {
+            "x": 1040,
+            "y": 150
+          },
+          {
+            "x": 1110,
+            "y": 140
+          },
+          {
+            "x": 1150,
+            "y": 90
+          },
+          {
+            "x": 1190,
+            "y": 50
+          }
+        ],
+        "width": 50
+      }
+    ]
+  }
+}

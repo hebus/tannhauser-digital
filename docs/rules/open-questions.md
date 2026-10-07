@@ -384,3 +384,19 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Reason:** la décision traite le cas à deux joueurs ; le cas à plus de deux joueurs et la passe automatique d'un joueur sans option ne sont pas précisés.
 - **Impact:** nombre de clics en phase Overwatch ; parties à plus de deux joueurs (hors périmètre actuel).
 - **Test required:** `overwatch.spec.ts` (aucun PC des deux côtés, passe puis placement adverse), `turn.spec.ts` (relance après une passe).
+
+## OQ-BOARD-001 — Mise en place sur un plateau aux zones verrouillées
+
+- **Rule:** (aucune règle source : mise en place du client, voir `placeTeams`)
+- **Interpretation (actuelle) :** chaque équipe est ancrée sur un `ENTRY_POINT` (les deux plus éloignés) et ne reçoit que des cases joignables depuis son ancre, PM illimités, avec l'état initial des portes, les sens uniques et les cases impraticables respectés (la salle d'armes du château, derrière une porte renforcée fermée, n'est donc jamais peuplée au départ). Hors cet ajout, la règle de placement existante est inchangée.
+- **Reason:** le livre de règles ne dit pas comment les équipes se placent sur une carte à plusieurs entrées ni si une zone verrouillée peut contenir un personnage au départ.
+- **Impact:** équilibre de départ des cartes ; le château donne un accès initial asymétrique (la porte de bois vers la chapelle est fermée, la poterne rejoint le hall par l'escalier à sens unique).
+- **Test required:** `castle-setup.spec.ts` (entrées, cases distinctes, zones joignables).
+
+## OQ-BOARD-002 — Attribution des entrées aux joueurs
+
+- **Rule:** (aucune règle source)
+- **Interpretation (actuelle) :** l'attribution d'une entrée à une équipe suit l'ordre des ids (le premier `ENTRY_POINT` par id va au premier joueur) ; sur le château, le joueur 1 démarre à la poterne et le joueur 2 à la grande porte.
+- **Reason:** les règles ne précisent pas quelle équipe occupe quelle entrée.
+- **Impact:** avantage éventuel d'un côté de la carte.
+- **Test required:** `castle-setup.spec.ts` (chaque équipe prend une entrée différente).

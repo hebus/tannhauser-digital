@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../dist-types/board-generator" },
+  "include": ["board-generator.ts", "castle.map.ts"],
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/content" }]
+}

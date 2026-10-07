@@ -15,6 +15,10 @@
 - `open-questions.md` : ambiguïtés et interprétations
 - `traceability.md` : index de traçabilité ; détail dans `traceability-<domaine>.md`
 
+## Cartes
+
+- `boards.md` : créer une carte (générateur, schéma de mise en page, convention de couleurs)
+
 ## Tickets (`docs/tickets/`)
 
 - `README.md` : gabarit de ticket TH-NNN et liste initiale

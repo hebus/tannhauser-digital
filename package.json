@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate:boards": "vite-node tools/board-generator/generate.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
