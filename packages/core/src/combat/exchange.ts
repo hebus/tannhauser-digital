@@ -3,6 +3,7 @@ import type { GameEvent } from '../events/events';
 import type { GameState, CharacterState } from '../state/types';
 import { currentStats, DEFAULT_GAME_CONFIG } from '../state/types';
 import type { RandomSource } from '../rng/rng';
+import { dropFlags } from '../flags/state';
 import { DEATHMATCH_REASON, deathmatchWinner } from '../victory/deathmatch';
 import { buildPoolLog, type CombatLog, type DefenseRollLog } from './log';
 import { combineModifiers, resolveCharacteristicTest } from './test';
@@ -112,7 +113,12 @@ export function resolveAttackExchange(
     characters: next.characters.map((c) => (c.id === target.id ? { ...c, health: healthAfter, alive: healthAfter > 0 } : c)),
   };
   events.push({ type: 'DAMAGE_APPLIED', targetId: target.id, wounds: damage, healthLeft: healthAfter });
-  if (defeated) events.push({ type: 'CHARACTER_DEFEATED', characterId: target.id });
+  if (defeated) {
+    events.push({ type: 'CHARACTER_DEFEATED', characterId: target.id });
+    const dropped = dropFlags(next, target.id);
+    next = dropped.state;
+    events.push(...dropped.events);
+  }
 
   const winnerId = deathmatchWinner(next);
   if (winnerId !== null) {

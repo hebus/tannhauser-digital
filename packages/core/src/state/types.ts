@@ -117,6 +117,22 @@ export interface VictoryState {
   readonly reason: string | null;
 }
 
+/** Mode de jeu (condition de victoire). Absent = Deathmatch. */
+export type GameMode = 'DEATHMATCH' | 'CAPTURE_THE_FLAG';
+
+/** Où se trouve un drapeau : au sol sur une case, porté par un personnage, ou planté dans un camp. */
+export type FlagLocation =
+  | { readonly kind: 'NODE'; readonly nodeId: NodeId }
+  | { readonly kind: 'CARRIED'; readonly characterId: CharacterId }
+  | { readonly kind: 'PLANTED'; readonly playerId: PlayerId; readonly nodeId: NodeId };
+
+/** Drapeau d'un joueur (mode Capture du drapeau) ; `ownerId` est le joueur dont c'est le drapeau. */
+export interface FlagState {
+  readonly id: string;
+  readonly ownerId: PlayerId;
+  readonly location: FlagLocation;
+}
+
 export interface GameState {
   readonly schemaVersion: number;
   readonly gameId: string;
@@ -132,6 +148,12 @@ export interface GameState {
   readonly history: readonly GameEvent[];
   readonly rng: RngState;
   readonly victory: VictoryState;
+  /** Mode de jeu ; absent = Deathmatch. */
+  readonly mode?: GameMode;
+  /** Drapeaux (Capture du drapeau), placés au démarrage de la partie. */
+  readonly flags?: readonly FlagState[];
+  /** Camp de chaque joueur : ses points d'entrée (où l'on plante les drapeaux ennemis). */
+  readonly camps?: Readonly<Record<PlayerId, readonly NodeId[]>>;
 }
 
 /** Caractéristiques courantes d'un personnage (ligne active selon la santé). */

@@ -39,6 +39,10 @@ export type GameEvent =
   | { readonly type: 'CHARACTER_DEFEATED'; readonly characterId: string }
   | { readonly type: 'TURN_ENDED'; readonly turn: number }
   | { readonly type: 'PLAYER_PASSED'; readonly playerId: string }
+  | { readonly type: 'FLAG_PLACED'; readonly flagId: string; readonly ownerId: string; readonly nodeId: string }
+  | { readonly type: 'FLAG_CAPTURED'; readonly flagId: string; readonly characterId: string; readonly nodeId: string }
+  | { readonly type: 'FLAG_DROPPED'; readonly flagId: string; readonly characterId: string; readonly nodeId: string }
+  | { readonly type: 'FLAG_PLANTED'; readonly flagId: string; readonly characterId: string; readonly playerId: string; readonly nodeId: string }
   | { readonly type: 'VICTORY'; readonly winnerId: string; readonly reason: string };
 
 export type GameEventType = GameEvent['type'];

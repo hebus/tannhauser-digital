@@ -1,4 +1,6 @@
 import { checkAttacker, checkTargeting, validateAttack } from '../combat/attack';
+import { capturableFlags, checkCaptureFlag, checkPlantFlag, plantableFlags } from '../flags/rules';
+import { flagsOf, isCaptureTheFlag } from '../flags/state';
 import { checkCommandGate } from '../engine/apply-command';
 import type { RuleError } from '../events/events';
 import { checkActor, checkDoorToggle, doorsAdjacentTo } from '../movement/handlers';
@@ -12,7 +14,7 @@ import type { GameCommand, GameCommandType } from '../commands/commands';
  * Actions qu'un personnage peut tenter. `SELECT` (début d'activation) s'ajoute aux actions de jeu
  * pour que l'interface explique aussi pourquoi un personnage ne peut pas être activé.
  */
-export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
+export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
 
 export interface AttackOption {
   readonly targetId: string;
@@ -33,6 +35,8 @@ export interface ActionDetails {
   readonly blocked?: readonly BlockedAttack[];
   /** OPEN_DOOR / CLOSE_DOOR : portes utilisables. */
   readonly doorIds?: readonly string[];
+  /** CAPTURE_FLAG / PLANT_FLAG : drapeaux utilisables maintenant. */
+  readonly flagIds?: readonly string[];
 }
 
 export interface LegalAction {
@@ -49,6 +53,8 @@ const GAME_COMMAND_OF: Record<ActionId, GameCommandType> = {
   SELECT: 'SELECT_CHARACTER',
   MOVE: 'MOVE_CHARACTER',
   ATTACK: 'ATTACK',
+  CAPTURE_FLAG: 'CAPTURE_FLAG',
+  PLANT_FLAG: 'PLANT_FLAG',
   OVERWATCH: 'OVERWATCH',
   OPEN_DOOR: 'OPEN_DOOR',
   CLOSE_DOOR: 'CLOSE_DOOR',
@@ -106,6 +112,18 @@ function attackAction(state: GameState, character: CharacterState): LegalAction 
   return refuseWith('ATTACK', 'NO_TARGET_IN_RANGE', 'Impossible : aucun ennemi à portée.', { attackOptions: [], blocked });
 }
 
+function flagAction(state: GameState, character: CharacterState, id: 'CAPTURE_FLAG' | 'PLANT_FLAG'): LegalAction {
+  if (!isCaptureTheFlag(state)) return refuseWith(id, 'NO_FLAGS_IN_MODE', "Ce mode de jeu n'utilise pas de drapeaux.");
+  const usable = (id === 'CAPTURE_FLAG' ? capturableFlags(state, character) : plantableFlags(state, character)).map((f) => f.id);
+  if (usable.length > 0) return ok(id, { flagIds: usable });
+  // Aucun drapeau utilisable : on explique le refus du premier drapeau pertinent (ou l'absence de drapeau).
+  const check = id === 'CAPTURE_FLAG' ? checkCaptureFlag : checkPlantFlag;
+  const candidates = flagsOf(state).filter((f) => (id === 'CAPTURE_FLAG' ? f.ownerId !== character.playerId : f.location.kind === 'CARRIED' && f.location.characterId === character.id));
+  const first = candidates[0] && check(state, character.playerId, character.id, candidates[0].id);
+  if (first && !first.ok) return refuse(id, first.error);
+  return refuseWith(id, id === 'CAPTURE_FLAG' ? 'NO_FLAG_TO_CAPTURE' : 'NO_FLAG_CARRIED', id === 'CAPTURE_FLAG' ? 'Impossible : aucun drapeau ennemi à récupérer.' : 'Impossible : ce personnage ne porte aucun drapeau.');
+}
+
 function doorAction(state: GameState, character: CharacterState, id: 'OPEN_DOOR' | 'CLOSE_DOOR'): LegalAction {
   const target = id === 'OPEN_DOOR' ? 'OPEN' : 'CLOSED';
   const actor = checkActor(state, character.playerId, character.id);
@@ -143,6 +161,9 @@ export function getLegalActions(state: GameState, characterId: string): LegalAct
         return moveAction(state, character);
       case 'ATTACK':
         return attackAction(state, character);
+      case 'CAPTURE_FLAG':
+      case 'PLANT_FLAG':
+        return flagAction(state, character, id);
       case 'OVERWATCH': {
         const c = checkOverwatchPlacement(state, character.playerId, character.id);
         return c.ok ? ok(id) : refuse(id, c.errors[0]!);
