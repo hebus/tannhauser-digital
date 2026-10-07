@@ -29,6 +29,14 @@ describe('validateBoard', () => {
     expect(codes).toContain('DUPLICATE_COLOR');
   });
 
+  it('autorise plus de 3 couleurs sur le plateau (la limite est par nœud)', () => {
+    const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+    const b = new BoardBuilder();
+    colors.forEach((c, i) => b.node(`n${i}`, [c, colors[(i + 1) % colors.length]!]));
+    colors.forEach((_, i) => b.edge(`n${i}`, `n${(i + 1) % colors.length}`));
+    expect(validateBoard(b.build())).toEqual([]);
+  });
+
   it('détecte une zone non reliée au reste du plateau', () => {
     const board = new BoardBuilder()
       .node('a', ['red'])
