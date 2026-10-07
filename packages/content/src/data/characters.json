@@ -1,0 +1,104 @@
+[
+  {
+    "id": "char.alpha.hero",
+    "factionId": "faction.alpha",
+    "nameKey": "char.alpha.hero.name",
+    "kind": "HERO",
+    "statRows": [
+      {
+        "combat": 7,
+        "physical": 7,
+        "mental": 6,
+        "movement": 5
+      },
+      {
+        "combat": 6,
+        "physical": 6,
+        "mental": 5,
+        "movement": 4
+      },
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 3
+      }
+    ],
+    "weaponIds": [
+      "weapon.pistol",
+      "weapon.melee"
+    ],
+    "competencies": [
+      "ATHLETICS"
+    ]
+  },
+  {
+    "id": "char.alpha.troop",
+    "factionId": "faction.alpha",
+    "nameKey": "char.alpha.troop.name",
+    "kind": "TROOP",
+    "statRows": [
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 4
+      }
+    ],
+    "weaponIds": [
+      "weapon.automatic"
+    ],
+    "competencies": []
+  },
+  {
+    "id": "char.beta.hero",
+    "factionId": "faction.beta",
+    "nameKey": "char.beta.hero.name",
+    "kind": "HERO",
+    "statRows": [
+      {
+        "combat": 7,
+        "physical": 7,
+        "mental": 6,
+        "movement": 5
+      },
+      {
+        "combat": 6,
+        "physical": 6,
+        "mental": 5,
+        "movement": 4
+      },
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 3
+      }
+    ],
+    "weaponIds": [
+      "weapon.pistol",
+      "weapon.melee"
+    ],
+    "competencies": [
+      "ATHLETICS"
+    ]
+  },
+  {
+    "id": "char.beta.troop",
+    "factionId": "faction.beta",
+    "nameKey": "char.beta.troop.name",
+    "kind": "TROOP",
+    "statRows": [
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 4
+      }
+    ],
+    "weaponIds": [
+      "weapon.automatic"
+    ],
+    "competencies": []
+  }
+]

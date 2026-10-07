@@ -1,0 +1,26 @@
+[
+  {
+    "id": "weapon.melee",
+    "nameKey": "weapon.melee.name",
+    "kind": "CLOSE_COMBAT",
+    "dice": 2
+  },
+  {
+    "id": "weapon.pistol",
+    "nameKey": "weapon.pistol.name",
+    "kind": "PISTOL",
+    "dice": 4
+  },
+  {
+    "id": "weapon.mental",
+    "nameKey": "weapon.mental.name",
+    "kind": "MENTAL",
+    "dice": 4
+  },
+  {
+    "id": "weapon.automatic",
+    "nameKey": "weapon.automatic.name",
+    "kind": "AUTOMATIC",
+    "dice": 5
+  }
+]

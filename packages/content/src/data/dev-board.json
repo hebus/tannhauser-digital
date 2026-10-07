@@ -1,0 +1,284 @@
+{
+  "id": "dev-board",
+  "nameKey": "board.dev.name",
+  "nodes": [
+    {
+      "id": "n1",
+      "x": 0,
+      "y": 0,
+      "zoneId": "znorth",
+      "colors": [
+        "red"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    },
+    {
+      "id": "n2",
+      "x": 120,
+      "y": 0,
+      "zoneId": "znorth",
+      "colors": [
+        "red",
+        "green"
+      ]
+    },
+    {
+      "id": "n3",
+      "x": 240,
+      "y": 0,
+      "zoneId": "znorth",
+      "colors": [
+        "green"
+      ]
+    },
+    {
+      "id": "n4",
+      "x": 360,
+      "y": 0,
+      "zoneId": "znorth",
+      "colors": [
+        "green"
+      ]
+    },
+    {
+      "id": "n5",
+      "x": 0,
+      "y": 120,
+      "zoneId": "znorth",
+      "colors": [
+        "red"
+      ]
+    },
+    {
+      "id": "n6",
+      "x": 120,
+      "y": 120,
+      "zoneId": "znorth",
+      "colors": [
+        "red",
+        "green",
+        "blue"
+      ]
+    },
+    {
+      "id": "n7",
+      "x": 240,
+      "y": 120,
+      "zoneId": "znorth",
+      "colors": [
+        "green",
+        "blue"
+      ]
+    },
+    {
+      "id": "n8",
+      "x": 360,
+      "y": 120,
+      "zoneId": "znorth",
+      "colors": [
+        "green"
+      ],
+      "properties": {
+        "movementCostModifier": 1
+      }
+    },
+    {
+      "id": "n9",
+      "x": 0,
+      "y": 240,
+      "zoneId": "zsouth",
+      "colors": [
+        "red",
+        "yellow"
+      ]
+    },
+    {
+      "id": "n10",
+      "x": 120,
+      "y": 240,
+      "zoneId": "zsouth",
+      "colors": [
+        "blue"
+      ]
+    },
+    {
+      "id": "n11",
+      "x": 240,
+      "y": 240,
+      "zoneId": "zsouth",
+      "colors": [
+        "blue",
+        "yellow"
+      ]
+    },
+    {
+      "id": "n12",
+      "x": 360,
+      "y": 240,
+      "zoneId": "zsouth",
+      "colors": [
+        "yellow"
+      ],
+      "properties": {
+        "passable": false
+      }
+    },
+    {
+      "id": "n13",
+      "x": 0,
+      "y": 360,
+      "zoneId": "zsouth",
+      "colors": [
+        "yellow"
+      ]
+    },
+    {
+      "id": "n14",
+      "x": 120,
+      "y": 360,
+      "zoneId": "zsouth",
+      "colors": [
+        "yellow",
+        "blue"
+      ]
+    },
+    {
+      "id": "n15",
+      "x": 240,
+      "y": 360,
+      "zoneId": "zsouth",
+      "colors": [
+        "yellow"
+      ]
+    },
+    {
+      "id": "n16",
+      "x": 360,
+      "y": 360,
+      "zoneId": "zsouth",
+      "colors": [
+        "yellow"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "n1",
+      "to": "n2"
+    },
+    {
+      "from": "n1",
+      "to": "n5"
+    },
+    {
+      "from": "n2",
+      "to": "n3"
+    },
+    {
+      "from": "n2",
+      "to": "n6"
+    },
+    {
+      "from": "n3",
+      "to": "n4"
+    },
+    {
+      "from": "n3",
+      "to": "n7"
+    },
+    {
+      "from": "n4",
+      "to": "n8"
+    },
+    {
+      "from": "n5",
+      "to": "n6"
+    },
+    {
+      "from": "n5",
+      "to": "n9"
+    },
+    {
+      "from": "n6",
+      "to": "n7",
+      "doorId": "door1"
+    },
+    {
+      "from": "n6",
+      "to": "n10"
+    },
+    {
+      "from": "n7",
+      "to": "n8"
+    },
+    {
+      "from": "n7",
+      "to": "n11"
+    },
+    {
+      "from": "n8",
+      "to": "n12"
+    },
+    {
+      "from": "n9",
+      "to": "n10"
+    },
+    {
+      "from": "n9",
+      "to": "n13"
+    },
+    {
+      "from": "n10",
+      "to": "n11",
+      "oneWay": true
+    },
+    {
+      "from": "n10",
+      "to": "n14"
+    },
+    {
+      "from": "n11",
+      "to": "n12"
+    },
+    {
+      "from": "n11",
+      "to": "n15"
+    },
+    {
+      "from": "n12",
+      "to": "n16"
+    },
+    {
+      "from": "n13",
+      "to": "n14"
+    },
+    {
+      "from": "n14",
+      "to": "n15"
+    },
+    {
+      "from": "n15",
+      "to": "n16"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door1",
+      "type": "WOODEN",
+      "state": "CLOSED"
+    }
+  ],
+  "portals": [
+    {
+      "id": "portal1",
+      "from": "n1",
+      "to": "n16",
+      "type": "SECRET_DOOR"
+    }
+  ]
+}

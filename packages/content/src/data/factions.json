@@ -1,0 +1,19 @@
+{
+  "factions": [
+    {
+      "id": "faction.alpha",
+      "nameKey": "faction.alpha.name"
+    },
+    {
+      "id": "faction.beta",
+      "nameKey": "faction.beta.name"
+    }
+  ],
+  "relations": [
+    {
+      "factionA": "faction.alpha",
+      "factionB": "faction.beta",
+      "relation": "ENEMY"
+    }
+  ]
+}
