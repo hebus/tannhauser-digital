@@ -328,7 +328,7 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 ## OQ-OVERWATCH-008 — Reprise de la commande annoncée
 
 - **Rule:** RULE-OVERWATCH-011
-- **Interpretation:** après la réaction, la commande mémorisée (`PendingReaction.resume`) est rejouée telle quelle si l'adversaire est vivant (même chemin de déplacement, mêmes cible et arme) ; si l'adversaire est tué, son activation se termine sans reprise ; si la commande est refusée à la reprise (le tir a modifié l'état : Combat tombé à 0, etc.), elle est abandonnée avec l'événement `OVERWATCH_RESUME_REFUSED` et l'activation continue. Pour le déclencheur (a), le déplacement est tronqué à la case d'arrêt et le reste du chemin est perdu (le joueur peut en émettre un nouveau).
+- **Interpretation:** après la réaction, la commande mémorisée (`PendingReaction.resume`) est rejouée telle quelle si l'adversaire est vivant (même chemin de déplacement, mêmes cible et arme) ; si l'adversaire est tué, son activation se termine sans reprise ; si la commande est refusée à la reprise (le tir a modifié l'état : Combat tombé à 0, etc.), elle est abandonnée avec l'événement `OVERWATCH_RESUME_REFUSED` et l'activation continue. Pour le déclencheur (a), le déplacement est tronqué à la case d'arrêt, puis le reste du chemin est rejoué après la réaction (décision du product owner : l'Overwatch interrompt l'action, il ne la fait pas perdre ; si le personnage survit, il poursuit son déplacement puis peut faire son action).
 - **Reason:** la décision demande la reprise mais pas le cas d'une commande devenue invalide.
 - **Impact:** un joueur peut perdre une action annoncée si le tir l'a rendue impossible.
 - **Test required:** `overwatch.spec.ts` (reprise, cible tuée, reprise refusée).

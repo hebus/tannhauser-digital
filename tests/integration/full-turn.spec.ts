@@ -219,16 +219,14 @@ describe('parcours Overwatch complet', () => {
 
     const reaction = d.run({ type: 'OVERWATCH_FIRE', playerId: 'p2', weaponId: 'pistol' });
     expect(reaction.events.map((e) => e.type)).toEqual([
-      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'OVERWATCH_RESOLVED',
+      'ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED', 'OVERWATCH_RESOLVED', 'CHARACTER_MOVED',
     ]);
     expect(d.hero('h1').health).toBe(1);
     expect(d.hero('h2')).toMatchObject({ overwatch: false, activated: true });
     expect(d.state.turn.reaction).toBeUndefined();
 
-    // L'activation de h1 reprend : mouvement restant, puis action (son attaque), sans nouvelle réaction.
+    // L'Overwatch n'a fait qu'interrompre : le déplacement reprend tout seul jusqu'en d, puis h1 peut faire son action.
     expect(d.state.turn.activeCharacterId).toBe('h1');
-    const step = d.run(move('p1', 'h1', ['d']));
-    expect(step.events.map((e) => e.type)).toEqual(['CHARACTER_MOVED']);
     expect(d.hero('h1')).toMatchObject({ nodeId: 'd', movementLeft: 0 });
 
     const kill = d.run(shoot('p1', 'h1', 'h2'));

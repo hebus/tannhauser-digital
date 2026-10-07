@@ -330,9 +330,24 @@ describe('Déclencheur a : entrée dans la ligne de vue pendant un déplacement'
     expect(res.events[1]).toMatchObject({ overwatcherId: 'e1', targetId: 'h1', nodeId: 'c' });
     expect(res.events[1]).not.toHaveProperty('announced');
     expect(hp(res.state, 'h1')).toMatchObject({ nodeId: 'c', movementLeft: 2 });
-    expect(res.state.turn.reaction).toEqual({ overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' });
+    // L'Overwatch interrompt sans faire perdre l'action : le reste du chemin (d) est mémorisé pour être rejoué.
+    expect(res.state.turn.reaction).toEqual({
+      overwatcherId: 'e1',
+      targetId: 'h1',
+      forPlayerId: 'p2',
+      resume: { type: 'MOVE_CHARACTER', playerId: 'p1', characterId: 'h1', path: ['d'] },
+    });
     expect(res.state.turn.activeCharacterId).toBe('h1');
     expect(hp(res.state, 'e1').overwatch).toBe(true);
+  });
+
+  it("refus de la réaction : le déplacement interrompu reprend automatiquement jusqu'à destination", () => {
+    const stopped = run(makeState(), move(['b', 'c', 'd']));
+    const res = run(stopped.state, { type: 'OVERWATCH_DECLINE', playerId: 'p2' });
+    expect(types(res.events)).toEqual(['OVERWATCH_RESOLVED', 'CHARACTER_MOVED']);
+    expect(res.events[1]).toMatchObject({ characterId: 'h1', path: ['d'], cost: 1 });
+    expect(hp(res.state, 'h1')).toMatchObject({ nodeId: 'd', movementLeft: 1 });
+    expect(res.state.turn.reaction).toBeUndefined();
   });
 
   it('arrêt dès le premier pas quand la première case est déjà vue (départ hors de vue)', () => {

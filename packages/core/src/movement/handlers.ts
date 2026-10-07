@@ -51,6 +51,7 @@ registerHandler('MOVE_CHARACTER', (state, command) => {
     }
   }
   const path = validation.path.slice(0, stopAt);
+  const remaining = validation.path.slice(stopAt);
   const cost = validation.costs.slice(0, stopAt).reduce((a, b) => a + b, 0);
   const destination = path[path.length - 1]!;
   const moved = withCharacter(state, { ...character, nodeId: destination, movementLeft: character.movementLeft - cost });
@@ -63,7 +64,18 @@ registerHandler('MOVE_CHARACTER', (state, command) => {
     events,
     state: {
       ...moved,
-      turn: { ...moved.turn, reaction: { overwatcherId: overwatcher.id, targetId: character.id, forPlayerId: overwatcher.playerId } },
+      turn: {
+        ...moved.turn,
+        reaction: {
+          overwatcherId: overwatcher.id,
+          targetId: character.id,
+          forPlayerId: overwatcher.playerId,
+          // L'Overwatch interrompt le déplacement sans le faire perdre : le reste du chemin est rejoué ensuite.
+          ...(remaining.length > 0
+            ? { resume: { type: 'MOVE_CHARACTER' as const, playerId: command.playerId, characterId: character.id, path: remaining } }
+            : {}),
+        },
+      },
     },
   };
 });
