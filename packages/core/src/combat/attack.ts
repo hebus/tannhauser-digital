@@ -1,6 +1,7 @@
 import { canSee } from '../board/line-of-sight';
 import type { BoardState, NodeId } from '../board/types';
 import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
+import type { RuleError } from '../events/events';
 import { currentStats, type CharacterState, type GameState } from '../state/types';
 import { resolveAttackExchange } from './exchange';
 import type { WeaponDefinition } from './weapons';
@@ -61,30 +62,60 @@ export function checkTargeting(
   return null;
 }
 
-registerHandler('ATTACK', (state, command, rng) => {
-  if (state.phase !== 'ACTIVATION') return reject('NOT_IN_ACTIVATION', "Aucune attaque hors de la phase d'activation.");
-  if (state.turn.activePlayerId !== command.playerId) return reject('NOT_ACTIVE_PLAYER', "Ce n'est pas le tour de ce joueur.");
+/** Résultat d'une validation : le contexte résolu, ou la première erreur de règle. */
+export type AttackerCheck =
+  | { readonly ok: true; readonly attacker: CharacterState }
+  | { readonly ok: false; readonly errors: readonly RuleError[] };
 
-  const attacker = state.characters.find((c) => c.id === command.attackerId);
-  if (!attacker) return reject('UNKNOWN_ATTACKER', `Attaquant inconnu : ${command.attackerId}`);
-  if (attacker.playerId !== command.playerId) return reject('NOT_OWN_CHARACTER', "Ce personnage n'appartient pas au joueur.");
-  if (!attacker.alive) return reject('ATTACKER_DEAD', 'Un personnage mort ne peut pas agir.');
+export type AttackValidation =
+  | { readonly ok: true; readonly attacker: CharacterState; readonly target: CharacterState; readonly weapon: WeaponDefinition }
+  | { readonly ok: false; readonly errors: readonly RuleError[] };
+
+const refusal = (code: string, message: string): { ok: false; errors: RuleError[] } => ({ ok: false, errors: [{ code, message }] });
+
+/** Conditions d'activation d'une attaque, avant tout choix de cible ou d'arme (partagées avec `getLegalActions`). */
+export function checkAttacker(state: GameState, playerId: string, attackerId: string): AttackerCheck {
+  if (state.phase !== 'ACTIVATION') return refusal('NOT_IN_ACTIVATION', "Aucune attaque hors de la phase d'activation.");
+  if (state.turn.activePlayerId !== playerId) return refusal('NOT_ACTIVE_PLAYER', "Ce n'est pas le tour de ce joueur.");
+
+  const attacker = state.characters.find((c) => c.id === attackerId);
+  if (!attacker) return refusal('UNKNOWN_ATTACKER', `Attaquant inconnu : ${attackerId}`);
+  if (attacker.playerId !== playerId) return refusal('NOT_OWN_CHARACTER', "Ce personnage n'appartient pas au joueur.");
+  if (!attacker.alive) return refusal('ATTACKER_DEAD', 'Un personnage mort ne peut pas agir.');
   // Une attaque est l'action unique de l'activation : le personnage doit être l'actif et n'avoir pas encore agi.
   if (state.turn.activeCharacterId !== attacker.id) {
-    return reject('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
+    return refusal('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
   }
-  if (state.turn.actionUsed) return reject('ACTION_ALREADY_USED', "Une seule action par activation : elle est déjà utilisée.");
+  if (state.turn.actionUsed) return refusal('ACTION_ALREADY_USED', 'Une seule action par activation : elle est déjà utilisée.');
+  return { ok: true, attacker };
+}
 
-  const target = state.characters.find((c) => c.id === command.targetId);
-  if (!target) return reject('UNKNOWN_TARGET', `Cible inconnue : ${command.targetId}`);
-  if (!target.alive) return reject('TARGET_DEAD', 'La cible est déjà hors de combat.');
-  if (target.playerId === attacker.playerId) return reject('TARGET_NOT_ENEMY', 'La cible doit être ennemie.');
+/** Validation complète d'une commande ATTACK (source unique pour le handler et `getLegalActions`). */
+export function validateAttack(
+  state: GameState,
+  input: { readonly playerId: string; readonly attackerId: string; readonly targetId: string; readonly weaponId: string },
+): AttackValidation {
+  const checked = checkAttacker(state, input.playerId, input.attackerId);
+  if (!checked.ok) return checked;
+  const { attacker } = checked;
 
-  const weapon: WeaponDefinition | undefined = attacker.weapons?.find((w) => w.id === command.weaponId);
-  if (!weapon) return reject('WEAPON_NOT_OWNED', `Arme non possédée : ${command.weaponId}`);
+  const target = state.characters.find((c) => c.id === input.targetId);
+  if (!target) return refusal('UNKNOWN_TARGET', `Cible inconnue : ${input.targetId}`);
+  if (!target.alive) return refusal('TARGET_DEAD', 'La cible est déjà hors de combat.');
+  if (target.playerId === attacker.playerId) return refusal('TARGET_NOT_ENEMY', 'La cible doit être ennemie.');
+
+  const weapon: WeaponDefinition | undefined = attacker.weapons?.find((w) => w.id === input.weaponId);
+  if (!weapon) return refusal('WEAPON_NOT_OWNED', `Arme non possédée : ${input.weaponId}`);
 
   const refused = checkTargeting(state, attacker, target, weapon);
-  if (refused) return refused;
+  if (refused && !refused.ok) return { ok: false, errors: refused.errors };
+  return { ok: true, attacker, target, weapon };
+}
+
+registerHandler('ATTACK', (state, command, rng) => {
+  const validation = validateAttack(state, command);
+  if (!validation.ok) return { ok: false, errors: validation.errors };
+  const { attacker, target, weapon } = validation;
 
   const result = resolveAttackExchange({ ...state, turn: { ...state.turn, actionUsed: true } }, attacker, target, weapon, rng);
   return { ok: true, state: result.state, events: result.events };

@@ -1,6 +1,6 @@
-import type { GameEvent } from '../events/events';
-import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
-import type { GameState, PlayerId, TurnState } from '../state/types';
+import type { GameEvent, RuleError } from '../events/events';
+import { registerHandler, reject } from '../engine/apply-command';
+import type { CharacterState, GameState, PlayerId, TurnState } from '../state/types';
 import { CommandPointService } from './command-points';
 import { rollInitiative } from './initiative';
 import { nextPlayerWithActivation, startTurn } from './start-turn';
@@ -37,29 +37,41 @@ export function endActivation(state: GameState, events: GameEvent[], rng: Random
   return advance(state, events, rng);
 }
 
-function checkActivationPhase(state: GameState, playerId: PlayerId): HandlerOutcome | null {
-  if (state.phase !== 'ACTIVATION') return reject('WRONG_PHASE', 'Aucune phase d\'activation en cours.');
+export type TurnCheck<T = object> = ({ readonly ok: true } & T) | { readonly ok: false; readonly error: RuleError };
+
+const no = (code: string, message: string): { ok: false; error: RuleError } => ({ ok: false, error: { code, message } });
+
+function checkActivationPhase(state: GameState, playerId: PlayerId): { ok: false; error: RuleError } | null {
+  if (state.phase !== 'ACTIVATION') return no('WRONG_PHASE', "Aucune phase d'activation en cours.");
   if (state.turn.activePlayerId !== playerId) {
-    return reject('NOT_YOUR_TURN', `Ce n'est pas au joueur ${playerId} d'agir.`);
+    return no('NOT_YOUR_TURN', `Ce n'est pas au joueur ${playerId} d'agir.`);
   }
   return null;
 }
 
-registerHandler('SELECT_CHARACTER', (state, command) => {
-  const refused = checkActivationPhase(state, command.playerId);
+/** Conditions de SELECT_CHARACTER (partagées avec `getLegalActions`). */
+export function checkSelectCharacter(state: GameState, playerId: PlayerId, characterId: string): TurnCheck<{ character: CharacterState }> {
+  const refused = checkActivationPhase(state, playerId);
   if (refused) return refused;
   if (state.turn.activeCharacterId !== undefined) {
-    return reject('ACTIVATION_IN_PROGRESS', 'Une activation est déjà en cours.');
+    return no('ACTIVATION_IN_PROGRESS', 'Une activation est déjà en cours.');
   }
-  const character = state.characters.find((c) => c.id === command.characterId);
-  if (!character) return reject('UNKNOWN_CHARACTER', `Personnage inconnu : ${command.characterId}.`);
-  if (character.playerId !== command.playerId) {
-    return reject('NOT_YOUR_CHARACTER', `Le personnage ${character.id} n'appartient pas au joueur ${command.playerId}.`);
+  const character = state.characters.find((c) => c.id === characterId);
+  if (!character) return no('UNKNOWN_CHARACTER', `Personnage inconnu : ${characterId}.`);
+  if (character.playerId !== playerId) {
+    return no('NOT_YOUR_CHARACTER', `Le personnage ${character.id} n'appartient pas au joueur ${playerId}.`);
   }
-  if (!character.alive) return reject('CHARACTER_DEAD', `Le personnage ${character.id} est hors de combat.`);
+  if (!character.alive) return no('CHARACTER_DEAD', `Le personnage ${character.id} est hors de combat.`);
   if (character.activated) {
-    return reject('ALREADY_ACTIVATED', `Le personnage ${character.id} a déjà été activé ce tour.`);
+    return no('ALREADY_ACTIVATED', `Le personnage ${character.id} a déjà été activé ce tour.`);
   }
+  return { ok: true, character };
+}
+
+registerHandler('SELECT_CHARACTER', (state, command) => {
+  const checked = checkSelectCharacter(state, command.playerId, command.characterId);
+  if (!checked.ok) return { ok: false, errors: [checked.error] };
+  const { character } = checked;
   return {
     ok: true,
     events: [{ type: 'CHARACTER_ACTIVATION_STARTED', characterId: character.id }],
@@ -71,26 +83,40 @@ registerHandler('SELECT_CHARACTER', (state, command) => {
   };
 });
 
-/** END_TURN : fin de l'activation du personnage en cours (le tour entier se termine quand tous ont été activés). */
-registerHandler('END_TURN', (state, command, rng) => {
-  const refused = checkActivationPhase(state, command.playerId);
+/** Conditions de END_TURN (fin d'activation), partagées avec `getLegalActions`. */
+export function checkEndActivation(state: GameState, playerId: PlayerId): TurnCheck<{ characterId: string }> {
+  const refused = checkActivationPhase(state, playerId);
   if (refused) return refused;
   const characterId = state.turn.activeCharacterId;
-  if (characterId === undefined) return reject('NO_ACTIVE_CHARACTER', 'Aucune activation en cours à terminer.');
-  const events: GameEvent[] = [{ type: 'CHARACTER_ACTIVATION_ENDED', characterId }];
+  if (characterId === undefined) return no('NO_ACTIVE_CHARACTER', 'Aucune activation en cours à terminer.');
+  return { ok: true, characterId };
+}
+
+/** END_TURN : fin de l'activation du personnage en cours (le tour entier se termine quand tous ont été activés). */
+registerHandler('END_TURN', (state, command, rng) => {
+  const checked = checkEndActivation(state, command.playerId);
+  if (!checked.ok) return { ok: false, errors: [checked.error] };
+  const events: GameEvent[] = [{ type: 'CHARACTER_ACTIVATION_ENDED', characterId: checked.characterId }];
   return { ok: true, events, state: advance(state, events, rng) };
 });
+
+/** Conditions de PASS, partagées avec `getLegalActions`. */
+export function checkPass(state: GameState, playerId: PlayerId): TurnCheck {
+  const refused = checkActivationPhase(state, playerId);
+  if (refused) return refused;
+  if (state.turn.activeCharacterId !== undefined) {
+    return no('ACTIVATION_IN_PROGRESS', "Terminez l'activation en cours avant de passer.");
+  }
+  return { ok: true };
+}
 
 /**
  * PASS : le joueur renonce à toutes ses activations restantes pour ce tour
  * (ses personnages non activés sont marqués activés). Voir OQ-TURN-005.
  */
 registerHandler('PASS', (state, command, rng) => {
-  const refused = checkActivationPhase(state, command.playerId);
-  if (refused) return refused;
-  if (state.turn.activeCharacterId !== undefined) {
-    return reject('ACTIVATION_IN_PROGRESS', 'Terminez l\'activation en cours avant de passer.');
-  }
+  const checked = checkPass(state, command.playerId);
+  if (!checked.ok) return { ok: false, errors: [checked.error] };
   const events: GameEvent[] = [{ type: 'PLAYER_PASSED', playerId: command.playerId }];
   const passed: GameState = {
     ...state,

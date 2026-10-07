@@ -1,6 +1,6 @@
-import type { DoorId, NodeId } from '../board/types';
+import type { Door, DoorId, NodeId } from '../board/types';
 import type { GameCommand } from '../commands/commands';
-import type { GameEvent } from '../events/events';
+import type { GameEvent, RuleError } from '../events/events';
 import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
 import type { CharacterState, GameState } from '../state/types';
 import { findOverwatchTrigger } from '../overwatch/trigger';
@@ -11,13 +11,13 @@ export const CLOSE_DOOR_COST = 0;
 /** Coût en PM pour ouvrir une porte : la spec n'en donne pas (OQ-DOOR-001). */
 export const OPEN_DOOR_COST = 0;
 
-type ActorCheck =
+export type ActorCheck =
   | { readonly ok: true; readonly character: CharacterState }
-  | { readonly ok: false; readonly out: HandlerOutcome };
+  | { readonly ok: false; readonly error: RuleError };
 
 /** Contrôles communs : phase, joueur actif, propriété, vivant, activation non terminée (OQ-MOVE-003). */
-function checkActor(state: GameState, playerId: string, characterId: string): ActorCheck {
-  const no = (code: string, message: string): ActorCheck => ({ ok: false, out: reject(code, message) });
+export function checkActor(state: GameState, playerId: string, characterId: string): ActorCheck {
+  const no = (code: string, message: string): ActorCheck => ({ ok: false, error: { code, message } });
   if (state.phase !== 'ACTIVATION') return no('WRONG_PHASE', "Impossible : ce n'est pas la phase d'activation.");
   if (state.turn.activePlayerId !== playerId) return no('NOT_ACTIVE_PLAYER', "Impossible : ce n'est pas votre tour.");
   const character = state.characters.find((c) => c.id === characterId);
@@ -34,7 +34,7 @@ function withCharacter(state: GameState, next: CharacterState): GameState {
 
 registerHandler('MOVE_CHARACTER', (state, command) => {
   const actor = checkActor(state, command.playerId, command.characterId);
-  if (!actor.ok) return actor.out;
+  if (!actor.ok) return { ok: false, errors: [actor.error] };
   const { character } = actor;
 
   const validation = validatePath(state, character.id, command.path);
@@ -73,27 +73,51 @@ function isAdjacentToDoor(state: GameState, nodeId: NodeId, doorId: DoorId): boo
   return state.board.edges.some((e) => e.doorId === doorId && (e.from === nodeId || e.to === nodeId));
 }
 
-type DoorCommand = Extract<GameCommand, { type: 'OPEN_DOOR' | 'CLOSE_DOOR' }>;
+export type DoorCheck =
+  | { readonly ok: true; readonly character: CharacterState; readonly door: Door; readonly cost: number }
+  | { readonly ok: false; readonly error: RuleError };
 
-function toggleDoor(state: GameState, command: DoorCommand, target: 'OPEN' | 'CLOSED'): HandlerOutcome {
-  const actor = checkActor(state, command.playerId, command.characterId);
-  if (!actor.ok) return actor.out;
+/** Conditions d'ouverture/fermeture d'une porte (partagées avec `getLegalActions`). */
+export function checkDoorToggle(
+  state: GameState,
+  playerId: string,
+  characterId: string,
+  doorId: DoorId,
+  target: 'OPEN' | 'CLOSED',
+): DoorCheck {
+  const no = (code: string, message: string): DoorCheck => ({ ok: false, error: { code, message } });
+  const actor = checkActor(state, playerId, characterId);
+  if (!actor.ok) return actor;
   const { character } = actor;
 
-  const door = state.board.doors[command.doorId];
-  if (!door) return reject('UNKNOWN_DOOR', `Porte inconnue : ${command.doorId}.`);
+  const door = state.board.doors[doorId];
+  if (!door) return no('UNKNOWN_DOOR', `Porte inconnue : ${doorId}.`);
   if (!isAdjacentToDoor(state, character.nodeId, door.id)) {
-    return reject('DOOR_NOT_ADJACENT', 'Impossible : le personnage doit être sur une case adjacente à la porte.');
+    return no('DOOR_NOT_ADJACENT', 'Impossible : le personnage doit être sur une case adjacente à la porte.');
   }
   if (door.state === target) {
     return target === 'OPEN'
-      ? reject('DOOR_ALREADY_OPEN', 'Impossible : la porte est déjà ouverte.')
-      : reject('DOOR_ALREADY_CLOSED', 'Impossible : la porte est déjà fermée.');
+      ? no('DOOR_ALREADY_OPEN', 'Impossible : la porte est déjà ouverte.')
+      : no('DOOR_ALREADY_CLOSED', 'Impossible : la porte est déjà fermée.');
   }
   const cost = target === 'OPEN' ? OPEN_DOOR_COST : CLOSE_DOOR_COST;
   if (character.movementLeft < cost) {
-    return reject('INSUFFICIENT_MOVEMENT', `Impossible : ${cost} PM requis, ${character.movementLeft} disponible(s).`);
+    return no('INSUFFICIENT_MOVEMENT', `Impossible : ${cost} PM requis, ${character.movementLeft} disponible(s).`);
   }
+  return { ok: true, character, door, cost };
+}
+
+/** Portes de la carte dont une arête touche le nœud. */
+export function doorsAdjacentTo(state: GameState, nodeId: NodeId): Door[] {
+  return Object.values(state.board.doors).filter((d) => isAdjacentToDoor(state, nodeId, d.id));
+}
+
+type DoorCommand = Extract<GameCommand, { type: 'OPEN_DOOR' | 'CLOSE_DOOR' }>;
+
+function toggleDoor(state: GameState, command: DoorCommand, target: 'OPEN' | 'CLOSED'): HandlerOutcome {
+  const checked = checkDoorToggle(state, command.playerId, command.characterId, command.doorId, target);
+  if (!checked.ok) return { ok: false, errors: [checked.error] };
+  const { character, door, cost } = checked;
   const board = { ...state.board, doors: { ...state.board.doors, [door.id]: { ...door, state: target } } };
   return {
     ok: true,

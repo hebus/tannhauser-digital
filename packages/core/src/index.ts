@@ -22,5 +22,6 @@ export * from './combat/weapons';
 export * from './combat/log';
 export * from './combat/attack';
 export * from './victory/deathmatch';
+export * from './actions/legal-actions';
 export * from './overwatch/trigger';
 import './overwatch/handlers';

@@ -37,17 +37,27 @@ export function reject(code: string, message: string): HandlerOutcome {
 }
 
 /**
+ * Garde commune à toutes les commandes : partie terminée, réaction d'Overwatch en attente.
+ * Partagée avec `getLegalActions` pour que l'interface voie exactement les mêmes refus.
+ */
+export function checkCommandGate(state: GameState, type: GameCommandType): RuleError | null {
+  if (state.phase === 'FINISHED' && type !== 'START_GAME') {
+    return { code: 'GAME_FINISHED', message: 'La partie est terminée.' };
+  }
+  // Une réaction d'Overwatch suspend tout le reste jusqu'à sa résolution.
+  if (state.turn.reaction && type !== 'OVERWATCH_FIRE' && type !== 'OVERWATCH_DECLINE') {
+    return { code: 'REACTION_PENDING', message: "Une réaction d'Overwatch est en attente de résolution." };
+  }
+  return null;
+}
+
+/**
  * Point d'entrée unique du moteur. Pure vis-à-vis de `state` (jamais muté) ;
  * l'aléa passe exclusivement par `rng`. Une commande refusée renvoie l'état d'origine.
  */
 export function applyCommand(state: GameState, command: GameCommand, rng: RandomSource): CommandResult {
-  if (state.phase === 'FINISHED' && command.type !== 'START_GAME') {
-    return refused(state, 'GAME_FINISHED', 'La partie est terminée.');
-  }
-  // Une réaction d'Overwatch suspend tout le reste jusqu'à sa résolution.
-  if (state.turn.reaction && command.type !== 'OVERWATCH_FIRE' && command.type !== 'OVERWATCH_DECLINE') {
-    return refused(state, 'REACTION_PENDING', "Une réaction d'Overwatch est en attente de résolution.");
-  }
+  const gate = checkCommandGate(state, command.type);
+  if (gate) return { accepted: false, state, events: [], errors: [gate] };
   const handler = handlers[command.type] as CommandHandler | undefined;
   if (!handler) return refused(state, 'UNSUPPORTED_COMMAND', `Commande non supportée : ${command.type}`);
 
