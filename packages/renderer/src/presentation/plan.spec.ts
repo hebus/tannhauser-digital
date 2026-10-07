@@ -37,6 +37,7 @@ describe('planPresentation', () => {
     ];
     expect(planPresentation(events, null, state(1, 'p1')).map((s) => s.kind)).toEqual([
       'overwatchPlaced',
+      'banner', // réaction d'Overwatch annoncée juste avant l'éclair
       'overwatchTriggered',
       'damage',
       'defeat',
@@ -45,35 +46,60 @@ describe('planPresentation', () => {
     expect(damage).toEqual({ kind: 'damage', targetId: 'b', wounds: 2 });
   });
 
+  const at = (turn: number, active: string, phase: string): GameState => ({ ...state(turn, active), phase }) as unknown as GameState;
+  const banners = (steps: ReturnType<typeof planPresentation>) => steps.flatMap((s) => (s.kind === 'banner' ? [s.banner] : []));
+
   it('bannière de tour : joueur actif de l état, sinon vainqueur de l initiative du lot', () => {
     const events: GameEvent[] = [
       { type: 'TURN_STARTED', turn: 2 },
       { type: 'INITIATIVE_ROLLED', rolls: { p1: 1, p2: 5 }, winnerId: 'p2' },
     ];
-    expect(planPresentation(events, null, state(2, 'p1'))).toEqual([{ kind: 'banner', turn: 2, playerId: 'p1' }]);
-    expect(planPresentation(events, null, state(3, 'p1'))).toEqual([{ kind: 'banner', turn: 2, playerId: 'p2' }]);
+    expect(planPresentation(events, null, state(2, 'p1'))).toEqual([{ kind: 'banner', banner: { kind: 'turnStart', turn: 2, playerId: 'p1' } }]);
+    expect(planPresentation(events, null, state(3, 'p1'))).toEqual([{ kind: 'banner', banner: { kind: 'turnStart', turn: 2, playerId: 'p2' } }]);
   });
 
-  it("annonce à quelle équipe c'est le tour quand la main change (hors début de tour)", () => {
-    const withPhase = (active: string, phase: string): GameState =>
-      ({ ...state(1, active), phase }) as unknown as GameState;
-    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p2', 'ACTIVATION'))).toEqual([
-      { kind: 'turnOf', playerId: 'p2', phase: 'ACTIVATION' },
-    ]);
-    // Même joueur, nouvelle phase : annonce aussi (phase d'Overwatch).
-    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p1', 'OVERWATCH'))).toEqual([
-      { kind: 'turnOf', playerId: 'p1', phase: 'OVERWATCH' },
-    ]);
-    // Rien ne change : pas d'annonce ; partie terminée : pas d'annonce.
-    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p1', 'ACTIVATION'))).toEqual([]);
-    expect(planPresentation([], withPhase('p1', 'ACTIVATION'), withPhase('p2', 'FINISHED'))).toEqual([]);
+  it('phase d’Overwatch : annoncée au changement de phase ou de joueur qui décide', () => {
+    expect(banners(planPresentation([], at(1, 'p1', 'ACTIVATION'), at(1, 'p1', 'OVERWATCH')))).toEqual([{ kind: 'overwatchPhase', turn: 1, playerId: 'p1' }]);
+    expect(banners(planPresentation([], at(1, 'p1', 'OVERWATCH'), at(1, 'p2', 'OVERWATCH')))).toEqual([{ kind: 'overwatchPhase', turn: 1, playerId: 'p2' }]);
   });
 
-  it('au début de tour, une seule bannière (pas de doublon avec le changement de main)', () => {
-    const next = { ...state(2, 'p2'), phase: 'OVERWATCH' } as unknown as GameState;
-    const prev = { ...state(1, 'p1'), phase: 'ACTIVATION' } as unknown as GameState;
-    const steps = planPresentation([{ type: 'TURN_STARTED', turn: 2 }], prev, next);
+  it('phase d’activation, puis changement de main pendant l’activation', () => {
+    expect(banners(planPresentation([{ type: 'OVERWATCH_PHASE_ENDED' }], at(1, 'p2', 'OVERWATCH'), at(1, 'p1', 'ACTIVATION')))).toEqual([
+      { kind: 'activationPhase', turn: 1, playerId: 'p1' },
+    ]);
+    expect(banners(planPresentation([], at(1, 'p1', 'ACTIVATION'), at(1, 'p2', 'ACTIVATION')))).toEqual([{ kind: 'turnOf', turn: 1, playerId: 'p2' }]);
+  });
+
+  it('aucune bannière si rien ne change, partie terminée, ou état précédent inconnu', () => {
+    expect(planPresentation([], at(1, 'p1', 'ACTIVATION'), at(1, 'p1', 'ACTIVATION'))).toEqual([]);
+    expect(planPresentation([], at(1, 'p1', 'ACTIVATION'), at(1, 'p2', 'FINISHED'))).toEqual([]);
+    expect(planPresentation([], null, at(1, 'p1', 'ACTIVATION'))).toEqual([]);
+  });
+
+  it('au début de tour, une seule bannière (pas de doublon avec le changement de phase/de main)', () => {
+    const steps = planPresentation([{ type: 'TURN_STARTED', turn: 2 }], at(1, 'p1', 'ACTIVATION'), at(2, 'p2', 'OVERWATCH'));
     expect(steps.map((s) => s.kind)).toEqual(['banner']);
+    expect(banners(steps)[0]?.kind).toBe('turnStart');
+  });
+
+  it('réaction d’Overwatch : bannière du propriétaire du tireur, avant l’éclair, et prioritaire sur le changement de main', () => {
+    const owned = (active: string, phase: string): GameState =>
+      ({ ...at(1, active, phase), characters: [{ id: 'ow', nodeId: 'n1', playerId: 'p2' }, { id: 'tg', nodeId: 'n2', playerId: 'p1' }] }) as unknown as GameState;
+    const events: GameEvent[] = [{ type: 'OVERWATCH_TRIGGERED', overwatcherId: 'ow', targetId: 'tg', nodeId: 'n2' }];
+    const steps = planPresentation(events, owned('p1', 'ACTIVATION'), owned('p2', 'ACTIVATION'));
+    expect(steps.map((s) => s.kind)).toEqual(['banner', 'overwatchTriggered']);
+    expect(banners(steps)).toEqual([{ kind: 'reaction', turn: 1, playerId: 'p2', overwatcherId: 'ow', targetId: 'tg' }]);
+  });
+
+  it('victoire : bannière finale unique, après les animations de combat, prioritaire sur tout le reste', () => {
+    const events: GameEvent[] = [
+      { type: 'DAMAGE_APPLIED', targetId: 'b', wounds: 1, healthLeft: 0 },
+      { type: 'CHARACTER_DEFEATED', characterId: 'b' },
+      { type: 'VICTORY', winnerId: 'p1', reason: 'elimination' },
+    ];
+    const steps = planPresentation(events, at(1, 'p1', 'ACTIVATION'), at(1, 'p2', 'FINISHED'));
+    expect(steps.map((s) => s.kind)).toEqual(['damage', 'defeat', 'banner']);
+    expect(banners(steps)).toEqual([{ kind: 'victory', turn: 1, playerId: 'p1' }]);
   });
 
   it('ignore les événements sans présentation et ne mute pas l état', () => {

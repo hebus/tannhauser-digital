@@ -1,15 +1,17 @@
-import { getLegalActions, getReactionOptions, type ActionId, type GameState } from '@tannhauser/core';
+import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, type ActionRow } from './hud-model';
 import { reasonText, t } from './i18n';
 import { createLabeler, type Labeler } from './labels';
+import { createPhaseTracker, playerMarkStyle } from './phase-tracker';
+import { phaseModel } from './phase-model';
 
 export type ToastTone = 'info' | 'error';
 
 export interface Hud {
-  /** Redessine d'après l'état courant. */
-  render(): void;
+  /** Redessine d'après l'état courant ; `events` = dernier lot d'événements (mise en valeur brève des phases). */
+  render(events?: readonly GameEvent[]): void;
   /** Message bref visible et annoncé aux lecteurs d'écran (toujours une explication, jamais un silence). */
   toast(text: string, tone?: ToastTone): void;
   /** Ferme le sous-menu ouvert ; renvoie vrai s'il y en avait un. */
@@ -27,9 +29,9 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   const actionsPanel = h('section', { class: 'hud-panel hud-actions', attrs: { 'aria-label': t('actions.title') } });
   const reactionPanel = h('div', { class: 'hud-reaction', attrs: { role: 'alertdialog', 'aria-labelledby': 'hud-reaction-title', hidden: true } });
   const toastEl = h('div', { class: 'hud-toast', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
-  const banner = h('div', { class: 'hud-banner', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
+  const phase = createPhaseTracker();
   const left = h('div', { class: 'hud-left' }, statusPanel, actionsPanel);
-  root.append(left, banner, reactionPanel, toastEl);
+  root.append(left, phase.element, reactionPanel, toastEl);
 
   let menu: MenuKind | null = null;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -67,9 +69,17 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     const pcs = h(
       'ul',
       { class: 'hud-pcs', attrs: { 'aria-label': t('status.commandPoints') } },
-      ...m.players.map((p) =>
-        h('li', { class: `hud-pc${p.active ? ' is-active' : ''}` }, h('span', { text: `${p.active ? '▶ ' : ''}${p.name}` }), h('b', { text: t('status.pc', { n: p.commandPoints }) })),
-      ),
+      ...m.players.map((p, i) => {
+        const mark = playerMarkStyle(i);
+        const li = h(
+          'li',
+          { class: `hud-pc${p.active ? ' is-active' : ''}`, attrs: { 'aria-current': p.active ? 'true' : undefined } },
+          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null),
+          h('b', { text: t('status.pc', { n: p.commandPoints }) }),
+        );
+        li.style.setProperty('--pc', mark.color);
+        return li;
+      }),
     );
     statusPanel.append(head, pcs);
 
@@ -329,17 +339,6 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     );
   }
 
-  function renderBanner(state: GameState, labels: Labeler): void {
-    const p = placementModel(state, labels);
-    banner.hidden = !p;
-    banner.textContent = '';
-    if (!p) return;
-    banner.append(
-      h('strong', { text: `◉ ${t('placement.banner', { player: p.playerName, cost: p.cost })}` }),
-      h('span', { text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
-    );
-  }
-
   /** PASS sans activation en cours : même chemin d'explication que les autres actions. */
   function runPassWithoutActive(): void {
     const state = game.state;
@@ -386,14 +385,14 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     );
   }
 
-  function render(): void {
+  function render(events: readonly GameEvent[] = []): void {
     const state = game.state;
     const labels = createLabeler(state);
     withFocusKept(root, () => {
       renderStatus(state, labels);
       renderActions(state, labels);
       renderReaction(state, labels);
-      renderBanner(state, labels);
+      phase.update(phaseModel(state, labels, events));
     });
     // La réaction attend une réponse : le focus va sur le premier bouton quand elle apparaît.
     if (state.turn.reaction && !reactionPanel.contains(document.activeElement)) reactionPanel.querySelector<HTMLElement>('button')?.focus();

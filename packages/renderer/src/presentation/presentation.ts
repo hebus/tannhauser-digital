@@ -5,6 +5,8 @@ import type { CharacterLayer } from '../character-layer';
 import { AnimationQueue, AnimationRunner, action, tween, type Animation } from './animation-queue';
 import { easeInOutQuad, easeOutCubic, lerp } from './easing';
 import { pointAlong, type Point } from './path-geometry';
+import { BANNER_DURATIONS, bannerPose, type BannerPlan, type BannerText } from './banner';
+import { createBannerView, type BannerView } from './banner-view';
 import { planPresentation, type PresentationStep } from './plan';
 import type { ReducedMotion } from './reduced-motion';
 
@@ -18,7 +20,8 @@ export const TIMING = {
   defeat: 650,
   ring: 550,
   bolt: 380,
-  banner: 1500,
+  /** Message court (changement d'option). Les durées des bannières sont dans `BANNER_DURATIONS`. */
+  notice: 1400,
   /** Durée d'affichage statique des indicateurs en mouvement réduit (aucun mouvement). */
   staticHold: 1200,
 } as const;
@@ -28,8 +31,10 @@ export interface PresentationOptions {
   readonly reducedMotion: ReducedMotion;
   /** Taille de l'écran (px) pour centrer la bannière. */
   readonly screenSize: () => { width: number; height: number };
-  /** Nom affichable d'un joueur (par défaut : son identifiant). */
-  readonly playerName?: (playerId: string) => string;
+  /** Titre et sous-titre (localisés par le client) d'une bannière : le renderer ne contient aucun texte de jeu. */
+  readonly bannerText: (plan: BannerPlan) => BannerText;
+  /** Débogage : la bannière reste affichée (figée) jusqu'à la suivante au lieu de disparaître. */
+  readonly holdBanners?: boolean;
 }
 
 /**
@@ -49,18 +54,22 @@ export class Presentation {
   private readonly characters: CharacterLayer;
   private readonly reducedMotion: ReducedMotion;
   private readonly screenSize: () => { width: number; height: number };
-  private readonly playerName: (playerId: string) => string;
+  private readonly bannerText: (plan: BannerPlan) => BannerText;
+  private readonly holdBanners: boolean;
   private readonly unsubscribe: () => void;
   private textScale = 1;
   private bannerToken = 0;
-  private bannerView: Container | null = null;
+  private bannerView: BannerView | null = null;
+  private noticeToken = 0;
+  private noticeView: Container | null = null;
   private destroyed = false;
 
   constructor(options: PresentationOptions) {
     this.characters = options.characters;
     this.reducedMotion = options.reducedMotion;
     this.screenSize = options.screenSize;
-    this.playerName = options.playerName ?? ((id) => id);
+    this.bannerText = options.bannerText;
+    this.holdBanners = options.holdBanners ?? false;
     this.worldLayer.label = 'PresentationWorld';
     this.screenLayer.label = 'PresentationScreen';
     this.queue = new AnimationQueue({ reduced: this.reducedMotion.value });
@@ -98,9 +107,16 @@ export class Presentation {
     this.runner.skip();
   }
 
+  /** Affiche immédiatement une bannière (remplace la courante) : sert au débogage (`?debugBanner=`). */
+  announce(plan: BannerPlan, players?: readonly { readonly id: string }[]): void {
+    if (this.destroyed) return;
+    const index = players ? players.findIndex((p) => p.id === plan.playerId) : -1;
+    this.showBanner(plan, index >= 0 ? index : null);
+  }
+
   /** Message court non bloquant au centre haut de l'écran (ex. changement d'option). */
   notify(text: string): void {
-    this.showBanner(text, 1400, 18);
+    this.showNotice(text);
   }
 
   destroy(): void {
@@ -137,17 +153,9 @@ export class Presentation {
         this.queue.enqueue(this.boltAnimation(step.overwatcherId, target ? { x: target.x, y: target.y } : null, step.targetId));
         break;
       }
-      case 'banner':
-        this.queue.enqueue(
-          action(() =>
-            this.showBanner(`Tour ${step.turn}${step.playerId ? ` — ${this.playerName(step.playerId)} commence` : ''}`, TIMING.banner, 30),
-          ),
-        );
-        break;
-      case 'turnOf': {
-        const name = this.playerName(step.playerId);
-        const text = step.phase === 'OVERWATCH' ? `${name} — phase d'Overwatch` : `${name} — à vous de jouer`;
-        this.queue.enqueue(action(() => this.showBanner(text, TIMING.banner, 26)));
+      case 'banner': {
+        const index = next.players.findIndex((p) => p.id === step.banner.playerId);
+        this.queue.enqueue(action(() => this.showBanner(step.banner, index >= 0 ? index : null)));
         break;
       }
     }
@@ -346,36 +354,60 @@ export class Presentation {
 
   // ---- Bannière ---------------------------------------------------------------------------------------
 
-  private showBanner(text: string, durationMs: number, fontSize: number): void {
-    this.bannerView?.destroy({ children: true });
+  /**
+   * Bannière de grande transition : glisse + zoome à l'entrée, se maintient, sort en douceur. Une nouvelle bannière
+   * REMPLACE proprement la précédente (jamais de superposition). En mouvement réduit : affichage fixe bref.
+   */
+  private showBanner(plan: BannerPlan, playerIndex: number | null): void {
+    this.bannerView?.destroy();
     const token = (this.bannerToken += 1);
-    const label = new Text({ text, style: { fill: 0xffffff, fontSize, fontWeight: '800', stroke: { color: 0x000000, width: 4 } } });
+    const view = createBannerView(plan.kind, this.bannerText(plan), playerIndex);
+    const { width, height } = this.screenSize();
+    view.container.position.set(width / 2, height * 0.28);
+    this.screenLayer.addChild(view.container);
+    this.bannerView = view;
+    const isCurrent = (): boolean => token === this.bannerToken && !view.container.destroyed;
+    if (this.holdBanners) {
+      view.setPose(bannerPose(0.5, false)); // débogage : la bannière reste affichée jusqu'à la suivante
+      return;
+    }
+    view.setPose(bannerPose(0, this.reduced));
+    this.runner.add({
+      duration: this.reduced ? TIMING.staticHold : BANNER_DURATIONS[plan.kind],
+      update: (p) => {
+        if (isCurrent()) view.setPose(bannerPose(p, this.reduced));
+      },
+      finish: () => {
+        if (token !== this.bannerToken) return; // remplacée : déjà détruite
+        view.destroy();
+        this.bannerView = null;
+      },
+    });
+  }
+
+  /** Message court non bloquant (ex. changement d'option), distinct des bannières : ne les remplace pas. */
+  private showNotice(text: string): void {
+    this.noticeView?.destroy({ children: true });
+    const token = (this.noticeToken += 1);
+    const label = new Text({ text, style: { fill: 0xffffff, fontSize: 18, fontWeight: '700', stroke: { color: 0x000000, width: 4 } } });
     label.anchor.set(0.5);
-    const padX = 22;
-    const padY = 12;
     const bg = new Graphics();
-    bg.roundRect(-label.width / 2 - padX, -label.height / 2 - padY, label.width + padX * 2, label.height + padY * 2, 10).fill({ color: 0x0b0d10, alpha: 0.88 }).stroke({ width: 2, color: 0xffffff });
+    bg.roundRect(-label.width / 2 - 18, -label.height / 2 - 8, label.width + 36, label.height + 16, 8).fill({ color: 0x0b0d10, alpha: 0.88 }).stroke({ width: 1.5, color: 0xffffff });
     const view = new Container();
     view.addChild(bg, label);
-    const place = (offsetY: number): void => {
-      const { width, height } = this.screenSize();
-      view.position.set(width / 2, height * 0.18 + offsetY);
-    };
-    place(0);
+    const { width } = this.screenSize();
+    view.position.set(width / 2, 28);
     this.screenLayer.addChild(view);
-    this.bannerView = view;
-    const reduced = this.reduced;
+    this.noticeView = view;
     this.runner.add({
-      duration: reduced ? TIMING.staticHold : durationMs,
+      duration: this.reduced ? TIMING.staticHold : TIMING.notice,
       update: (p) => {
-        if (view.destroyed || token !== this.bannerToken) return;
-        if (reduced) return;
-        place(p < 0.15 ? lerp(-16, 0, p / 0.15) : 0);
-        view.alpha = p < 0.15 ? p / 0.15 : p > 0.8 ? 1 - (p - 0.8) / 0.2 : 1;
+        if (view.destroyed || token !== this.noticeToken || this.reduced) return;
+        view.alpha = p > 0.8 ? 1 - (p - 0.8) / 0.2 : 1;
       },
       finish: () => {
         if (!view.destroyed) view.destroy({ children: true });
-        if (this.bannerView === view) this.bannerView = null;
+        if (this.noticeView === view) this.noticeView = null;
       },
     });
   }

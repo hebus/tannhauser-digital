@@ -8,12 +8,16 @@ import {
   OverlayLayer,
   Presentation,
   ReducedMotion,
+  type BannerKind,
+  type BannerPlan,
   buildPathPreview,
   textScaleForZoom,
 } from '@tannhauser/renderer';
 import { getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import type { GameFacade } from './game-facade';
+import { bannerText } from './ui/banner-text';
+import { t } from './ui/i18n';
 import { createLabeler } from './ui/labels';
 import { startFromSetup } from './ui/boot';
 import { mountUi } from './ui/mount';
@@ -46,12 +50,22 @@ async function main(): Promise<void> {
   const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
   const reducedMotion = new ReducedMotion();
+  // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
+  // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
+  const debugBanner = new URLSearchParams(location.search).get('debugBanner');
   const presentation = new Presentation({
     characters,
     reducedMotion,
     screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
-    playerName: (id) => createLabeler(game.state).player(id),
+    bannerText: (plan) => bannerText(plan, createLabeler(game.state)),
+    holdBanners: debugBanner !== null,
   });
+  // Les styles du HUD (frise des phases) respectent aussi la bascule « mouvement réduit » (touche R).
+  const syncReducedMotionAttr = (reduced: boolean): void => {
+    document.documentElement.dataset.reducedMotion = String(reduced);
+  };
+  syncReducedMotionAttr(reducedMotion.value);
+  const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
   world.addChild(boardView, highlight, overlays, characters, presentation.worldLayer);
   app.stage.addChild(presentation.screenLayer);
 
@@ -141,6 +155,14 @@ async function main(): Promise<void> {
   };
   refresh();
   fit();
+  if (debugBanner !== null) {
+    const kinds: readonly BannerKind[] = ['turnStart', 'overwatchPhase', 'activationPhase', 'turnOf', 'reaction', 'victory'];
+    const kind = kinds.find((k) => k === debugBanner) ?? 'turnStart';
+    const s = game.state;
+    const [first, second] = s.characters;
+    const plan: BannerPlan = { kind, turn: s.turn.number, playerId: s.turn.activePlayerId, ...(first && second ? { overwatcherId: first.id, targetId: second.id } : {}) };
+    presentation.announce(plan, s.players);
+  }
 
   // Entrées → commandes. Aucune règle ici : tout passe par la façade et le moteur.
   const nodeAt = (sx: number, sy: number): string | null => {
@@ -251,12 +273,12 @@ async function main(): Promise<void> {
     if (key === 'l') {
       showLos = !showLos;
       refresh();
-      presentation.notify(`Ligne de vue : ${showLos ? 'affichée' : 'masquée'}`);
+      presentation.notify(t('banner.notice.los', { state: t(showLos ? 'banner.notice.shown' : 'banner.notice.hidden') }));
       return;
     }
     if (key === 'r') {
       const reduced = reducedMotion.toggle();
-      presentation.notify(`Mouvement réduit : ${reduced ? 'activé' : 'désactivé'}`);
+      presentation.notify(t('banner.notice.reducedMotion', { state: t(reduced ? 'banner.notice.on' : 'banner.notice.off') }));
       return;
     }
     const player = activePlayer();
@@ -295,6 +317,7 @@ async function main(): Promise<void> {
     unsubscribeGame();
     app.ticker.remove(tickAnimations);
     presentation.destroy();
+    unsubscribeReducedAttr();
     reducedMotion.destroy();
     app.destroy(true, { children: true });
   };

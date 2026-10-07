@@ -17,3 +17,23 @@ export function colorHex(id: string): number {
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return FALLBACK[h % FALLBACK.length]!;
 }
+
+/** Couleurs d'équipe (indexées par l'ordre des joueurs dans `GameState.players`), partagées pions / bannières / HUD. */
+export const PLAYER_COLORS: readonly number[] = [0x4dabf7, 0xff6b6b, 0xffd43b, 0x69db7c];
+
+/** Couleur d'un joueur d'après son index. */
+export function playerColor(index: number): number {
+  return PLAYER_COLORS[((index % PLAYER_COLORS.length) + PLAYER_COLORS.length) % PLAYER_COLORS.length]!;
+}
+
+/** Pictogrammes texte des formes de pion (cercle, losange, carré, triangle), dans l'ordre de `drawBody`. */
+export const PLAYER_SHAPE_GLYPHS: readonly string[] = ['●', '◆', '■', '▲'];
+
+export function playerShapeGlyph(index: number): string {
+  return PLAYER_SHAPE_GLYPHS[((index % 4) + 4) % 4]!;
+}
+
+/** Teinte numérique → couleur CSS `#rrggbb`. */
+export function cssColor(hex: number): string {
+  return `#${hex.toString(16).padStart(6, '0')}`;
+}

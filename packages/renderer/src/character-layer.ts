@@ -1,9 +1,9 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { currentStats, type CharacterState, type GameState } from '@tannhauser/core';
 import { NODE_RADIUS } from './board-view';
+import { PLAYER_COLORS } from './palette';
 import type { Point } from './presentation/path-geometry';
 
-const PLAYER_COLORS = [0x4dabf7, 0xff6b6b, 0xffd43b, 0x69db7c];
 const TOKEN_RADIUS = NODE_RADIUS * 0.62;
 
 /** Surcharge d'affichage purement visuelle d'un pion (animations) : jamais écrite dans `GameState`. */
@@ -18,7 +18,7 @@ export interface TokenDisplay {
 }
 
 /** Forme du corps du pion, propre à chaque joueur : l'appartenance ne repose pas que sur la couleur (accessibilité). */
-function drawBody(g: Graphics, shape: number, r: number, color: number, strokeWidth: number, strokeColor: number): void {
+export function drawBody(g: Graphics, shape: number, r: number, color: number, strokeWidth: number, strokeColor: number): void {
   switch (shape % 4) {
     case 0:
       g.circle(0, 0, r);

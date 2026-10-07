@@ -1,3 +1,4 @@
+import type { GameEvent } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { buildLogEntries, refusalEntry } from './combat-log-format';
 import { createCombatLog } from './combat-log';
@@ -31,8 +32,8 @@ export function mountUi(game: GameFacade): UiHandle {
   const hud = createHud(root, game);
   const endScreen = createEndScreen(root);
 
-  const refresh = (): void => {
-    hud.render();
+  const refresh = (events: readonly GameEvent[] = []): void => {
+    hud.render(events);
     endScreen.render(game.state, createLabeler(game.state), game.replaySeed);
   };
 
@@ -45,7 +46,7 @@ export function mountUi(game: GameFacade): UiHandle {
   log.append(buildLogEntries(game.state.history, createLabeler(game.state)));
   game.subscribe((events, state) => {
     log.append(buildLogEntries(events, createLabeler(state)));
-    refresh();
+    refresh(events);
   });
   refresh();
 
