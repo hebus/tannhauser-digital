@@ -8,8 +8,8 @@ import { createGameFromSetup, setupContentOf } from './ui/new-game';
 const content = loadDevContent();
 
 /** Joue une partie IA contre IA ; renvoie l'état final et le nombre de décisions. Échoue si le moteur refuse une commande de l'IA. */
-function playOut(boardId: string, seed: number, maxDecisions = 1500) {
-  const game = createGameFromSetup({ ...defaultSetup(setupContentOf(content), seed), boardId }, content);
+function playOut(boardId: string, seed: number, maxDecisions = 1500, mode: 'DEATHMATCH' | 'CAPTURE_THE_FLAG' = 'DEATHMATCH') {
+  const game = createGameFromSetup({ ...defaultSetup(setupContentOf(content), seed), boardId, mode }, content);
   let decisions = 0;
   while (game.state.phase !== 'FINISHED' && decisions < maxDecisions) {
     const player = decidingPlayer(game.state)!;
@@ -50,5 +50,20 @@ describe('IA basique', () => {
   it('finit par terminer au moins une partie (l’IA attaque)', () => {
     const results = [1, 2, 3, 4, 5].map((seed) => playOut('dev-board', seed).state.phase);
     expect(results).toContain('FINISHED');
+  });
+
+  describe('Capture du drapeau', () => {
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    const runs = ['dev-board', 'castle'].flatMap((boardId) => seeds.map((seed) => ({ boardId, seed, ...playOut(boardId, seed, 3000, 'CAPTURE_THE_FLAG') })));
+
+    it('joue des parties complètes sans commande refusée', () => {
+      for (const r of runs) expect(r.state.turn.number, `${r.boardId} seed ${r.seed}`).toBeGreaterThan(1);
+    });
+
+    it('au moins une partie se termine par la victoire CTF_FLAGS_PLANTED', () => {
+      const planted = runs.filter((r) => r.state.victory?.reason === 'CTF_FLAGS_PLANTED');
+      console.info(`CTF : ${planted.length}/${runs.length} parties finies par drapeaux plantés, ${runs.filter((r) => r.state.phase === 'FINISHED').length}/${runs.length} finies`);
+      expect(planted.length).toBeGreaterThan(0);
+    });
   });
 });

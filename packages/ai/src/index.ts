@@ -1,5 +1,9 @@
 import {
+  carriedFlags,
+  flagsOf,
   getLegalActions,
+  isCaptureTheFlag,
+  isWounded,
   getReactionOptions,
   reachableNodes,
   type BoardState,
@@ -15,6 +19,9 @@ import {
  * (disponibilité lue dans `getLegalActions` / `getReactionOptions`, jamais recopiée) ; les règles restent dans le core.
  * Tout est une heuristique simple : attaquer si possible, sinon se rapprocher de l'ennemi le plus proche (en ouvrant
  * les portes qui bloquent), sinon finir l'activation.
+ * En Capture du drapeau : un porteur rejoint son camp et plante ; un personnage valide récupère un drapeau ennemi au sol
+ * (ou s'en approche) ; attaquer un porteur ennemi est prioritaire ; récupérer / planter passe avant d'attaquer
+ * (une seule action par activation).
  */
 
 /** Joueur qui doit décider maintenant (réaction en attente, sinon joueur actif), `null` si la partie est finie. */
@@ -50,8 +57,32 @@ const weaponPower = (w: WeaponDefinition | undefined): number => (w ? w.dice + (
 
 const enemiesOf = (state: GameState, playerId: string): CharacterState[] => state.characters.filter((c) => c.alive && c.playerId !== playerId);
 
+/** Le personnage porte-t-il au moins un drapeau (toujours faux hors Capture du drapeau) ? */
+const carries = (state: GameState, character: CharacterState): boolean => carriedFlags(state, character.id).length > 0;
+
+/** Ennemis vers lesquels converger : en Capture du drapeau, les porteurs d'abord (les abattre fait lâcher le drapeau). */
+function enemyTargets(state: GameState, playerId: string): CharacterState[] {
+  const enemies = enemiesOf(state, playerId);
+  const carriers = enemies.filter((c) => carries(state, c));
+  return carriers.length > 0 ? carriers : enemies;
+}
+
 function distanceMap(state: GameState, playerId: string): Map<NodeId, number> {
-  return distancesToNearest(state.board, enemiesOf(state, playerId).map((c) => c.nodeId));
+  return distancesToNearest(state.board, enemyTargets(state, playerId).map((c) => c.nodeId));
+}
+
+/** Cases des drapeaux ennemis posés au sol. */
+const groundEnemyFlagNodes = (state: GameState, playerId: string): NodeId[] =>
+  flagsOf(state).flatMap((f) => (f.ownerId !== playerId && f.location.kind === 'NODE' ? [f.location.nodeId] : []));
+
+/** Un ennemi vivant est-il sur la case ou sur une case voisine (arêtes non orientées) ? */
+function enemyAdjacent(state: GameState, character: CharacterState): boolean {
+  const near = new Set<NodeId>([character.nodeId]);
+  for (const e of state.board.edges) {
+    if (e.from === character.nodeId) near.add(e.to);
+    if (e.to === character.nodeId) near.add(e.from);
+  }
+  return enemiesOf(state, character.playerId).some((c) => near.has(c.nodeId));
 }
 
 function reaction(state: GameState, playerId: string): GameCommand | null {
@@ -83,7 +114,12 @@ function select(state: GameState, playerId: string): GameCommand | null {
   const dist = distanceMap(state, playerId);
   const candidates = state.characters
     .filter((c) => c.alive && c.playerId === playerId && getLegalActions(state, c.id).some((a) => a.id === 'SELECT' && a.available))
-    .sort((a, b) => (dist.get(a.nodeId) ?? Infinity) - (dist.get(b.nodeId) ?? Infinity) || a.id.localeCompare(b.id));
+    .sort(
+      (a, b) =>
+        Number(carries(state, b)) - Number(carries(state, a)) ||
+        (dist.get(a.nodeId) ?? Infinity) - (dist.get(b.nodeId) ?? Infinity) ||
+        a.id.localeCompare(b.id),
+    );
   const first = candidates[0];
   return first ? { type: 'SELECT_CHARACTER', playerId, characterId: first.id } : { type: 'PASS', playerId };
 }
@@ -92,26 +128,56 @@ function activate(state: GameState, playerId: string, character: CharacterState)
   const legal = getLegalActions(state, character.id);
   const action = (id: string) => legal.find((a) => a.id === id && a.available);
 
+  const ctf = isCaptureTheFlag(state);
+
+  // Capture du drapeau : planter / récupérer passe avant tout (une seule action par activation).
+  if (ctf) {
+    const plant = action('PLANT_FLAG')?.details?.flagIds?.[0];
+    if (plant) return { type: 'PLANT_FLAG', playerId, characterId: character.id, flagId: plant };
+    if (!carries(state, character)) {
+      const capture = action('CAPTURE_FLAG')?.details?.flagIds?.[0];
+      if (capture) return { type: 'CAPTURE_FLAG', playerId, characterId: character.id, flagId: capture };
+    }
+  }
+
+  // Objectif de déplacement : le camp pour un porteur, le drapeau ennemi au sol le plus proche pour un personnage
+  // valide sans ennemi adjacent, sinon l'ennemi (porteurs d'abord).
+  let goal: 'CAMP' | 'FLAG' | null = null;
+  if (ctf && carries(state, character)) goal = 'CAMP';
+  else if (ctf && !isWounded(character) && !enemyAdjacent(state, character) && groundEnemyFlagNodes(state, playerId).length > 0) goal = 'FLAG';
+
+  const moveToward = (dist: Map<NodeId, number>): GameCommand | null => {
+    if (!action('MOVE')) return null;
+    const here = dist.get(character.nodeId) ?? Infinity;
+    const best = reachableDestinations(state, character.id)
+      .map((r) => ({ r, d: dist.get(r.nodeId) ?? Infinity }))
+      .sort((a, b) => a.d - b.d || a.r.cost - b.r.cost || a.r.nodeId.localeCompare(b.r.nodeId))[0];
+    return best && best.d < here ? { type: 'MOVE_CHARACTER', playerId, characterId: character.id, path: best.r.path } : null;
+  };
+
+  if (goal) {
+    const sources = goal === 'CAMP' ? [...(state.camps?.[playerId] ?? [])] : groundEnemyFlagNodes(state, playerId);
+    const move = moveToward(distancesToNearest(state.board, sources));
+    if (move) return move;
+  }
+
   const attack = action('ATTACK')?.details?.attackOptions;
   if (attack && attack.length > 0) {
     const scored = attack
       .map((o) => ({
         o,
+        carrier: carries(state, state.characters.find((c) => c.id === o.targetId)!) ? 0 : 1,
         health: state.characters.find((c) => c.id === o.targetId)?.health ?? Infinity,
         power: weaponPower(character.weapons?.find((w) => w.id === o.weaponId)),
       }))
-      .sort((a, b) => a.health - b.health || b.power - a.power || a.o.targetId.localeCompare(b.o.targetId));
+      .sort((a, b) => a.carrier - b.carrier || a.health - b.health || b.power - a.power || a.o.targetId.localeCompare(b.o.targetId));
     const pick = scored[0]!.o;
     return { type: 'ATTACK', playerId, attackerId: character.id, targetId: pick.targetId, weaponId: pick.weaponId };
   }
 
-  if (action('MOVE')) {
-    const dist = distanceMap(state, playerId);
-    const here = dist.get(character.nodeId) ?? Infinity;
-    const best = reachableDestinations(state, character.id)
-      .map((r) => ({ r, d: dist.get(r.nodeId) ?? Infinity }))
-      .sort((a, b) => a.d - b.d || a.r.cost - b.r.cost || a.r.nodeId.localeCompare(b.r.nodeId))[0];
-    if (best && best.d < here) return { type: 'MOVE_CHARACTER', playerId, characterId: character.id, path: best.r.path };
+  if (goal !== 'CAMP') {
+    const move = moveToward(distanceMap(state, playerId));
+    if (move) return move;
   }
 
   const doors = action('OPEN_DOOR')?.details?.doorIds;
