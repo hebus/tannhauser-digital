@@ -14,8 +14,27 @@ function setup(enemyNode = 'n2'): { facade: GameFacade; player: string; hero: st
     // Les troupes sont écartées, hors de toute ligne de vue.
     return { ...c, nodeId: c.playerId === player ? 'n5' : 'n16' };
   });
-  return { facade: new GameFacade({ ...base.state, characters }, 3), player, hero: hero.id, enemyHero: enemyHero.id };
+  const facade = new GameFacade({ ...base.state, characters }, 3);
+  // Phase de placement de l'Overwatch : chaque joueur confirme sans placer, puis les activations commencent.
+  const other = base.state.players.find((p) => p.id !== player)!.id;
+  expect(facade.dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: player }).accepted).toBe(true);
+  expect(facade.dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: other }).accepted).toBe(true);
+  return { facade, player, hero: hero.id, enemyHero: enemyHero.id };
 }
+
+describe('GameFacade : phase de placement', () => {
+  it('la partie de dev démarre en phase OVERWATCH ; placer coûte 1 PC et le personnage n\'est plus activable', () => {
+    const facade = GameFacade.createDev(3);
+    expect(facade.state.phase).toBe('OVERWATCH');
+    const player = facade.state.turn.activePlayerId!;
+    const hero = facade.state.characters.find((c) => c.playerId === player && c.definitionId.endsWith('.hero'))!;
+    const placed = facade.dispatch({ type: 'OVERWATCH', playerId: player, characterId: hero.id });
+    expect(placed.accepted).toBe(true);
+    expect(facade.state.players.find((p) => p.id === player)?.commandPoints).toBe(1);
+    expect(facade.state.characters.find((c) => c.id === hero.id)).toMatchObject({ overwatch: true, activated: true });
+    expect(facade.targetable(hero.id)).toEqual([]);
+  });
+});
 
 describe('GameFacade.targetable', () => {
   it("est vide tant que le personnage n'est pas activé", () => {

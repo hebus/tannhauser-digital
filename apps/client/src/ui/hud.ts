@@ -1,7 +1,7 @@
 import { getLegalActions, getReactionOptions, type ActionId, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, rosterRows, statusModel, type ActionRow } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, type ActionRow } from './hud-model';
 import { reasonText, t } from './i18n';
 import { createLabeler, type Labeler } from './labels';
 
@@ -27,8 +27,9 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   const actionsPanel = h('section', { class: 'hud-panel hud-actions', attrs: { 'aria-label': t('actions.title') } });
   const reactionPanel = h('div', { class: 'hud-reaction', attrs: { role: 'alertdialog', 'aria-labelledby': 'hud-reaction-title', hidden: true } });
   const toastEl = h('div', { class: 'hud-toast', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
+  const banner = h('div', { class: 'hud-banner', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
   const left = h('div', { class: 'hud-left' }, statusPanel, actionsPanel);
-  root.append(left, reactionPanel, toastEl);
+  root.append(left, banner, reactionPanel, toastEl);
 
   let menu: MenuKind | null = null;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -94,7 +95,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         ),
       );
     } else if (!m.finished) {
-      statusPanel.append(h('div', { class: 'hud-char hud-char-none', text: t('status.hint.select') }));
+      statusPanel.append(h('div', { class: 'hud-char hud-char-none', text: t(m.placement ? 'status.hint.placement' : 'status.hint.select') }));
     }
 
     const seed = game.replaySeed;
@@ -231,6 +232,11 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       actionsPanel.append(h('p', { class: 'hud-note', text: t('reason.GAME_FINISHED') }));
       return;
     }
+    const placement = placementModel(state, labels);
+    if (placement) {
+      renderPlacement(placement);
+      return;
+    }
     const characterId = activeId(state);
     if (!characterId) {
       // Aucun personnage activé : la liste des personnages activables remplace la barre d'actions.
@@ -269,6 +275,71 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     actionsPanel.append(list);
   }
 
+  // --- Phase de placement de l'Overwatch ---
+  function placeOverwatch(characterId: string, playerId: string): void {
+    dispatch({ type: 'OVERWATCH', playerId, characterId });
+  }
+
+  function renderPlacement(p: NonNullable<ReturnType<typeof placementModel>>): void {
+    actionsPanel.append(
+      h('h3', { class: 'hud-subtitle', text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
+    );
+    for (const r of p.rows) {
+      const unavailable = !r.available;
+      actionsPanel.append(
+        h(
+          'button',
+          {
+            class: `hud-btn${unavailable ? ' is-unavailable' : ''}${r.placed ? ' is-placed' : ''}`,
+            attrs: { type: 'button', 'data-fid': `place-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? r.reason : r.name },
+            on: {
+              click: () => {
+                if (unavailable) toast(r.reason ?? '', 'error');
+                else placeOverwatch(r.characterId, p.playerId);
+              },
+            },
+          },
+          h(
+            'span',
+            { class: 'hud-btn-label' },
+            h('span', { text: r.placed ? `◉ ${r.name} · ${t('placement.placed')}` : t('placement.place', { name: r.name }) }),
+            h('kbd', { text: r.key }),
+          ),
+          unavailable ? h('span', { class: 'hud-btn-reason', text: r.reason }) : null,
+        ),
+      );
+    }
+    actionsPanel.append(
+      h(
+        'button',
+        {
+          class: `hud-btn hud-btn-primary${p.endAvailable ? '' : ' is-unavailable'}`,
+          attrs: { type: 'button', 'data-fid': 'end-placement', 'aria-disabled': p.endAvailable ? undefined : 'true', title: p.endReason ?? t('placement.endHint') },
+          on: {
+            click: () => {
+              if (!p.endAvailable) toast(p.endReason ?? '', 'error');
+              else dispatch({ type: 'END_OVERWATCH_PLACEMENT', playerId: p.playerId });
+            },
+          },
+        },
+        h('span', { class: 'hud-btn-label' }, h('span', { text: t('placement.end') }), h('kbd', { text: 'E' })),
+        p.endAvailable ? null : h('span', { class: 'hud-btn-reason', text: p.endReason }),
+      ),
+      h('p', { class: 'hud-note', text: t('placement.endHint') }),
+    );
+  }
+
+  function renderBanner(state: GameState, labels: Labeler): void {
+    const p = placementModel(state, labels);
+    banner.hidden = !p;
+    banner.textContent = '';
+    if (!p) return;
+    banner.append(
+      h('strong', { text: `◉ ${t('placement.banner', { cost: p.cost })}` }),
+      h('span', { text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
+    );
+  }
+
   /** PASS sans activation en cours : même chemin d'explication que les autres actions. */
   function runPassWithoutActive(): void {
     const state = game.state;
@@ -285,9 +356,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     if (!options) return;
     const playerId = options.forPlayerId;
     const firstFire = options.fire.find((f) => f.available);
+    const context = reactionContext(state, labels);
+    const announcedLine = options.announced ? context : null;
     reactionPanel.append(
       h('h2', { class: 'hud-reaction-title', text: `◉ ${t('reaction.title')}`, attrs: { id: 'hud-reaction-title' } }),
       h('p', { text: t('reaction.text', { overwatcher: labels.character(options.overwatcherId), target: labels.character(options.targetId) }) }),
+      announcedLine ? h('p', { class: 'hud-reaction-context', text: t('reaction.announcedLabel', { action: announcedLine }) }) : h('p', { class: 'hud-reaction-context', text: context ?? '' }),
+      ...(options.announced ? [h('p', { class: 'hud-note', text: t('reaction.optional') })] : []),
       h('p', { class: 'hud-note', text: t('reaction.waitingFor', { player: labels.player(playerId) }) }),
       h(
         'div',
@@ -318,6 +393,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       renderStatus(state, labels);
       renderActions(state, labels);
       renderReaction(state, labels);
+      renderBanner(state, labels);
     });
     // La réaction attend une réponse : le focus va sur le premier bouton quand elle apparaît.
     if (state.turn.reaction && !reactionPanel.contains(document.activeElement)) reactionPanel.querySelector<HTMLElement>('button')?.focus();
@@ -329,6 +405,14 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     const state = game.state;
     if (key === 'escape') return closeMenu();
     if (MAIN_HANDLED_KEYS.has(key) || state.turn.reaction || state.phase === 'FINISHED') return false;
+    if (/^[1-9]$/.test(key) && state.phase === 'OVERWATCH') {
+      const placement = placementModel(state, createLabeler(state));
+      const row = placement?.rows[Number(key) - 1];
+      if (!placement || !row) return true;
+      if (!row.available) toast(row.reason ?? '', 'error');
+      else placeOverwatch(row.characterId, placement.playerId);
+      return true;
+    }
     if (/^[1-9]$/.test(key) && !activeId(state)) {
       const labels = createLabeler(state);
       const row = rosterRows(state, labels)[Number(key) - 1];

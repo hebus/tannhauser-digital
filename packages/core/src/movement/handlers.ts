@@ -40,7 +40,7 @@ registerHandler('MOVE_CHARACTER', (state, command) => {
   const validation = validatePath(state, character.id, command.path);
   if (!validation.ok) return { ok: false, errors: validation.errors };
 
-  // Overwatch : le déplacement s'arrête à la première case vue par un adversaire en Overwatch.
+  // Overwatch (déclencheur a) : le déplacement s'arrête à la première case vue par un adversaire en Overwatch.
   let stopAt = validation.path.length;
   let overwatcher: CharacterState | null = null;
   for (let i = 0; i < validation.path.length; i += 1) {

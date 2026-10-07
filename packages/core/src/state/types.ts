@@ -1,4 +1,5 @@
 import type { BoardState, NodeId } from '../board/types';
+import type { GameCommand } from '../commands/commands';
 import type { GameEvent } from '../events/events';
 import type { WeaponDefinition } from '../combat/weapons';
 import type { RngState } from '../rng/rng';
@@ -23,14 +24,24 @@ export interface TurnState {
   readonly actionUsed?: boolean;
   /** Réaction d'Overwatch en attente : suspend l'activation adverse (toutes les autres commandes sont refusées). */
   readonly reaction?: PendingReaction;
+  /**
+   * Overwatchers ayant refusé l'attaque d'opportunité pendant l'activation courante : ils ne se
+   * redéclenchent pas contre ce même adversaire (OQ-OVERWATCH-005). Remis à zéro à chaque changement d'activation.
+   */
+  readonly overwatchWaived?: readonly CharacterId[];
 }
 
-/** Réaction d'Overwatch déclenchée par un déplacement adverse entré dans la ligne de vue. */
+/** Réaction d'Overwatch (attaque d'opportunité) déclenchée par un adversaire dans la ligne de vue. */
 export interface PendingReaction {
   readonly overwatcherId: CharacterId;
   readonly targetId: CharacterId;
   /** Joueur qui doit répondre (propriétaire du personnage en Overwatch). */
   readonly forPlayerId: PlayerId;
+  /**
+   * Commande annoncée par l'adversaire (déplacement ou action) et suspendue : elle est rejouée une fois la
+   * réaction résolue si la cible est toujours en vie. Absente pour un déclenchement par entrée dans la ligne de vue.
+   */
+  readonly resume?: GameCommand;
 }
 
 /** Paramètres de partie sérialisables (valeurs de mode de jeu, pas de constantes en dur). */
@@ -73,7 +84,10 @@ export interface CharacterState {
   /** Armes possédées (définitions runtime sérialisables, copiées du contenu à la mise en place). */
   readonly weapons?: readonly WeaponDefinition[];
   readonly activated: boolean;
-  /** En Overwatch : réagit quand un adversaire entre dans sa ligne de vue. */
+  /**
+   * En Overwatch : réagit à un adversaire (entrée dans la ligne de vue, ou action/déplacement tenté dans sa ligne
+   * de vue). Un personnage placé en Overwatch est aussi marqué ctivated : il n'est pas activable ce tour.
+   */
   readonly overwatch?: boolean;
   readonly movementLeft: number;
 }

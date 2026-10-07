@@ -19,7 +19,16 @@ export type GameEvent =
   | { readonly type: 'COMBAT_ROLLED'; readonly attackerId: string; readonly dice: readonly number[]; readonly successes: number; readonly difficulty?: number; readonly log?: CombatLog }
   | { readonly type: 'DEFENSE_ROLLED'; readonly defenderId: string; readonly dice: readonly number[]; readonly successes: number; readonly difficulty: number }
   | { readonly type: 'OVERWATCH_PLACED'; readonly characterId: string }
-  | { readonly type: 'OVERWATCH_TRIGGERED'; readonly overwatcherId: string; readonly targetId: string; readonly nodeId: string }
+  | { readonly type: 'OVERWATCH_PLACEMENT_ENDED'; readonly playerId: string }
+  | {
+      readonly type: 'OVERWATCH_TRIGGERED';
+      readonly overwatcherId: string;
+      readonly targetId: string;
+      readonly nodeId: string;
+      /** Type de la commande adverse suspendue (absent : déclenchement par entrée dans la ligne de vue). */
+      readonly announced?: string;
+    }
+  | { readonly type: 'OVERWATCH_RESUME_REFUSED'; readonly characterId: string; readonly command: string; readonly code: string; readonly message: string }
   | { readonly type: 'OVERWATCH_RESOLVED'; readonly overwatcherId: string; readonly fired: boolean }
   | { readonly type: 'ATTACK_HIT'; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'ATTACK_MISSED'; readonly attackerId: string; readonly targetId: string }

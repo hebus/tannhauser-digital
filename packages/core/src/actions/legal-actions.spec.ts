@@ -40,6 +40,7 @@ interface Opts {
   turn?: Partial<TurnState>;
   phase?: GameState['phase'];
   doorState?: 'OPEN' | 'CLOSED';
+  commandPoints?: number;
 }
 
 /** h1 (p1) actif en a ; e1 (p2) en e (hors de vue). */
@@ -49,8 +50,8 @@ function makeState(opts: Opts = {}): GameState {
     scenarioId: 't',
     board: board(),
     players: [
-      { id: 'p1', factionId: 'x', commandPoints: 0 },
-      { id: 'p2', factionId: 'y', commandPoints: 0 },
+      { id: 'p1', factionId: 'x', commandPoints: opts.commandPoints ?? 0 },
+      { id: 'p2', factionId: 'y', commandPoints: opts.commandPoints ?? 0 },
     ],
     characters: opts.characters ?? [char('h1', 'p1', 'a', { activated: true }), char('e1', 'p2', 'e')],
     rng: new SeededRng(1).snapshot(),
@@ -68,15 +69,19 @@ const by = (actions: LegalAction[], id: ActionId): LegalAction => actions.find((
 describe('getLegalActions', () => {
   it('renvoie toutes les actions, chacune avec un motif français quand elle est indisponible', () => {
     const actions = getLegalActions(makeState(), 'h1');
-    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
+    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS', 'END_OVERWATCH_PLACEMENT']);
     for (const a of actions) if (!a.available) expect(a.reason).toMatch(/\S/);
   });
 
-  it('personnage actif prêt : déplacement, Overwatch, ouverture de porte et fin possibles', () => {
+  it('personnage actif prêt : déplacement, ouverture de porte et fin possibles ; Overwatch refusé hors placement', () => {
     const actions = getLegalActions(makeState({ characters: [char('h1', 'p1', 'b', { activated: true }), char('e1', 'p2', 'e')] }), 'h1');
     expect(by(actions, 'MOVE').available).toBe(true);
     expect(by(actions, 'MOVE').details?.reachableCount).toBeGreaterThan(0);
-    expect(by(actions, 'OVERWATCH').available).toBe(true);
+    expect(by(actions, 'OVERWATCH')).toMatchObject({
+      available: false,
+      code: 'OVERWATCH_BEFORE_ACTIVATIONS',
+      reason: "Impossible : l'Overwatch se place avant les activations.",
+    });
     expect(by(actions, 'END_ACTIVATION').available).toBe(true);
     expect(by(actions, 'OPEN_DOOR')).toMatchObject({ available: true, details: { doorIds: ['D'] } });
     expect(by(actions, 'CLOSE_DOOR')).toMatchObject({ available: false, code: 'DOOR_ALREADY_CLOSED' });
@@ -114,17 +119,11 @@ describe('getLegalActions', () => {
     expect(by(getLegalActions(state, 'h1'), 'ATTACK')).toMatchObject({ available: false, code: 'CHARACTERISTIC_ZERO' });
   });
 
-  it('action déjà utilisée : attaque et Overwatch refusés, déplacement encore permis', () => {
+  it('action déjà utilisée : attaque refusée, déplacement encore permis', () => {
     const state = makeState({ characters: [char('h1', 'p1', 'c', { activated: true }), char('e1', 'p2', 'd')], turn: { actionUsed: true } });
     const actions = getLegalActions(state, 'h1');
     expect(by(actions, 'ATTACK')).toMatchObject({ available: false, code: 'ACTION_ALREADY_USED' });
-    expect(by(actions, 'OVERWATCH')).toMatchObject({ available: false, code: 'ACTION_ALREADY_USED' });
     expect(by(actions, 'MOVE').available).toBe(true);
-  });
-
-  it('Overwatch déjà posé', () => {
-    const state = makeState({ characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('e1', 'p2', 'e')] });
-    expect(by(getLegalActions(state, 'h1'), 'OVERWATCH')).toMatchObject({ available: false, code: 'ALREADY_OVERWATCH' });
   });
 
   it('plus de PM : déplacement refusé avec motif', () => {
@@ -150,9 +149,18 @@ describe('getLegalActions', () => {
     const actions = getLegalActions(state, 'h1');
     expect(by(actions, 'SELECT').available).toBe(true);
     expect(by(actions, 'ATTACK')).toMatchObject({ available: false, code: 'NOT_ACTIVE_CHARACTER' });
-    expect(by(actions, 'OVERWATCH')).toMatchObject({ available: false, code: 'NOT_ACTIVE_CHARACTER' });
+    expect(by(actions, 'OVERWATCH')).toMatchObject({ available: false, code: 'OVERWATCH_BEFORE_ACTIVATIONS' });
     expect(by(actions, 'END_ACTIVATION')).toMatchObject({ available: false, code: 'NO_ACTIVE_CHARACTER' });
     expect(by(actions, 'PASS').available).toBe(true);
+  });
+
+  it('personnage en Overwatch : non activable (IN_OVERWATCH), distinct d\'un personnage déjà activé', () => {
+    const state = makeState({
+      characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('h2', 'p1', 'b'), char('e1', 'p2', 'e')],
+      turn: { activeCharacterId: undefined, actionUsed: undefined },
+    });
+    expect(by(getLegalActions(state, 'h1'), 'SELECT')).toMatchObject({ available: false, code: 'IN_OVERWATCH' });
+    expect(by(getLegalActions(state, 'h2'), 'SELECT').available).toBe(true);
   });
 
   it('personnage déjà activé ou adverse : SELECT refusé', () => {
@@ -189,11 +197,16 @@ describe('getLegalActions', () => {
       makeState({ characters: [char('h1', 'p1', 'c', { activated: true }), char('e1', 'p2', 'e')] }),
       makeState({ characters: [char('h1', 'p1', 'd', { activated: true }), char('e1', 'p2', 'e')], turn: { actionUsed: true } }),
       makeState({ turn: { activeCharacterId: undefined, actionUsed: undefined }, characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'e')] }),
+      placementState(),
+      placementState({ commandPoints: 0 }),
+      placementState({ activePlayerId: 'p2' }),
+      placementState({ characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('e1', 'p2', 'e')] }),
     ];
     const accepts = (s: GameState, cmd: Parameters<typeof applyCommand>[1]) => applyCommand(s, cmd, new SeededRng(3)).accepted;
     for (const s of states) {
       const actions = getLegalActions(s, 'h1');
       expect(by(actions, 'OVERWATCH').available).toBe(accepts(s, { type: 'OVERWATCH', playerId: 'p1', characterId: 'h1' }));
+      expect(by(actions, 'END_OVERWATCH_PLACEMENT').available).toBe(accepts(s, { type: 'END_OVERWATCH_PLACEMENT', playerId: 'p1' }));
       expect(by(actions, 'END_ACTIVATION').available).toBe(accepts(s, { type: 'END_TURN', playerId: 'p1' }));
       expect(by(actions, 'PASS').available).toBe(accepts(s, { type: 'PASS', playerId: 'p1' }));
       expect(by(actions, 'SELECT').available).toBe(accepts(s, { type: 'SELECT_CHARACTER', playerId: 'p1', characterId: 'h1' }));
@@ -209,6 +222,49 @@ describe('getLegalActions', () => {
   });
 });
 
+/** Phase de placement de l'Overwatch : p1 décide (sauf `activePlayerId`), PC par défaut 2. */
+function placementState(opts: { activePlayerId?: string; commandPoints?: number; characters?: CharacterState[] } = {}): GameState {
+  const activePlayerId = opts.activePlayerId ?? 'p1';
+  return makeState({
+    phase: 'OVERWATCH',
+    commandPoints: opts.commandPoints ?? 2,
+    characters: opts.characters ?? [char('h1', 'p1', 'a'), char('e1', 'p2', 'e')],
+    turn: { initiativePlayerId: 'p1', activePlayerId, activeCharacterId: undefined, actionUsed: undefined },
+  });
+}
+
+describe('getLegalActions : phase de placement de l\'Overwatch', () => {
+  it('Overwatch disponible avec au moins 1 PC pour le joueur qui décide', () => {
+    const actions = getLegalActions(placementState(), 'h1');
+    expect(by(actions, 'OVERWATCH')).toEqual({ id: 'OVERWATCH', available: true });
+    expect(by(actions, 'END_OVERWATCH_PLACEMENT').available).toBe(true);
+  });
+
+  it('sans PC : « Impossible : 1 PC requis. »', () => {
+    expect(by(getLegalActions(placementState({ commandPoints: 0 }), 'h1'), 'OVERWATCH')).toMatchObject({
+      available: false,
+      code: 'INSUFFICIENT_COMMAND_POINTS',
+      reason: 'Impossible : 1 PC requis.',
+    });
+  });
+
+  it('personnage déjà en Overwatch ; joueur qui ne décide pas encore', () => {
+    const placed = placementState({ characters: [char('h1', 'p1', 'a', { activated: true, overwatch: true }), char('e1', 'p2', 'e')] });
+    expect(by(getLegalActions(placed, 'h1'), 'OVERWATCH')).toMatchObject({ available: false, code: 'ALREADY_OVERWATCH' });
+    const waiting = placementState({ activePlayerId: 'p2' });
+    expect(by(getLegalActions(waiting, 'h1'), 'OVERWATCH')).toMatchObject({ available: false, code: 'NOT_YOUR_PLACEMENT_TURN' });
+    expect(by(getLegalActions(waiting, 'h1'), 'END_OVERWATCH_PLACEMENT')).toMatchObject({ available: false, code: 'NOT_YOUR_PLACEMENT_TURN' });
+    expect(by(getLegalActions(waiting, 'e1'), 'OVERWATCH').available).toBe(true);
+  });
+
+  it('les actions d\'activation sont toutes refusées pendant le placement', () => {
+    const actions = getLegalActions(placementState(), 'h1');
+    for (const id of ['SELECT', 'MOVE', 'ATTACK', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS'] as const) {
+      expect(by(actions, id).available).toBe(false);
+    }
+  });
+});
+
 describe('getReactionOptions', () => {
   const reactionState = (ow: CharacterState) =>
     makeState({
@@ -218,6 +274,16 @@ describe('getReactionOptions', () => {
 
   it('null sans réaction', () => {
     expect(getReactionOptions(makeState())).toBeNull();
+  });
+
+  it('expose la commande annoncée en attente (déclencheur b)', () => {
+    const resume = { type: 'MOVE_CHARACTER', playerId: 'p1', characterId: 'h1', path: ['b'] } as const;
+    const state = makeState({
+      characters: [char('h1', 'p1', 'c', { activated: true }), char('e1', 'p2', 'e', { overwatch: true })],
+      turn: { reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2', resume } },
+    });
+    expect(getReactionOptions(state)?.announced).toEqual(resume);
+    expect(getReactionOptions(reactionState(char('e1', 'p2', 'e', { overwatch: true })))).not.toHaveProperty('announced');
   });
 
   it('liste les armes utilisables pour tirer', () => {

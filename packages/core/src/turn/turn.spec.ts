@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardBuilder } from '../board/builder';
 import { applyCommand, type CommandResult } from '../engine/apply-command';
 import '../engine/start-game';
+import '../overwatch/handlers';
 import './handlers';
 import { ScriptedRng, SeededRng, type RandomSource } from '../rng/rng';
 import { createInitialState } from '../state/initial-state';
@@ -57,9 +58,23 @@ function run(state: GameState, rng: RandomSource, ...commands: GameCommand[]): C
 const select = (playerId: string, characterId: string): GameCommand => ({ type: 'SELECT_CHARACTER', playerId, characterId });
 const end = (playerId: string): GameCommand => ({ type: 'END_TURN', playerId });
 
-/** Partie démarrée, p2 gagne l'initiative du tour 1 (3 vs 8). */
-function started(rng: RandomSource = new ScriptedRng([3, 8])): GameState {
+const endPlacement = (playerId: string): GameCommand => ({ type: 'END_OVERWATCH_PLACEMENT', playerId });
+const otherPlayer = (playerId: string) => (playerId === 'p1' ? 'p2' : 'p1');
+
+/** Termine la phase de placement sans Overwatch : le gagnant de l'initiative confirme, puis l'autre joueur. */
+function skipPlacement(state: GameState, rng: RandomSource): GameState {
+  const winner = state.turn.initiativePlayerId!;
+  return run(state, rng, endPlacement(winner), endPlacement(otherPlayer(winner))).state;
+}
+
+/** Partie démarrée en phase OVERWATCH : p2 gagne l'initiative du tour 1 (3 vs 8) et décide en premier. */
+function startedPlacement(rng: RandomSource = new ScriptedRng([3, 8])): GameState {
   return applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+}
+
+/** Partie démarrée, placements sautés : phase ACTIVATION, p2 active en premier. */
+function started(rng: RandomSource = new ScriptedRng([3, 8])): GameState {
+  return skipPlacement(startedPlacement(rng), rng);
 }
 
 describe('refresh de début de tour', () => {
@@ -138,7 +153,7 @@ describe('activations alternées', () => {
   it('enchaîne sur le tour suivant : refresh + initiative, TURN_ENDED', () => {
     // Tour 1 : p2 gagne (3 vs 8). Tour 2 : p1 gagne (9 vs 4).
     const rng = new ScriptedRng([3, 8, 9, 4]);
-    const state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+    const state = started(rng);
     const res = run(
       state, rng,
       select('p2', 'b1'), end('p2'), select('p1', 'a1'), end('p1'),
@@ -152,7 +167,7 @@ describe('activations alternées', () => {
     ]);
     expect(last.state.turn).toEqual({ number: 2, initiativePlayerId: 'p1', activePlayerId: 'p1' });
     expect(last.state.characters.every((c) => !c.activated && c.movementLeft === 6)).toBe(true);
-    expect(last.state.phase).toBe('ACTIVATION');
+    expect(last.state.phase).toBe('OVERWATCH');
   });
 
   it('les PC dépensés sont perdus au refresh suivant', () => {
@@ -160,6 +175,7 @@ describe('activations alternées', () => {
     let state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
     state = run(state, rng, { type: 'REROLL_INITIATIVE', playerId: 'p2' }).state; // p2 : 2 → 1 PC
     expect(state.players.find((p) => p.id === 'p2')?.commandPoints).toBe(1);
+    state = skipPlacement(state, rng);
     state = run(
       state, rng,
       select('p2', 'b1'), end('p2'), select('p1', 'a1'), end('p1'),
@@ -179,7 +195,7 @@ describe('activations alternées', () => {
 
   it('PASS des deux joueurs termine le tour', () => {
     const rng = new ScriptedRng([3, 8, 1, 2]);
-    const state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+    const state = started(rng);
     const res = run(state, rng, { type: 'PASS', playerId: 'p2' }, { type: 'PASS', playerId: 'p1' });
     expect(res.state.turn.number).toBe(2);
     expect(res.events.map((e) => e.type)).toContain('TURN_ENDED');
@@ -227,12 +243,12 @@ describe('REROLL_INITIATIVE', () => {
   });
 
   it('rejette si le joueur n\'est pas le gagnant', () => {
-    const res = applyCommand(started(), { type: 'REROLL_INITIATIVE', playerId: 'p1' }, new SeededRng(1));
+    const res = applyCommand(startedPlacement(), { type: 'REROLL_INITIATIVE', playerId: 'p1' }, new SeededRng(1));
     expect(res.errors[0]?.code).toBe('NOT_INITIATIVE_WINNER');
   });
 
   it('rejette si les PC sont insuffisants', () => {
-    const state = started();
+    const state = startedPlacement();
     const broke: GameState = { ...state, players: state.players.map((p) => ({ ...p, commandPoints: 0 })) };
     const res = applyCommand(broke, { type: 'REROLL_INITIATIVE', playerId: 'p2' }, new SeededRng(1));
     expect(res.accepted).toBe(false);
@@ -240,17 +256,116 @@ describe('REROLL_INITIATIVE', () => {
     expect(res.state).toBe(broke);
   });
 
-  it('rejette une fois les activations commencées', () => {
-    const state = run(started(), new SeededRng(1), select('p2', 'b1')).state;
-    const res = applyCommand(state, { type: 'REROLL_INITIATIVE', playerId: 'p2' }, new SeededRng(1));
-    expect(res.errors[0]?.code).toBe('ACTIVATIONS_STARTED');
+  it('rejette en phase d\'activation (WRONG_PHASE)', () => {
+    const res = applyCommand(started(), { type: 'REROLL_INITIATIVE', playerId: 'p2' }, new SeededRng(1));
+    expect(res.errors[0]?.code).toBe('WRONG_PHASE');
+  });
+
+  it('rejette dès qu\'un placement a eu lieu ou que le gagnant a confirmé (PLACEMENT_STARTED)', () => {
+    const rng = new SeededRng(1);
+    const placed = run(startedPlacement(), rng, { type: 'OVERWATCH', playerId: 'p2', characterId: 'b1' }).state;
+    expect(applyCommand(placed, { type: 'REROLL_INITIATIVE', playerId: 'p2' }, rng).errors[0]?.code).toBe('PLACEMENT_STARTED');
+    const confirmed = run(startedPlacement(), rng, endPlacement('p2')).state;
+    expect(applyCommand(confirmed, { type: 'REROLL_INITIATIVE', playerId: 'p2' }, rng).errors[0]?.code).toBe('PLACEMENT_STARTED');
+  });
+
+  it('un nouveau gagnant décide en premier après la relance', () => {
+    const rng = new ScriptedRng([3, 8, 9, 2]);
+    const state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+    const rerolled = run(state, rng, { type: 'REROLL_INITIATIVE', playerId: 'p2' }).state;
+    expect(rerolled.phase).toBe('OVERWATCH');
+    expect(rerolled.turn.activePlayerId).toBe('p1');
+    expect(applyCommand(rerolled, endPlacement('p2'), rng).errors[0]?.code).toBe('NOT_YOUR_PLACEMENT_TURN');
   });
 });
 
+describe('phase OVERWATCH : enchaînement du tour', () => {
+  it('START_GAME : refresh, initiative, puis phase OVERWATCH (le gagnant décide d\'abord)', () => {
+    const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([3, 8]));
+    expect(res.state.phase).toBe('OVERWATCH');
+    expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2' });
+    expect(res.events.map((e) => e.type)).toEqual([
+      'GAME_STARTED', 'TURN_STARTED', 'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED',
+    ]);
+  });
+
+  it('ordre de décision : le gagnant confirme, puis l\'autre ; ensuite les activations (gagnant en premier)', () => {
+    const rng = new ScriptedRng([3, 8]);
+    const state = applyCommand(makeState(), { type: 'START_GAME' }, rng).state;
+    expect(applyCommand(state, endPlacement('p1'), rng).errors[0]?.code).toBe('NOT_YOUR_PLACEMENT_TURN');
+    const first = run(state, rng, endPlacement('p2'));
+    expect(first.events.map((e) => e.type)).toEqual(['OVERWATCH_PLACEMENT_ENDED']);
+    expect(first.state.phase).toBe('OVERWATCH');
+    expect(first.state.turn.activePlayerId).toBe('p1');
+    const second = run(first.state, rng, endPlacement('p1'));
+    expect(second.state.phase).toBe('ACTIVATION');
+    expect(second.state.turn.activePlayerId).toBe('p2');
+  });
+
+  it('END_OVERWATCH_PLACEMENT est refusé hors de la phase OVERWATCH', () => {
+    expect(applyCommand(started(), endPlacement('p2'), new SeededRng(1)).errors[0]?.code).toBe('NOT_PLACEMENT_PHASE');
+  });
+
+  it('SELECT_CHARACTER est refusé pendant la phase de placement', () => {
+    expect(applyCommand(startedPlacement(), select('p2', 'b1'), new SeededRng(1)).errors[0]?.code).toBe('WRONG_PHASE');
+  });
+
+  it('un personnage en Overwatch n\'est pas activable (IN_OVERWATCH) et le tour se termine sans lui', () => {
+    const rng = new ScriptedRng([3, 8, 9, 4]);
+    let state = startedPlacement(rng);
+    state = run(state, rng, { type: 'OVERWATCH', playerId: 'p2', characterId: 'b1' }, endPlacement('p2'), endPlacement('p1')).state;
+    expect(applyCommand(state, select('p2', 'b1'), rng).errors[0]?.code).toBe('IN_OVERWATCH');
+    state = run(state, rng, select('p2', 'b2'), end('p2'), select('p1', 'a1'), end('p1'), select('p1', 'a2')).state;
+    const last = applyCommand(state, end('p1'), rng);
+    expect(last.events.map((e) => e.type)).toContain('TURN_ENDED');
+    expect(last.state.turn.number).toBe(2);
+    expect(last.state.phase).toBe('OVERWATCH');
+  });
+
+  it('un joueur dont tous les personnages sont en Overwatch ne bloque pas la partie', () => {
+    const rng = new ScriptedRng([3, 8, 9, 4]);
+    let state = startedPlacement(rng);
+    state = run(
+      state, rng,
+      { type: 'OVERWATCH', playerId: 'p2', characterId: 'b1' },
+      { type: 'OVERWATCH', playerId: 'p2', characterId: 'b2' },
+      endPlacement('p2'), endPlacement('p1'),
+    ).state;
+    // p2 n'a rien à activer : la main revient à p1 qui enchaîne ses deux personnages, puis le tour se termine.
+    expect(state.turn.activePlayerId).toBe('p1');
+    state = run(state, rng, select('p1', 'a1'), end('p1')).state;
+    expect(state.turn.activePlayerId).toBe('p1');
+    const last = run(state, rng, select('p1', 'a2'), end('p1'));
+    expect(last.events.map((e) => e.type)).toContain('TURN_ENDED');
+    expect(last.state.turn.number).toBe(2);
+  });
+
+  it('si plus aucun personnage n\'est activable, le tour suivant démarre aussitôt', () => {
+    const rng = new ScriptedRng([3, 8, 7, 6]);
+    const base = startedPlacement(rng);
+    const lone: GameState = { ...base, characters: base.characters.filter((c) => c.playerId === 'p2') };
+    const state = run(
+      lone, rng,
+      { type: 'OVERWATCH', playerId: 'p2', characterId: 'b1' },
+      { type: 'OVERWATCH', playerId: 'p2', characterId: 'b2' },
+      endPlacement('p2'),
+    ).state;
+    const res = applyCommand(state, endPlacement('p1'), rng);
+    expect(res.accepted).toBe(true);
+    expect(res.events.map((e) => e.type)).toEqual([
+      'OVERWATCH_PLACEMENT_ENDED', 'TURN_ENDED', 'TURN_STARTED',
+      'COMMAND_POINTS_REFRESHED', 'COMMAND_POINTS_REFRESHED', 'INITIATIVE_ROLLED',
+    ]);
+    expect(res.state.turn.number).toBe(2);
+    expect(res.state.phase).toBe('OVERWATCH');
+  });
+});
 describe('déterminisme et immutabilité', () => {
   const script: GameCommand[] = [
     { type: 'REROLL_INITIATIVE', playerId: 'p1' },
-    select('p1', 'a1'), end('p1'), select('p2', 'b1'), end('p2'),
+    { type: 'OVERWATCH', playerId: 'p1', characterId: 'a1' }, { type: 'OVERWATCH', playerId: 'p2', characterId: 'b1' },
+    endPlacement('p1'), endPlacement('p2'), endPlacement('p1'),
+    select('p1', 'a2'), end('p1'), select('p2', 'b2'), end('p2'),
   ];
 
   it('même seed + mêmes commandes = même état', () => {
@@ -273,7 +388,7 @@ describe('déterminisme et immutabilité', () => {
     const rng = new ScriptedRng([3, 8, 4, 9, 1, 2, 3, 4]);
     let state = deepFreeze(applyCommand(makeState(), { type: 'START_GAME' }, rng).state);
     for (const c of [
-      { type: 'REROLL_INITIATIVE', playerId: 'p2' }, select('p1', 'a1'), end('p1'),
+      { type: 'REROLL_INITIATIVE', playerId: 'p2' }, endPlacement('p2'), endPlacement('p1'), select('p1', 'a1'), end('p1'),
       { type: 'PASS', playerId: 'p2' }, { type: 'PASS', playerId: 'p1' },
     ] as GameCommand[]) {
       const res = applyCommand(state, c, rng);

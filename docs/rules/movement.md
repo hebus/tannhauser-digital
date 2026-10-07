@@ -35,7 +35,7 @@ Le plateau est un **graphe** de nœuds. La validation de contenu (ArkType) garan
 | RULE-MOVE-016 | Les cases d'action et d'objectif ne font pas partie de la zone de déplacement normale ; les points d'entrée appartiennent à leur zone. |
 | RULE-MOVE-017 | Ouvrir ou fermer une porte ne coûte aucun PM, même à 0 PM restant (OQ-DOOR-001). |
 | RULE-MOVE-018 | Le déplacement n'est pas bloqué par l'action : il reste permis après l'action de l'activation (PM conservés) et avant elle (RULE-TURN-008). |
-| RULE-MOVE-019 | Un déplacement s'arrête sur la première case vue par un adversaire en Overwatch et suspend l'activation (RULE-OVERWATCH-002). |
+| RULE-MOVE-019 | Un déplacement s'arrête sur la première case vue par un adversaire en Overwatch et suspend l'activation (RULE-OVERWATCH-002) ; un déplacement tenté depuis une case déjà vue ouvre la réaction avant d'être exécuté (RULE-OVERWATCH-010). |
 
 Événement : `CHARACTER_MOVED` (chemin, coût payé, PM restants).
 

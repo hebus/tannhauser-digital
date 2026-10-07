@@ -15,7 +15,7 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `weapon` | arme | Équipement d'attaque avec type de jet et réserve de dés |
 | `equipment` | équipement | Jeton d'inventaire, occupe un emplacement |
 | `activation` | activation | Tour de jeu d'un personnage : déplacements (selon ses PM) et au plus une action |
-| `action` | action | Acte majeur d'une activation, une seule par activation : attaquer, Overwatch, etc. Ne coûte ni PC ni PM |
+| `action` | action | Acte majeur d'une activation, une seule par activation : attaquer, ouvrir/fermer une porte, etc. Ne coûte ni PC ni PM (l'Overwatch n'est plus une action) |
 | `move` | déplacement | Dépense de points de mouvement le long d'un chemin |
 | `attack` | attaque | Résolution d'un jet de combat contre une cible |
 | `defense` | défense / parade | Jet de Physique du défenseur ; chaque succès annule une blessure |
@@ -30,8 +30,9 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `LdM` / `LOS` | ligne de vue | Relation de visibilité réciproque entre deux nœuds |
 | `test` | test | Jet sans opposition |
 | `duel` | duel | Jets opposés |
-| `overwatch` | sur le qui-vive | Action qui prépare une réaction : un adversaire entrant dans la ligne de vue pendant un déplacement s'arrête et peut être visé |
-| `reaction` | réaction | Interruption d'une activation adverse (`turn.reaction`) : le joueur en Overwatch tire ou renonce, puis l'activation reprend |
+| `overwatch` | sur le qui-vive | État pris pendant la phase de placement pour 1 PC (le personnage n'est pas activé ce tour) : un adversaire qui entre dans sa ligne de vue en se déplaçant s'arrête, ou qui tente de bouger/agir depuis sa ligne de vue est interrompu ; l'attaque d'opportunité est optionnelle |
+| `placement` | placement (phase OVERWATCH) | Phase entre l'initiative et les activations où chaque joueur, initiative d'abord, met des personnages en Overwatch tant qu'il a des PC, puis confirme |
+| `reaction` | réaction | Interruption d'une activation adverse (`turn.reaction`) : le joueur en Overwatch tire (attaque d'opportunité) ou renonce, puis l'activation reprend ; la commande adverse annoncée (déplacement/action) est alors exécutée |
 | `smoke` | fumée | Effet de plateau temporaire qui coupe la ligne de vue |
 | `door` | porte | Entité d'état OPEN/CLOSED sur une arête |
 | `portal` | portail | Lien non adjacent entre deux nœuds (porte secrète) |

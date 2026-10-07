@@ -1,4 +1,4 @@
-import { currentStats, getLegalActions, type ActionId, type CharacterState, type GameState } from '@tannhauser/core';
+import { OVERWATCH_COST, currentStats, getLegalActions, getReactionOptions, type ActionId, type CharacterState, type GameCommand, type GameState } from '@tannhauser/core';
 import { reasonText, t } from './i18n';
 import type { Labeler } from './labels';
 
@@ -20,6 +20,9 @@ export const ACTION_KEYS: Readonly<Partial<Record<ActionId, string>>> = {
   PASS: 'P',
 };
 export const MAIN_HANDLED_KEYS: ReadonlySet<string> = new Set(['e', 'o', 'p', 't', 'd', 'c', 'i']);
+
+/** Phase de placement de l'Overwatch (avant les activations) : le HUD affiche alors le panneau de placement. */
+export const isPlacementPhase = (state: GameState): boolean => state.phase === 'OVERWATCH';
 
 export interface CharacterCard {
   readonly id: string;
@@ -43,6 +46,7 @@ export interface StatusModel {
   readonly character: CharacterCard | null;
   readonly actionUsed: boolean;
   readonly reactionFor: string | null;
+  readonly placement: boolean;
   readonly winnerName: string | null;
 }
 
@@ -74,6 +78,7 @@ export function statusModel(state: GameState, labels: Labeler): StatusModel {
     character: active ? characterCard(active, labels) : null,
     actionUsed: state.turn.actionUsed === true,
     reactionFor: state.turn.reaction ? labels.player(state.turn.reaction.forPlayerId) : null,
+    placement: isPlacementPhase(state),
     winnerName: winner ? labels.player(winner) : null,
   };
 }
@@ -128,4 +133,77 @@ export function rosterRows(state: GameState, labels: Labeler): RosterRow[] {
         reason: select.available ? undefined : reasonText(select.code, select.reason),
       };
     });
+}
+
+export interface PlacementRow {
+  readonly characterId: string;
+  readonly name: string;
+  readonly key: string;
+  /** Déjà en Overwatch ce tour-ci. */
+  readonly placed: boolean;
+  readonly available: boolean;
+  /** Raison lisible quand le placement est impossible (et que le personnage n'est pas déjà placé). */
+  readonly reason: string | undefined;
+}
+
+export interface PlacementModel {
+  readonly playerId: string;
+  readonly playerName: string;
+  readonly commandPoints: number;
+  readonly cost: number;
+  readonly rows: readonly PlacementRow[];
+  readonly endAvailable: boolean;
+  readonly endReason: string | undefined;
+}
+
+/** Phase de placement : personnages du joueur qui décide, avec disponibilité/raison issues de `getLegalActions`. `null` hors phase. */
+export function placementModel(state: GameState, labels: Labeler): PlacementModel | null {
+  if (!isPlacementPhase(state) || !state.turn.activePlayerId) return null;
+  const playerId = state.turn.activePlayerId;
+  const own = state.characters.filter((c) => c.playerId === playerId && c.alive);
+  const rows = own.map((c, i): PlacementRow => {
+    const ow = getLegalActions(state, c.id).find((a) => a.id === 'OVERWATCH')!;
+    return {
+      characterId: c.id,
+      name: labels.character(c.id),
+      key: String(i + 1),
+      placed: c.overwatch === true,
+      available: ow.available,
+      reason: ow.available ? undefined : reasonText(ow.code, ow.reason),
+    };
+  });
+  const end = own[0] ? getLegalActions(state, own[0].id).find((a) => a.id === 'END_OVERWATCH_PLACEMENT') : undefined;
+  return {
+    playerId,
+    playerName: labels.player(playerId),
+    commandPoints: state.players.find((p) => p.id === playerId)?.commandPoints ?? 0,
+    cost: OVERWATCH_COST,
+    rows,
+    endAvailable: end?.available ?? true,
+    endReason: end && !end.available ? reasonText(end.code, end.reason) : undefined,
+  };
+}
+
+/** Texte de l'action adverse suspendue par une réaction (déclencheur b), ou `null` pour une entrée dans la ligne de vue. */
+export function announcedText(command: GameCommand | undefined, labels: Labeler): string | null {
+  if (!command) return null;
+  switch (command.type) {
+    case 'MOVE_CHARACTER':
+      return t('reaction.announced.move', { character: labels.character(command.characterId), node: command.path[command.path.length - 1] ?? '?' });
+    case 'ATTACK':
+      return t('reaction.announced.attack', { character: labels.character(command.attackerId), target: labels.character(command.targetId) });
+    case 'OPEN_DOOR':
+      return t('reaction.announced.openDoor', { character: labels.character(command.characterId), door: command.doorId });
+    case 'CLOSE_DOOR':
+      return t('reaction.announced.closeDoor', { character: labels.character(command.characterId), door: command.doorId });
+    default:
+      return null;
+  }
+}
+
+/** Phrase de contexte d'une réaction : action annoncée en attente, ou déplacement interrompu. */
+export function reactionContext(state: GameState, labels: Labeler): string | null {
+  const options = getReactionOptions(state);
+  if (!options) return null;
+  return announcedText(options.announced, labels) ?? t('reaction.entered', { target: labels.character(options.targetId) });
 }

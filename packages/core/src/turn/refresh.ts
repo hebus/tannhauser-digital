@@ -10,6 +10,7 @@ export interface RefreshResult {
  * Refresh de début de tour (§66.1) :
  * - PC de chaque joueur remis à `config.commandPointsPerTurn` (les PC non dépensés sont perdus) ;
  * - personnages vivants : `activated` remis à faux, `movementLeft` selon leur ligne de stats courante ;
+ *   l'Overwatch est retiré ici (décision du PO, OQ-OVERWATCH-006) : un Overwatch non tiré dure tout le tour ;
  * - effets SMOKE décrémentés ; ceux qui arrivent à 0 sont retirés (SMOKE_EXPIRED).
  */
 export function refreshTurn(state: GameState): RefreshResult {

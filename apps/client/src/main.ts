@@ -11,7 +11,7 @@ import {
   buildPathPreview,
   textScaleForZoom,
 } from '@tannhauser/renderer';
-import type { GameState } from '@tannhauser/core';
+import { getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import type { GameFacade } from './game-facade';
 import { startFromSetup } from './ui/boot';
@@ -112,11 +112,12 @@ async function main(): Promise<void> {
     updatePath();
     const cp = s.players.map((p) => `${p.id}: ${p.commandPoints} PC`).join(' · ');
     const reaction = s.turn.reaction ? ` — RÉACTION : ${s.turn.reaction.forPlayerId} (T = tirer, D = refuser)` : '';
+    const phaseText = s.phase === 'OVERWATCH' ? ' — PHASE OVERWATCH : placements (E = terminer)' : '';
     const activeText = active ? ` · actif : ${active.id}${s.turn.actionUsed ? ' (action utilisée)' : ''}` : '';
     const text =
       s.phase === 'FINISHED'
         ? `Partie terminée : victoire de ${s.victory.winnerId}`
-        : `Tour ${s.turn.number} · joue ${activePlayer()} · ${cp}${activeText}${reaction}`;
+        : `Tour ${s.turn.number} · joue ${activePlayer()} · ${cp}${activeText}${phaseText}${reaction}`;
     if (statusEl) statusEl.textContent = text;
   };
 
@@ -158,6 +159,11 @@ async function main(): Promise<void> {
     const here = s.characters.filter((c) => c.alive && c.nodeId === nodeId);
     const active = activeCharacter();
     const own = here.find((c) => c.playerId === player);
+    if (s.phase === 'OVERWATCH') {
+      // Phase de placement : cliquer un de ses personnages tente de le mettre en Overwatch (1 PC) ; le moteur explique les refus.
+      if (own) send({ type: 'OVERWATCH', playerId: player, characterId: own.id });
+      return;
+    }
     if (!active) {
       if (own) send({ type: 'SELECT_CHARACTER', playerId: player, characterId: own.id });
       return;
@@ -269,11 +275,16 @@ async function main(): Promise<void> {
           if (send({ type: 'OVERWATCH_FIRE', playerId: reaction.forPlayerId, weaponId: w.id }).accepted) break;
         }
       }
-    } else if (player && key === 'e') send({ type: 'END_TURN', playerId: player });
-    else if (player && key === 'p') send({ type: 'PASS', playerId: player });
+    } else if (player && key === 'e') {
+      // Phase de placement : E confirme la fin des placements ; sinon fin d'activation.
+      send(s.phase === 'OVERWATCH' ? { type: 'END_OVERWATCH_PLACEMENT', playerId: player } : { type: 'END_TURN', playerId: player });
+    } else if (player && key === 'p') send({ type: 'PASS', playerId: player });
     else if (player && key === 'o') {
-      const a = activeCharacter();
-      if (a) send({ type: 'OVERWATCH', playerId: player, characterId: a.id });
+      // O n'agit qu'en phase de placement : on tente le premier personnage disponible ; hors phase, le moteur refuse
+      // (avec le motif « l'Overwatch se place avant les activations ») et le HUD l'affiche.
+      const own = s.characters.filter((c) => c.playerId === player && c.alive);
+      const candidate = own.find((c) => getLegalActions(s, c.id).some((a) => a.id === 'OVERWATCH' && a.available)) ?? own[0];
+      if (candidate) send({ type: 'OVERWATCH', playerId: player, characterId: candidate.id });
     }
   }, { signal });
 
