@@ -32,3 +32,12 @@ Un mode est une **donnée** (PC de départ, jetons, condition de victoire) ; le 
 ## Tests attendus
 
 Un test de victoire par mode ; scoring au tour 1 refusé ; 10 tours en King of the Hill ; quatre objectifs ; reproduction exacte sous graine.
+
+## État d'implémentation
+
+| Mode | État |
+|---|---|
+| Deathmatch | Implémenté (`victory/deathmatch.ts`), mode par défaut. |
+| Capture the Flag | Implémenté dans le moteur (`flags/*`, commandes `CAPTURE_FLAG` / `PLANT_FLAG`, événements `FLAG_*`, victoire `CTF_FLAGS_PLANTED`) ; choix du mode sur l'écran de mise en place (`mode=ctf` dans le lien de rejeu). Lectures retenues : OQ-FLAG-001 à 004. |
+| Domination, King of the Hill, Objectifs, Scénario | À faire (cases d'action/objectif, chaîne de commandement, jetons : voir `objectives.md`). |
+

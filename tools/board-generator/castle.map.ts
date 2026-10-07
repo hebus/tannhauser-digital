@@ -210,6 +210,13 @@ export const castleSpec: BoardSpec = {
     // Grande porte (sud, dans la cour) et poterne (nord-est, bout du couloir) : points d'entrée des deux équipes.
     { at: { x: 550, y: 1040 }, kind: 'ENTRY_POINT' },
     { at: { x: 1190, y: 50 }, kind: 'ENTRY_POINT' },
+    // Cases d'objectif (Capture du drapeau : 3 drapeaux par joueur y sont posés) : une par pièce principale + deux au hall.
+    { at: { x: 270, y: 230 }, kind: 'OBJECTIVE' },
+    { at: { x: 930, y: 230 }, kind: 'OBJECTIVE' },
+    { at: { x: 150, y: 690 }, kind: 'OBJECTIVE' },
+    { at: { x: 950, y: 690 }, kind: 'OBJECTIVE' },
+    { at: { x: 600, y: 390 }, kind: 'OBJECTIVE' },
+    { at: { x: 600, y: 610 }, kind: 'OBJECTIVE' },
     // Puits de la cour : case impraticable.
     { at: { x: 700, y: 940 }, passable: false },
     // Gravats dans la cuisine : +1 PM pour y entrer.

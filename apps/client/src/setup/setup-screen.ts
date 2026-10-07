@@ -1,6 +1,6 @@
 import { h } from '../ui/dom';
 import { t } from '../ui/i18n';
-import { MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
+import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
 
 export interface SetupScreenContent extends SetupContent {
   readonly boards: readonly { readonly id: string; readonly nameKey: string; readonly board: SetupContent['boards'][number]['board'] }[];
@@ -21,6 +21,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
     const selected = new Map<string, Set<string>>(initial.teams.map((team) => [team.playerId, new Set(team.characterIds)]));
     let boardId = initial.boardId;
     const aiPlayers = new Set(initial.ai ?? []);
+    let mode = initial.mode ?? 'DEATHMATCH';
 
     const errors = h('ul', { class: 'setup-errors', attrs: { role: 'alert', 'aria-live': 'assertive', hidden: true } });
     const seedInput = h('input', { class: 'setup-input', attrs: { id: 'setup-seed', type: 'number', min: 0, max: MAX_SEED, step: 1, value: initial.seed, inputmode: 'numeric', 'aria-describedby': 'setup-seed-hint' } });
@@ -28,6 +29,12 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       'select',
       { class: 'setup-input', attrs: { id: 'setup-board' }, on: { change: (e) => { boardId = (e.target as HTMLSelectElement).value; } } },
       ...content.boards.map((b) => h('option', { text: t(b.nameKey), attrs: { value: b.id, selected: b.id === boardId } })),
+    );
+
+    const modeSelect = h(
+      'select',
+      { class: 'setup-input', attrs: { id: 'setup-mode' }, on: { change: (e) => { mode = (e.target as HTMLSelectElement).value as typeof mode; } } },
+      ...GAME_MODES.map((m) => h('option', { text: t(m.nameKey), attrs: { value: m.mode, selected: m.mode === mode } })),
     );
 
     const teamFieldset = (playerId: string) =>
@@ -69,6 +76,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       return {
         boardId,
         seed: seedInput.value.trim() === '' ? Number.NaN : Number(seedInput.value),
+        ...(mode !== 'DEATHMATCH' ? { mode } : {}),
         ...(aiPlayers.size > 0 ? { ai: PLAYER_IDS.filter((id) => aiPlayers.has(id)) } : {}),
         teams: PLAYER_IDS.map((playerId) => ({
           playerId,
@@ -98,6 +106,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       h('h1', { class: 'ui-dialog-title', text: t('setup.title'), attrs: { id: 'setup-title' } }),
       h('p', { class: 'hud-note', text: t('setup.subtitle') }),
       h('div', { class: 'setup-field' }, h('label', { text: t('setup.board'), attrs: { for: 'setup-board' } }), boardSelect),
+      h('div', { class: 'setup-field' }, h('label', { text: t('setup.mode'), attrs: { for: 'setup-mode' } }), modeSelect),
       h('div', { class: 'setup-teams' }, ...PLAYER_IDS.map(teamFieldset)),
       h(
         'div',

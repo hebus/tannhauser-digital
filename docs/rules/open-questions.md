@@ -411,3 +411,31 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Reason:** les règles ne précisent pas quelle équipe occupe quelle entrée.
 - **Impact:** avantage éventuel d'un côté de la carte.
 - **Test required:** `castle-setup.spec.ts` (chaque équipe prend une entrée différente).
+
+## OQ-FLAG-001 — Mise en place des drapeaux (Capture du drapeau)
+- **Rule:** RULE-VICT-002 : le gagnant du jet de mise en place pose le premier drapeau sur une case d'objectif ; les joueurs alternent jusqu'à 3 drapeaux chacun.
+- **Interpretation (actuelle) :** pose automatique et déterministe au démarrage : les joueurs alternent dans l'ordre de la partie (joueur 1 d'abord, pas de jet de mise en place), chacun sur la case d'objectif libre la plus proche de ses propres personnages ; une seule case d'objectif par drapeau. Le plateau doit avoir au moins 6 cases d'objectif (château : 6, plateau de dev : 6).
+- **Reason:** le choix libre du joueur n'est pas encore dans l'interface ; la règle ne dit pas non plus s'il peut y avoir plusieurs drapeaux sur une case d'objectif.
+- **Impact:** équilibre de la partie ; la future pose manuelle remplacera cette heuristique.
+- **Test required:** `flags.spec.ts` (placement).
+
+## OQ-FLAG-002 — « Aucun ennemi adjacent » pour récupérer un drapeau
+- **Rule:** RULE-OBJ-010 : récupérer un drapeau adjacent en phase d'action « si aucun ennemi n'est adjacent ».
+- **Interpretation (actuelle) :** aucun ennemi (vivant) sur la case du personnage ni sur une case voisine par arête (comme le corps à corps). Le personnage peut être sur la case du drapeau (drapeau déposé à la mort d'un porteur) ou sur une case voisine ; il ne récupère que les drapeaux ADVERSES, au sol.
+- **Reason:** la règle ne dit pas si l'ennemi ne doit pas être adjacent au personnage ou au drapeau, ni si l'on peut reprendre son propre drapeau tombé.
+- **Impact:** facilité de récupération des drapeaux.
+- **Test required:** `flags.spec.ts` (récupérer un drapeau).
+
+## OQ-FLAG-003 — Où planter : « camp » ou « point d'entrée ennemi » ?
+- **Rule:** RULE-VICT-002 : victoire quand 2 drapeaux ennemis sont plantés « dans son propre camp » ; RULE-OBJ-013 : planter depuis une case adjacente à « un point d'entrée ennemi » sans ennemi adjacent à ce point.
+- **Interpretation (actuelle) :** les deux textes se contredisent ; on plante dans SON camp (le point d'entrée où l'équipe débarque), depuis ce point ou une case voisine, sans ennemi adjacent à ce point d'entrée. Un camp = le point d'entrée de départ de l'équipe (`GameState.camps`).
+- **Reason:** contradiction entre la condition de victoire et la règle de plantage.
+- **Impact:** toute la dynamique du mode (on ramène les drapeaux chez soi, ou on va les planter chez l'ennemi).
+- **Test required:** `flags.spec.ts` (planter, victoire).
+
+## OQ-FLAG-004 — Drapeaux portés : limite, Overwatch, élimination en mode drapeau
+- **Rule:** « Les drapeaux n'occupent pas d'inventaire » (RULE-OBJ-010) ; un porteur éliminé dépose son drapeau (RULE-OBJ-012).
+- **Interpretation (actuelle) :** aucune limite de drapeaux portés ; récupérer et planter sont chacun l'action unique de l'activation et ne déclenchent PAS l'attaque d'opportunité de l'Overwatch (seules les commandes de déplacement, attaque et portes la déclenchent) ; l'élimination totale de l'équipe adverse reste une victoire dans tous les modes.
+- **Reason:** non précisé par les règles.
+- **Impact:** un porteur peut cumuler les drapeaux ; l'Overwatch ne punit pas l'action de drapeau.
+- **Test required:** `flags.spec.ts`.

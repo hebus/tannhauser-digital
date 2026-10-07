@@ -28,7 +28,10 @@
       "zoneId": "armurerie",
       "colors": [
         "r.armurerie"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "armurerie-04",
@@ -65,7 +68,10 @@
       "colors": [
         "c.nord-ouest-b",
         "r.bibliotheque"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "bibliotheque-04",
@@ -103,7 +109,10 @@
       "colors": [
         "c.nord-est-b",
         "r.chapelle"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "chapelle-04",
@@ -383,6 +392,7 @@
         "r.cuisine"
       ],
       "properties": {
+        "kind": "OBJECTIVE",
         "movementCostModifier": 1
       }
     },
@@ -412,7 +422,10 @@
       "zoneId": "hall",
       "colors": [
         "r.hall"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "hall-03",
@@ -470,7 +483,10 @@
       "colors": [
         "c.sud-a",
         "r.hall"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "hall-09",

@@ -60,7 +60,10 @@
         "red",
         "green",
         "blue"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n7",
@@ -70,7 +73,10 @@
       "colors": [
         "green",
         "blue"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n8",
@@ -101,7 +107,10 @@
       "zoneId": "zsouth",
       "colors": [
         "blue"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n11",
@@ -111,7 +120,10 @@
       "colors": [
         "blue",
         "yellow"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n12",
@@ -142,7 +154,10 @@
       "colors": [
         "yellow",
         "blue"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n15",
@@ -151,7 +166,10 @@
       "zoneId": "zsouth",
       "colors": [
         "yellow"
-      ]
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
     },
     {
       "id": "n16",

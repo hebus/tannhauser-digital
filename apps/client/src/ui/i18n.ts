@@ -207,6 +207,9 @@ export const FR: Messages = {
   'setup.title': 'Mise en place',
   'setup.subtitle': 'Choisissez le plateau, les équipes et la graine, puis démarrez.',
   'setup.board': 'Plateau',
+  'setup.mode': 'Mode de jeu',
+  'mode.DEATHMATCH': 'Deathmatch (éliminer l’équipe adverse)',
+  'mode.CAPTURE_THE_FLAG': 'Capture du drapeau',
   'setup.team': 'Équipe de {player}',
   'setup.teamHint': 'Cochez les personnages (1 à {max}).',
   'setup.ai': 'Piloté par l’IA',
@@ -228,6 +231,7 @@ export const FR: Messages = {
   'setupError.UNKNOWN_CHARACTER': 'Personnage inconnu : {id}.',
   'setupError.DUPLICATE_CHARACTER': '{player} a choisi deux fois {id}.',
   'setupError.BAD_SEED': 'La graine doit être un entier entre 0 et {max}.',
+  'setupError.MODE_UNSUPPORTED_BOARD': 'Ce plateau ne convient pas à ce mode : il faut au moins {objectives} cases d’objectif et {entries} points d’entrée.',
   'setupError.NOT_ENOUGH_NODES': "Le plateau n'a pas assez de cases pour {n} personnages.",
 
   // Noms de contenu
@@ -443,6 +447,9 @@ export const EN: Messages = {
   'setup.title': 'Game setup',
   'setup.subtitle': 'Pick the board, the teams and the seed, then start.',
   'setup.board': 'Board',
+  'setup.mode': 'Game mode',
+  'mode.DEATHMATCH': 'Deathmatch (eliminate the other team)',
+  'mode.CAPTURE_THE_FLAG': 'Capture the Flag',
   'setup.team': 'Team of {player}',
   'setup.teamHint': 'Tick characters (1 to {max}).',
   'setup.ai': 'Controlled by the AI',

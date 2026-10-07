@@ -1,4 +1,4 @@
-import type { BoardState, NodeId } from '@tannhauser/core';
+import { FLAGS_PER_PLAYER, type BoardState, type GameMode, type NodeId } from '@tannhauser/core';
 import type { CharacterDefinition, LoadedBoard } from '@tannhauser/content';
 
 /** Configuration d'une partie choisie sur l'écran de mise en place. Pure et sérialisable (hash d'URL). */
@@ -13,7 +13,15 @@ export interface SetupConfig {
   readonly teams: readonly TeamConfig[];
   /** Joueurs pilotés par l'IA (absent : partie entre humains). */
   readonly ai?: readonly string[];
+  /** Mode de jeu (absent : Deathmatch). */
+  readonly mode?: GameMode;
 }
+
+/** Modes proposés, avec leur code d'URL. */
+export const GAME_MODES: readonly { readonly mode: GameMode; readonly code: string; readonly nameKey: string }[] = [
+  { mode: 'DEATHMATCH', code: 'dm', nameKey: 'mode.DEATHMATCH' },
+  { mode: 'CAPTURE_THE_FLAG', code: 'ctf', nameKey: 'mode.CAPTURE_THE_FLAG' },
+];
 
 export const MAX_TEAM_SIZE = 4;
 export const MAX_SEED = 0xffffffff;
@@ -26,7 +34,7 @@ export interface SetupContent {
 
 /** Problème de configuration : code stable + paramètres (le texte vient de `setupError.<code>` dans i18n). */
 export interface SetupIssue {
-  readonly code: 'UNKNOWN_BOARD' | 'TEAM_COUNT' | 'TEAM_EMPTY' | 'TEAM_TOO_LARGE' | 'UNKNOWN_CHARACTER' | 'DUPLICATE_CHARACTER' | 'BAD_SEED' | 'NOT_ENOUGH_NODES';
+  readonly code: 'UNKNOWN_BOARD' | 'TEAM_COUNT' | 'TEAM_EMPTY' | 'TEAM_TOO_LARGE' | 'UNKNOWN_CHARACTER' | 'DUPLICATE_CHARACTER' | 'BAD_SEED' | 'NOT_ENOUGH_NODES' | 'MODE_UNSUPPORTED_BOARD';
   readonly params?: Readonly<Record<string, string | number>>;
 }
 
@@ -53,6 +61,13 @@ export function validateSetup(config: SetupConfig, content: SetupContent): Setup
   if (board) {
     const free = Object.values(board.board.nodes).filter((n) => n.properties.passable).length;
     if (free < total) issues.push({ code: 'NOT_ENOUGH_NODES', params: { n: total } });
+    if (config.mode === 'CAPTURE_THE_FLAG') {
+      const nodes = Object.values(board.board.nodes);
+      const objectives = nodes.filter((n) => n.properties.kind === 'OBJECTIVE' && n.properties.passable).length;
+      const entries = nodes.filter((n) => n.properties.kind === 'ENTRY_POINT').length;
+      const needed = config.teams.length * FLAGS_PER_PLAYER;
+      if (objectives < needed || entries < config.teams.length) issues.push({ code: 'MODE_UNSUPPORTED_BOARD', params: { objectives: needed, entries: config.teams.length } });
+    }
   }
   return issues;
 }
@@ -81,6 +96,7 @@ export function encodeSetup(config: SetupConfig): string {
   params.set('seed', String(config.seed));
   for (const team of config.teams) params.set(team.playerId, team.characterIds.join(','));
   if (config.ai && config.ai.length > 0) params.set('ai', config.ai.join(','));
+  if (config.mode && config.mode !== 'DEATHMATCH') params.set('mode', GAME_MODES.find((m) => m.mode === config.mode)!.code);
   return params.toString();
 }
 
@@ -97,7 +113,8 @@ export function decodeSetup(hash: string): SetupConfig | null {
     teams.push({ playerId, characterIds: raw.split(',').filter((s) => s.length > 0) });
   }
   const ai = (params.get('ai') ?? '').split(',').filter((id) => (PLAYER_IDS as readonly string[]).includes(id));
-  return { boardId: board, seed: Number(seedText), teams, ...(ai.length > 0 ? { ai } : {}) };
+  const mode = GAME_MODES.find((m) => m.code === params.get('mode'))?.mode;
+  return { boardId: board, seed: Number(seedText), teams, ...(ai.length > 0 ? { ai } : {}), ...(mode && mode !== 'DEATHMATCH' ? { mode } : {}) };
 }
 
 // --- Placement initial ---

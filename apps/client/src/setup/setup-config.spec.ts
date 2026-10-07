@@ -141,3 +141,32 @@ describe('joueurs pilotés par l’IA', () => {
     expect(decodeSetup(`#${encodeSetup(base)}&ai=p9,p1`)?.ai).toEqual(['p1']);
   });
 });
+
+describe('mode Capture du drapeau', () => {
+  const available = setupContentOf(loadDevContent());
+  const ctf = (boardId: string): SetupConfig => ({ ...defaultSetup(available, 11), boardId, mode: 'CAPTURE_THE_FLAG' });
+
+  it('aller-retour dans le hash d’URL ; Deathmatch = pas de paramètre', () => {
+    const config = ctf('castle');
+    expect(encodeSetup(config)).toContain('mode=ctf');
+    expect(decodeSetup(`#${encodeSetup(config)}`)).toEqual(config);
+    expect(encodeSetup({ ...config, mode: 'DEATHMATCH' })).not.toContain('mode=');
+  });
+
+  it('les deux plateaux livrés conviennent ; un plateau sans objectifs est refusé', () => {
+    expect(validateSetup(ctf('dev-board'), available)).toEqual([]);
+    expect(validateSetup(ctf('castle'), available)).toEqual([]);
+    const bare = { boards: [{ id: 'bare', board: new BoardBuilder().node('a', ['r']).node('b', ['r']).edge('a', 'b').build() }], characters: available.characters };
+    expect(validateSetup({ ...ctf('bare'), teams: [{ playerId: 'p1', characterIds: [available.characters[0]!.id] }, { playerId: 'p2', characterIds: [available.characters[1]!.id] }] }, bare).map((i) => i.code)).toContain('MODE_UNSUPPORTED_BOARD');
+  });
+
+  for (const boardId of ['dev-board', 'castle']) {
+    it(`démarre une partie sur ${boardId} : 6 drapeaux posés, un camp par joueur`, () => {
+      const game = createGameFromSetup(ctf(boardId));
+      expect(game.state.mode).toBe('CAPTURE_THE_FLAG');
+      expect(game.state.flags).toHaveLength(6);
+      expect(Object.keys(game.state.camps!).sort()).toEqual(['p1', 'p2']);
+      for (const camp of Object.values(game.state.camps!)) expect(camp).toHaveLength(1);
+    });
+  }
+});

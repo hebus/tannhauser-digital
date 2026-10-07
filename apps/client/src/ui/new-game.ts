@@ -61,6 +61,15 @@ export function createGameFromSetup(config: SetupConfig, content: DevContent = l
     })),
     characters,
     rng: rng.snapshot(),
+    ...(config.mode && config.mode !== 'DEATHMATCH'
+      ? {
+          mode: config.mode,
+          // Camp de chaque équipe : le point d'entrée où elle débarque (validé par validateSetup pour ce mode).
+          camps: Object.fromEntries(
+            config.teams.map((team) => [team.playerId, placement[team.playerId]!.slice(0, 1).filter((n) => board.nodes[n]!.properties.kind === 'ENTRY_POINT')]),
+          ),
+        }
+      : {}),
   });
   // START_GAME consomme l'aléa (initiative) ; le snapshot du nouvel état reprend la séquence là où elle s'arrête.
   const started = applyCommand(initial, { type: 'START_GAME' }, rng);
