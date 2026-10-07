@@ -2,6 +2,7 @@ import { type } from 'arktype';
 import { defaultNodeProperties, validateBoard, type BoardState, type BoardNode, type Door } from '@tannhauser/core';
 import {
   boardSchema,
+  type BoardLayoutJson,
   characterSchema,
   factionsFileSchema,
   weaponSchema,
@@ -30,6 +31,8 @@ export interface LoadedBoard {
   readonly id: string;
   readonly nameKey: string;
   readonly board: BoardState;
+  /** Mise en page d'affichage (pièces, couloirs) : absente pour un plateau « grille » simple. */
+  readonly layout?: BoardLayoutJson;
 }
 
 /** Valide un plateau JSON (schéma + cohérence du graphe) et le convertit en `BoardState`. */
@@ -61,7 +64,9 @@ export function loadBoard(data: unknown, source = 'board'): LoadedBoard {
   const board: BoardState = { nodes, edges: json.edges, doors, portals: json.portals ?? [] };
   const issues = validateBoard(board);
   if (issues.length > 0) throw new ContentError(source, issues.map((i) => `${i.code} : ${i.message}`));
-  return { id: json.id, nameKey: json.nameKey, board };
+  const problems = json.layout ? layoutProblems(json.layout) : [];
+  if (problems.length > 0) throw new ContentError(source, problems);
+  return { id: json.id, nameKey: json.nameKey, board, ...(json.layout ? { layout: json.layout } : {}) };
 }
 
 export function loadWeapons(data: unknown, source = 'weapons'): WeaponDefinition[] {
@@ -99,4 +104,23 @@ function assertUniqueIds(source: string, items: readonly { id: string }[]): void
   const seen = new Set<string>();
   const dup = items.filter((i) => (seen.has(i.id) ? true : (seen.add(i.id), false))).map((i) => `Identifiant dupliqué : ${i.id}`);
   if (dup.length > 0) throw new ContentError(source, dup);
+}
+
+/** Cohérence de la mise en page : identifiants uniques, polygones non dégénérés. */
+function layoutProblems(layout: BoardLayoutJson): string[] {
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const id of [...layout.rooms.map((r) => r.id), ...layout.corridors.map((c) => c.id)]) {
+    if (seen.has(id)) problems.push(`Identifiant de mise en page dupliqué : ${id}`);
+    seen.add(id);
+  }
+  for (const room of layout.rooms) {
+    let area2 = 0;
+    room.polygon.forEach((p, i) => {
+      const q = room.polygon[(i + 1) % room.polygon.length]!;
+      area2 += p.x * q.y - q.x * p.y;
+    });
+    if (Math.abs(area2) < 1e-6) problems.push(`Pièce ${room.id} : polygone dégénéré (aire nulle)`);
+  }
+  return problems;
 }

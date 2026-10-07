@@ -45,6 +45,23 @@ export const portalSchema = type({
   type: "'SECRET_DOOR'",
 });
 
+const layoutPoint = type({ x: 'number', y: 'number' });
+
+/** Mise en page d'affichage (voir `BoardLayout` du renderer) : pièces en polygones, couloirs en lignes brisées. */
+export const layoutSchema = type({
+  rooms: type({
+    id: 'string > 0',
+    'nameKey?': 'string',
+    polygon: layoutPoint.array().atLeastLength(3),
+    'fill?': /^#[0-9a-fA-F]{6}$/,
+  }).array(),
+  corridors: type({
+    id: 'string > 0',
+    points: layoutPoint.array().atLeastLength(2),
+    width: 'number > 0',
+  }).array(),
+});
+
 export const boardSchema = type({
   id: 'string > 0',
   nameKey: 'string > 0',
@@ -52,6 +69,7 @@ export const boardSchema = type({
   edges: edgeSchema.array(),
   'doors?': doorSchema.array(),
   'portals?': portalSchema.array(),
+  'layout?': layoutSchema,
 });
 
 export const weaponSchema = type({
@@ -97,6 +115,7 @@ export const factionsFileSchema = type({
 });
 
 export type BoardJson = typeof boardSchema.infer;
+export type BoardLayoutJson = typeof layoutSchema.infer;
 export type WeaponDefinition = typeof weaponSchema.infer;
 export type CharacterDefinition = typeof characterSchema.infer;
 export type FactionDefinition = typeof factionSchema.infer;

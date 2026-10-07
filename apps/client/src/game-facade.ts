@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '@tannhauser/core';
 import { createCharacterState, loadDevContent } from '@tannhauser/content';
+import type { BoardLayout } from '@tannhauser/renderer';
 
 /** Ennemi ciblable par le personnage, avec les armes qui passent `checkTargeting`. */
 export interface TargetableEntry {
@@ -31,6 +32,8 @@ export class GameFacade {
   constructor(
     state: GameState,
     private readonly seed: number,
+    /** Mise en page d'affichage du plateau (pièces, couloirs), absente pour une grille simple. */
+    readonly layout?: BoardLayout,
   ) {
     this.current = state;
     this.rng = SeededRng.fromSnapshot(state.rng);

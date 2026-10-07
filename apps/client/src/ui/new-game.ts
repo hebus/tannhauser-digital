@@ -63,6 +63,6 @@ export function createGameFromSetup(config: SetupConfig, content: DevContent = l
   // START_GAME consomme l'aléa (initiative) ; le snapshot du nouvel état reprend la séquence là où elle s'arrête.
   const started = applyCommand(initial, { type: 'START_GAME' }, rng);
   if (!started.accepted) throw new InvalidSetupError(started.errors.map((e) => e.code));
-  return new GameFacade(started.state, config.seed);
+  return new GameFacade(started.state, config.seed, undefined);
 }
 
