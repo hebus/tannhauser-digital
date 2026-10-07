@@ -1,10 +1,15 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.tsbuildinfo'] },
+  { ignores: ['**/dist/**', '**/dist-types/**', '.claude/**', '**/node_modules/**', '**/*.tsbuildinfo'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['apps/**/*.ts', 'packages/renderer/**/*.ts'],
+    languageOptions: { globals: globals.browser },
+  },
   {
     // Règle d'architecture (§3.2) : le moteur ne dépend ni de Pixi, ni du DOM, ni du rendu.
     files: ['packages/core/**/*.ts'],
