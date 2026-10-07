@@ -1,5 +1,17 @@
 import { Application, Container } from 'pixi.js';
-import { BoardView, Camera, CharacterLayer, HighlightLayer, NODE_RADIUS } from '@tannhauser/renderer';
+import {
+  BoardView,
+  Camera,
+  CharacterLayer,
+  HighlightLayer,
+  NODE_RADIUS,
+  OverlayLayer,
+  Presentation,
+  ReducedMotion,
+  buildPathPreview,
+  textScaleForZoom,
+} from '@tannhauser/renderer';
+import type { GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { GameFacade } from './game-facade';
 
@@ -26,12 +38,35 @@ async function main(): Promise<void> {
   let showIds = true;
   let boardView = new BoardView(game.state.board, { showNodeIds: showIds });
   const highlight = new HighlightLayer(game.state.board);
+  const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
-  world.addChild(boardView, highlight, characters);
+  const reducedMotion = new ReducedMotion();
+  const presentation = new Presentation({
+    characters,
+    reducedMotion,
+    screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
+  });
+  world.addChild(boardView, highlight, overlays, characters, presentation.worldLayer);
+  app.stage.addChild(presentation.screenLayer);
+
+  // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
+  const lifetime = new AbortController();
+  const { signal } = lifetime;
+  const tickAnimations = (ticker: { deltaMS: number }): void => presentation.tick(ticker.deltaMS, performance.now());
+  app.ticker.add(tickAnimations);
 
   const camera = new Camera(world, { width: app.screen.width, height: app.screen.height });
-  const fit = () => camera.fit(boardView.bounds2D());
-  fit();
+  const syncTextScale = () => {
+    const k = textScaleForZoom(camera.zoom);
+    characters.setTextScale(k);
+    presentation.setTextScale(k);
+    return k;
+  };
+  const fit = () => {
+    camera.fit(boardView.bounds2D());
+    syncTextScale();
+    updatePath();
+  };
 
   const statusEl = document.getElementById('status');
   const logEl = document.getElementById('log');
@@ -46,12 +81,27 @@ async function main(): Promise<void> {
   const activePlayer = () => game.state.turn.activePlayerId;
   const activeCharacter = () => game.state.characters.find((c) => c.id === game.state.turn.activeCharacterId);
 
+  let showLos = false;
+  let hoverNode: string | null = null;
+  let reachableNow: ReturnType<GameFacade['reachable']> = [];
+
+  /** Aperçu de chemin : uniquement vers un nœud atteignable (liste du moteur) ; sinon aucun tracé. */
+  function updatePath(): void {
+    const active = activeCharacter();
+    const preview = active ? buildPathPreview(game.state.board, active.nodeId, reachableNow, hoverNode) : null;
+    overlays.showPath(preview, textScaleForZoom(camera.zoom));
+  }
+
   const refresh = () => {
     const s = game.state;
     characters.update(s);
     const active = activeCharacter();
     const reachable = active && !s.turn.reaction ? game.reachable(active.id) : [];
+    reachableNow = reachable;
     highlight.show(reachable.map((r) => r.nodeId));
+    overlays.showTargets(active ? game.targetable(active.id).map((t) => t.nodeId) : []);
+    overlays.showLineOfSight(active && showLos ? active.nodeId : null, active && showLos ? game.visibleFrom(active.id) : null);
+    updatePath();
     const cp = s.players.map((p) => `${p.id}: ${p.commandPoints} PC`).join(' · ');
     const reaction = s.turn.reaction ? ` — RÉACTION : ${s.turn.reaction.forPlayerId} (T = tirer, D = refuser)` : '';
     const activeText = active ? ` · actif : ${active.id}${s.turn.actionUsed ? ' (action utilisée)' : ''}` : '';
@@ -62,7 +112,11 @@ async function main(): Promise<void> {
     if (statusEl) statusEl.textContent = text;
   };
 
-  game.subscribe((events) => {
+  let shown: GameState = game.state;
+  const unsubscribeGame = game.subscribe((events, state) => {
+    // Les animations sont lancées avant la mise à jour des pions (positions de départ) ; elles ne touchent pas à l'état.
+    presentation.play(events, shown, state);
+    shown = state;
     for (const e of events) {
       const text = describeEvent(e);
       if (text) log(text);
@@ -75,6 +129,7 @@ async function main(): Promise<void> {
     return res;
   };
   refresh();
+  fit();
 
   // Entrées → commandes. Aucune règle ici : tout passe par la façade et le moteur.
   const nodeAt = (sx: number, sy: number): string | null => {
@@ -101,10 +156,11 @@ async function main(): Promise<void> {
     }
     const enemy = here.find((c) => c.playerId !== player);
     if (enemy) {
-      // Prototype : on essaie les armes du personnage jusqu'à ce que le moteur accepte l'attaque.
-      for (const w of active.weapons ?? []) {
-        if (send({ type: 'ATTACK', playerId: player, attackerId: active.id, targetId: enemy.id, weaponId: w.id }).accepted) return;
-      }
+      // Armes utilisables fournies par la façade (checkTargeting du moteur) ; sans cible valide, on tente quand même
+      // la première arme pour afficher le motif de refus du moteur dans le journal.
+      const entry = game.targetable(active.id).find((t) => t.targetId === enemy.id);
+      const weaponId = entry?.weaponIds[0] ?? active.weapons?.[0]?.id;
+      if (weaponId) send({ type: 'ATTACK', playerId: player, attackerId: active.id, targetId: enemy.id, weaponId });
       return;
     }
     const target = game.reachable(active.id).find((r) => r.nodeId === nodeId);
@@ -113,38 +169,80 @@ async function main(): Promise<void> {
 
   let dragging = false;
   let moved = 0;
-  app.canvas.addEventListener('pointerdown', () => {
-    dragging = true;
-    moved = 0;
-  });
-  window.addEventListener('pointerup', (e) => {
-    const wasClick = dragging && moved < 4;
-    dragging = false;
-    if (wasClick && e.target === app.canvas) {
-      const id = nodeAt(e.offsetX, e.offsetY);
-      if (id) onNodeClick(id);
-    }
-  });
-  window.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    moved += Math.abs(e.movementX) + Math.abs(e.movementY);
-    if (moved >= 4) camera.pan(e.movementX, e.movementY);
-  });
+  app.canvas.addEventListener(
+    'pointerdown',
+    () => {
+      presentation.skip(); // un clic termine les animations en cours
+      dragging = true;
+      moved = 0;
+    },
+    { signal },
+  );
+  window.addEventListener(
+    'pointerup',
+    (e) => {
+      const wasClick = dragging && moved < 4;
+      dragging = false;
+      if (wasClick && e.target === app.canvas) {
+        const id = nodeAt(e.offsetX, e.offsetY);
+        if (id) onNodeClick(id);
+      }
+    },
+    { signal },
+  );
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      if (dragging) {
+        moved += Math.abs(e.movementX) + Math.abs(e.movementY);
+        if (moved >= 4) camera.pan(e.movementX, e.movementY);
+        return;
+      }
+      const next = e.target === app.canvas ? nodeAt(e.offsetX, e.offsetY) : null;
+      if (next !== hoverNode) {
+        hoverNode = next;
+        updatePath();
+      }
+    },
+    { signal },
+  );
   app.canvas.addEventListener(
     'wheel',
     (e) => {
       e.preventDefault();
       camera.zoomAt(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.offsetX, e.offsetY);
+      syncTextScale();
+      updatePath();
     },
-    { passive: false },
+    { passive: false, signal },
   );
-  window.addEventListener('resize', () => {
-    camera.resize(app.screen.width, app.screen.height);
-    fit();
-  });
+  window.addEventListener(
+    'resize',
+    () => {
+      camera.resize(app.screen.width, app.screen.height);
+      fit();
+    },
+    { signal },
+  );
 
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
+    if (key === ' ') {
+      e.preventDefault();
+      presentation.skip();
+      return;
+    }
+    if (key === 'l') {
+      showLos = !showLos;
+      refresh();
+      presentation.notify(`Ligne de vue : ${showLos ? 'affichée' : 'masquée'}`);
+      return;
+    }
+    if (key === 'm') {
+      const reduced = reducedMotion.toggle();
+      presentation.notify(`Mouvement réduit : ${reduced ? 'activé' : 'désactivé'}`);
+      return;
+    }
     const player = activePlayer();
     const s = game.state;
     const reaction = s.turn.reaction;
@@ -169,7 +267,18 @@ async function main(): Promise<void> {
       const a = activeCharacter();
       if (a) send({ type: 'OVERWATCH', playerId: player, characterId: a.id });
     }
-  });
+  }, { signal });
+
+  const cleanup = (): void => {
+    lifetime.abort();
+    unsubscribeGame();
+    app.ticker.remove(tickAnimations);
+    presentation.destroy();
+    reducedMotion.destroy();
+    app.destroy(true, { children: true });
+  };
+  window.addEventListener('pagehide', cleanup, { once: true });
+  import.meta.hot?.dispose(cleanup);
 }
 
 main().catch((err: unknown) => {

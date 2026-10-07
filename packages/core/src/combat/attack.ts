@@ -32,7 +32,7 @@ export function stepDistance(board: BoardState, from: NodeId, to: NodeId): numbe
   return null;
 }
 
-function smokeNodes(state: GameState): ReadonlySet<NodeId> {
+export function smokeNodes(state: GameState): ReadonlySet<NodeId> {
   return new Set(state.effects.filter((e) => e.type === 'SMOKE').map((e) => e.origin));
 }
 

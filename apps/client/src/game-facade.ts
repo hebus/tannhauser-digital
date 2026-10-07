@@ -1,14 +1,24 @@
 import {
   SeededRng,
   applyCommand,
+  checkTargeting,
   createInitialState,
   reachableNodes,
+  smokeNodes,
+  visibleNodes,
   type CommandResult,
   type GameCommand,
   type GameEvent,
   type GameState,
 } from '@tannhauser/core';
 import { createCharacterState, loadDevContent } from '@tannhauser/content';
+
+/** Ennemi ciblable par le personnage, avec les armes qui passent `checkTargeting`. */
+export interface TargetableEntry {
+  readonly targetId: string;
+  readonly nodeId: string;
+  readonly weaponIds: readonly string[];
+}
 
 type Listener = (events: readonly GameEvent[], state: GameState) => void;
 
@@ -67,6 +77,32 @@ export class GameFacade {
     return [...reachableNodes(this.current, characterId).entries()]
       .filter(([, r]) => r.path.length > 0)
       .map(([nodeId, r]) => ({ nodeId, path: r.path, cost: r.cost }));
+  }
+
+  /**
+   * Ennemis que `characterId` peut attaquer maintenant, avec les armes utilisables. Vide si le personnage n'est pas
+   * celui en activation, a déjà agi, ou si une réaction est en attente. La légalité du ciblage (portée, ligne de vue,
+   * adjacence, combat à 0) vient de `checkTargeting` du moteur : aucune règle dupliquée ici.
+   */
+  targetable(characterId: string): TargetableEntry[] {
+    const s = this.current;
+    const attacker = s.characters.find((c) => c.id === characterId);
+    if (!attacker || !attacker.alive) return [];
+    if (s.phase !== 'ACTIVATION' || s.turn.reaction || s.turn.activeCharacterId !== attacker.id || s.turn.actionUsed) return [];
+    const result: TargetableEntry[] = [];
+    for (const target of s.characters) {
+      if (!target.alive || target.playerId === attacker.playerId) continue;
+      const weaponIds = (attacker.weapons ?? []).filter((w) => checkTargeting(s, attacker, target, w) === null).map((w) => w.id);
+      if (weaponIds.length > 0) result.push({ targetId: target.id, nodeId: target.nodeId, weaponIds });
+    }
+    return result;
+  }
+
+  /** Nœuds visibles depuis le personnage (ligne de vue du moteur, fumée comprise). */
+  visibleFrom(characterId: string): Set<string> {
+    const c = this.current.characters.find((x) => x.id === characterId);
+    if (!c) return new Set();
+    return visibleNodes(this.current.board, c.nodeId, { smokeNodes: smokeNodes(this.current) });
   }
 
   dispatch(command: GameCommand): CommandResult {
