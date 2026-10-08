@@ -9,7 +9,7 @@
 | RULE-MOVE-005 | Chemin connexe uniquement | §68.5 | `checkStep` (NOT_ADJACENT) | chemin non connexe |
 | RULE-MOVE-006 | Ennemi bloque ; allié traversable, jamais case d'arrivée (OQ-MOVE-004) | §68.3 | `checkStep`, `validatePath`, `reachableNodes` | ennemi/allié, ennemi hors de combat |
 | RULE-MOVE-007 | Portail relie deux nœuds distants ; coûte exactement 1 PM, dans les deux sens (OQ-MOVE-005, résolue) | §76.7 | `neighborCandidates`, `checkStep` (PORTAL) | portail ; « traverse un portail pour exactement 1 PM » |
-| RULE-MOVE-008 | Passage en force : duel de Physique, reporté ; point d'extension seulement (OQ-MOVE-006) | §69 | `movement/force-passage.ts` | à écrire avec le duel |
+| RULE-MOVE-008 | Passage en force : un par activation, duel de Physique 4 dés vs 4 dés (OQ-MOVE-006) | §69 | `movement/force-passage.ts`, `movement/handlers.ts` | `movement.spec.ts` (passage en force) |
 | RULE-MOVE-009 | `MOVE_CHARACTER` : joueur actif, propriétaire, vivant, activation (OQ-MOVE-003), déduit les PM, émet CHARACTER_MOVED | §68 | `movement/handlers.ts` | describe `MOVE_CHARACTER` |
 | RULE-MOVE-010 | Déterminisme et immutabilité de l'état | §0.1 | `reachable.ts` (tri par coût puis id) | déterministe / immutabilité |
 | RULE-MOVE-011 | Mouvement permis après et avant l'unique action ; `movementLeft` conservé (OQ-COMBAT-007) | §66 | `movement/handlers.ts` (aucun contrôle sur `actionUsed`) | « mouvement possible après une action, avant une action, et entre deux » |

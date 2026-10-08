@@ -39,7 +39,7 @@ export function resolveAttackExchange(
   let defenseRoll: DefenseRollLog | null = null;
   let parried = 0;
   const events: GameEvent[] = [];
-  if (wounds >= 1 && physical > 0) {
+  if (wounds >= 1) {
     const defenseMods = combineModifiers(
       ...nodeMods(target.nodeId, 'OCCUPANT', 'DEFENDER').map((m) => ({ extraDice: m.extraDice, resultModifier: m.resultModifier })),
     );

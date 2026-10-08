@@ -718,16 +718,15 @@ describe('OVERWATCH_FIRE', () => {
   });
 
   it('reprise refusée après le tir (état modifié) : OVERWATCH_RESUME_REFUSED, la réaction est tout de même résolue', () => {
-    // h1 : santé 2, Combat 0 à la dernière ligne ; touché une fois (santé 1), son attaque annoncée devient impossible.
-    const state = run(
-      inSight({
-        characters: [char('h1', 'p1', 'c', { activated: true, health: 2, statRows: [row, { ...row, combat: 0 }] }), watcher('e1', 'p2', 'e')],
-      }),
+    // h1 annonce une attaque ; entre l'annonce et la reprise, son arme disparaît (état modifié) : la reprise est refusée.
+    const announced = run(
+      inSight({ characters: [char('h1', 'p1', 'c', { activated: true, health: 2 }), watcher('e1', 'p2', 'e')] }),
       attack(),
     ).state;
+    const state = { ...announced, characters: announced.characters.map((c) => (c.id === 'h1' ? { ...c, weapons: [] } : c)) };
     const res = run(state, fire(), HIT);
     expect(types(res.events).slice(-2)).toEqual(['OVERWATCH_RESOLVED', 'OVERWATCH_RESUME_REFUSED']);
-    expect(res.events.at(-1)).toMatchObject({ characterId: 'h1', command: 'ATTACK', code: 'CHARACTERISTIC_ZERO' });
+    expect(res.events.at(-1)).toMatchObject({ characterId: 'h1', command: 'ATTACK', code: 'WEAPON_NOT_OWNED' });
     expect(res.state.turn.reaction).toBeUndefined();
     expect(res.state.turn.actionUsed).toBe(false);
     expect(hp(res.state, 'h1').health).toBe(1);

@@ -4,6 +4,7 @@ import type { GameEvent, RuleError } from '../events/events';
 import { registerHandler, type HandlerOutcome } from '../engine/apply-command';
 import type { CharacterState, GameState } from '../state/types';
 import { findOverwatchTrigger } from '../overwatch/trigger';
+import { resolveForcePassage } from './force-passage';
 import { validatePath } from './validate-path';
 
 /** Une porte ne coûte rien : ni à l'ouverture ni à la fermeture (décision du product owner). */
@@ -32,7 +33,7 @@ function withCharacter(state: GameState, next: CharacterState): GameState {
   return { ...state, characters: state.characters.map((c) => (c.id === next.id ? next : c)) };
 }
 
-registerHandler('MOVE_CHARACTER', (state, command) => {
+registerHandler('MOVE_CHARACTER', (state, command, rng) => {
   const actor = checkActor(state, command.playerId, command.characterId);
   if (!actor.ok) return { ok: false, errors: [actor.error] };
   const { character } = actor;
@@ -41,21 +42,53 @@ registerHandler('MOVE_CHARACTER', (state, command) => {
   if (!validation.ok) return { ok: false, errors: validation.errors };
 
   // Overwatch (déclencheur a) : le déplacement s'arrête à la première case vue par un adversaire en Overwatch.
+  // La case ennemie traversée par un passage en force n'est jamais une case d'arrêt : on ne peut pas s'y arrêter.
+  const crossing = validation.crossing;
   let stopAt = validation.path.length;
   let overwatcher: CharacterState | null = null;
   for (let i = 0; i < validation.path.length; i += 1) {
+    if (crossing?.index === i) continue;
     overwatcher = findOverwatchTrigger(state, character, validation.path[i]!);
     if (overwatcher) {
       stopAt = i + 1;
       break;
     }
   }
+
+  // Passage en force : tenté seulement si le déplacement arrive jusqu'à la case ennemie (pas d'arrêt avant).
+  const events: GameEvent[] = [];
+  let working = state;
+  if (crossing && stopAt > crossing.index) {
+    const enemy = state.characters.find((c) => c.id === crossing.enemyId)!;
+    const duel = resolveForcePassage(character, enemy, rng);
+    const success = duel.outcome.attackerWins;
+    events.push({
+      type: 'FORCE_PASSAGE_RESOLVED',
+      characterId: character.id,
+      enemyId: enemy.id,
+      nodeId: validation.path[crossing.index]!,
+      dice: duel.attacker.dice.map((d) => d.natural),
+      difficulty: duel.attacker.difficulty,
+      successes: duel.attacker.successes,
+      defenderDice: duel.defender.dice.map((d) => d.natural),
+      defenderDifficulty: duel.defender.difficulty,
+      defenderSuccesses: duel.defender.successes,
+      success,
+    });
+    working = { ...state, turn: { ...state.turn, forcePassageUsed: true } };
+    if (!success) {
+      stopAt = crossing.index;
+      overwatcher = null;
+    }
+  }
+
   const path = validation.path.slice(0, stopAt);
   const remaining = validation.path.slice(stopAt);
   const cost = validation.costs.slice(0, stopAt).reduce((a, b) => a + b, 0);
+  if (path.length === 0) return { ok: true, state: working, events };
   const destination = path[path.length - 1]!;
-  const moved = withCharacter(state, { ...character, nodeId: destination, movementLeft: character.movementLeft - cost });
-  const events: GameEvent[] = [{ type: 'CHARACTER_MOVED', characterId: character.id, path, cost }];
+  const moved = withCharacter(working, { ...character, nodeId: destination, movementLeft: character.movementLeft - cost });
+  events.push({ type: 'CHARACTER_MOVED', characterId: character.id, path, cost });
   if (!overwatcher) return { ok: true, state: moved, events };
 
   events.push({ type: 'OVERWATCH_TRIGGERED', overwatcherId: overwatcher.id, targetId: character.id, nodeId: destination });

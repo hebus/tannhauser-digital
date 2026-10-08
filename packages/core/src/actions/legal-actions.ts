@@ -105,10 +105,6 @@ function attackAction(state: GameState, character: CharacterState): LegalAction 
     }
   }
   if (options.length > 0) return ok('ATTACK', { attackOptions: options, blocked });
-  // Combat à 0 : le motif est le même pour toutes les cibles, on le dit tel quel.
-  if (blocked.every((b) => b.code === 'CHARACTERISTIC_ZERO')) {
-    return refuseWith('ATTACK', 'CHARACTERISTIC_ZERO', blocked[0]!.reason, { attackOptions: [], blocked });
-  }
   return refuseWith('ATTACK', 'NO_TARGET_IN_RANGE', 'Impossible : aucun ennemi à portée.', { attackOptions: [], blocked });
 }
 

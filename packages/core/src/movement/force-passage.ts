@@ -1,24 +1,27 @@
-import type { NodeId } from '../board/types';
-import type { CharacterId } from '../state/types';
+import { rollDuel, type DuelOutcome } from '../combat/duel';
+import { DEFAULT_TEST_POOL, type TestResult } from '../combat/test';
+import type { RandomSource } from '../rng/rng';
+import { currentStats, type CharacterState, type GameState } from '../state/types';
 
-/**
- * Point d'extension du passage en force (§69). NON IMPLÉMENTÉ : le système de duel n'existe pas encore.
- * TODO (OQ-MOVE-006) : quand le duel physique sera disponible, `checkStep` devra, au lieu de refuser
- * avec ENEMY_OCCUPIED, signaler une tentative de passage en force possible (PM suffisants, pas de
- * tentative précédente sur cette case durant l'activation) et un handler dédié résoudra le duel.
- */
-export interface ForcePassageRequest {
-  readonly characterId: CharacterId;
-  readonly nodeId: NodeId;
-  readonly enemyId: CharacterId;
+/** Le personnage actif a déjà tenté un passage en force pendant cette activation (réussi ou non). */
+export function forcePassageUsed(state: GameState): boolean {
+  return state.turn.forcePassageUsed === true;
 }
 
-export type ForcePassageOutcome =
-  | { readonly success: true }
-  | { readonly success: false; readonly counterAttack: boolean };
+export interface ForcePassageResult {
+  readonly attacker: TestResult;
+  readonly defender: TestResult;
+  readonly outcome: DuelOutcome;
+}
 
-/** Résolveur injectable (duel physique). Aucune implémentation fournie pour l'instant. */
-export type ForcePassageResolver = (request: ForcePassageRequest) => ForcePassageOutcome;
-
-/** Code d'erreur renvoyé tant que le passage en force n'est pas disponible. */
-export const FORCE_PASSAGE_UNAVAILABLE = 'ENEMY_OCCUPIED';
+/**
+ * Passage en force (bull rush) : duel de Physique. Chacun lance 4 dés, difficulté = 10 − Physique ; chaque succès du
+ * défenseur annule un succès de l'initiateur, qui doit en conserver au moins 1 pour traverser (`outcome.attackerWins`).
+ */
+export function resolveForcePassage(mover: CharacterState, enemy: CharacterState, rng: RandomSource): ForcePassageResult {
+  return rollDuel(
+    { characteristic: currentStats(mover).physical, pool: DEFAULT_TEST_POOL },
+    { characteristic: currentStats(enemy).physical, pool: DEFAULT_TEST_POOL },
+    rng,
+  );
+}

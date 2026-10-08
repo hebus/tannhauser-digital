@@ -11,6 +11,20 @@ export type GameEvent =
   | { readonly type: 'INITIATIVE_ROLLED'; readonly rolls: Readonly<Record<string, number>>; readonly winnerId: string }
   | { readonly type: 'CHARACTER_ACTIVATION_STARTED'; readonly characterId: string }
   | { readonly type: 'CHARACTER_MOVED'; readonly characterId: string; readonly path: readonly string[]; readonly cost: number }
+  /** Passage en force : duel de Physique entre le déplaçant et l'ennemi occupant `nodeId`. */
+  | {
+      readonly type: 'FORCE_PASSAGE_RESOLVED';
+      readonly characterId: string;
+      readonly enemyId: string;
+      readonly nodeId: string;
+      readonly dice: readonly number[];
+      readonly difficulty: number;
+      readonly successes: number;
+      readonly defenderDice: readonly number[];
+      readonly defenderDifficulty: number;
+      readonly defenderSuccesses: number;
+      readonly success: boolean;
+    }
   | { readonly type: 'DOOR_OPENED'; readonly characterId: string; readonly doorId: string; readonly cost: number }
   | { readonly type: 'DOOR_CLOSED'; readonly characterId: string; readonly doorId: string; readonly cost: number }
   | { readonly type: 'CHARACTER_ACTIVATION_ENDED'; readonly characterId: string }

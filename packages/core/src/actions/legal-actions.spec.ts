@@ -113,10 +113,10 @@ describe('getLegalActions', () => {
     expect(by(getLegalActions(state, 'h1'), 'ATTACK')).toMatchObject({ available: false, code: 'NO_ENEMY' });
   });
 
-  it('Combat à 0 : motif de la règle', () => {
+  it("Combat à 0 : l'attaque reste possible (difficulté 10)", () => {
     const zero = { ...rows[0]!, combat: 0 };
     const state = makeState({ characters: [char('h1', 'p1', 'c', { activated: true, statRows: [zero] }), char('e1', 'p2', 'd')] });
-    expect(by(getLegalActions(state, 'h1'), 'ATTACK')).toMatchObject({ available: false, code: 'CHARACTERISTIC_ZERO' });
+    expect(by(getLegalActions(state, 'h1'), 'ATTACK')).toMatchObject({ available: true });
   });
 
   it('action déjà utilisée : attaque refusée, déplacement encore permis', () => {

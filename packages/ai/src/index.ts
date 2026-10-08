@@ -188,7 +188,7 @@ function activate(state: GameState, playerId: string, character: CharacterState)
 /** Destinations atteignables du personnage (le moteur calcule coûts et chemins). */
 function reachableDestinations(state: GameState, characterId: string): { nodeId: NodeId; path: readonly NodeId[]; cost: number }[] {
   return [...reachableNodes(state, characterId).entries()]
-    .filter(([, r]) => r.path.length > 0)
+    .filter(([, r]) => r.path.length > 0 && !r.forcePassage)
     .map(([nodeId, r]) => ({ nodeId, path: r.path, cost: r.cost }));
 }
 

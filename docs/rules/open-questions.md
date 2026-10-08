@@ -127,17 +127,11 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 - **Impact:** coût réel possiblement différent ; déclaration à ajouter avec `turn/`.
 - **Test required:** `movement.spec.ts` (portail), à compléter après confirmation.
 
-## OQ-MOVE-006 — Passage en force (§69) non implémenté (RÉSOLUE)
+## OQ-MOVE-006 — Passage en force (§69) (RÉSOLUE, implémentée)
 
-- **Résolution (product owner) :** le passage en force est un duel de Physique ; reporté à plus tard. Seul le point d'extension (`movement/force-passage.ts`) existe ; ENEMY_OCCUPIED reste le comportement actuel. Coût et contre-attaque restent à préciser pour cette future implémentation.
-- **Historique :** l'interprétation ci-dessous était celle d'avant la décision.
-
-- **Rule:** RULE-MOVE-008
-- **Source:** §68.3, §69
-- **Interpretation (actuelle):** une case ennemie est refusée avec le code ENEMY_OCCUPIED. Seul le point d'extension (`movement/force-passage.ts` : `ForcePassageRequest`, `ForcePassageOutcome`, `ForcePassageResolver`) existe.
-- **Reason:** le duel physique et les événements FORCE_PASSAGE_* / PHYSICAL_DUEL_STARTED / COUNTER_ATTACK_TRIGGERED n'existent pas encore.
-- **Impact:** aucun franchissement d'ennemi possible ; coût en PM de la tentative et contre-attaque à préciser.
-- **Test required:** à écrire avec le système de duel (succès, échec, une seule tentative par activation, PM insuffisants).
+- **Résolution (product owner) :** un personnage ne traverse pas un adversaire, sauf UN passage en force par activation (duel de Physique). Celui qui force lance 4 dés (difficulté 10 − Physique), le défenseur aussi (4 dés, 10 − son Physique) ; chaque succès du défenseur annule un succès de l'initiateur ; il faut au moins 1 succès restant pour traverser.
+- **Implémentation :** une case ennemie n'est traversable que comme case intermédiaire d'un chemin de `MOVE_CHARACTER` (jamais comme arrivée), une seule fois par activation (`turn.forcePassageUsed`, tentative consommée même ratée). Le duel (`movement/force-passage.ts`, `combat/duel.ts`) est résolu quand le déplacement atteint la case ennemie ; événement `FORCE_PASSAGE_RESOLVED`. Succès : le déplacement continue (PM normaux). Échec : le personnage s'arrête sur la case précédente, en ne payant que les cases franchies. Overwatch : jamais d'arrêt sur la case ennemie traversée. `reachableNodes` marque `forcePassage` les cases atteignables seulement par ce biais ; l'IA les ignore.
+- **Reste à préciser :** contre-attaque de l'ennemi en cas d'échec (non implémentée).
 
 ## OQ-DOOR-001 — Coût et compétence d'ouverture d'une porte (RÉSOLUE)
 
@@ -328,7 +322,7 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 ## OQ-OVERWATCH-008 — Reprise de la commande annoncée
 
 - **Rule:** RULE-OVERWATCH-011
-- **Interpretation:** après la réaction, la commande mémorisée (`PendingReaction.resume`) est rejouée telle quelle si l'adversaire est vivant (même chemin de déplacement, mêmes cible et arme) ; si l'adversaire est tué, son activation se termine sans reprise ; si la commande est refusée à la reprise (le tir a modifié l'état : Combat tombé à 0, etc.), elle est abandonnée avec l'événement `OVERWATCH_RESUME_REFUSED` et l'activation continue. Pour le déclencheur (a), le déplacement est tronqué à la case d'arrêt, puis le reste du chemin est rejoué après la réaction (décision du product owner : l'Overwatch interrompt l'action, il ne la fait pas perdre ; si le personnage survit, il poursuit son déplacement puis peut faire son action).
+- **Interpretation:** après la réaction, la commande mémorisée (`PendingReaction.resume`) est rejouée telle quelle si l'adversaire est vivant (même chemin de déplacement, mêmes cible et arme) ; si l'adversaire est tué, son activation se termine sans reprise ; si la commande est refusée à la reprise (le tir a modifié l'état, ex. la cible ou l'arme n'est plus valide), elle est abandonnée avec l'événement `OVERWATCH_RESUME_REFUSED` et l'activation continue. Pour le déclencheur (a), le déplacement est tronqué à la case d'arrêt, puis le reste du chemin est rejoué après la réaction (décision du product owner : l'Overwatch interrompt l'action, il ne la fait pas perdre ; si le personnage survit, il poursuit son déplacement puis peut faire son action).
 - **Reason:** la décision demande la reprise mais pas le cas d'une commande devenue invalide.
 - **Impact:** un joueur peut perdre une action annoncée si le tir l'a rendue impossible.
 - **Test required:** `overwatch.spec.ts` (reprise, cible tuée, reprise refusée).

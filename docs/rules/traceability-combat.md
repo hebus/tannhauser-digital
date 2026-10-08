@@ -8,7 +8,7 @@ Tests dans `packages/core/src/combat/` : `test.spec.ts` (T), `attack.spec.ts` (A
 | RULE-TEST-002 | Succès si dé ≥ difficulté, ≥ 1 succès requis | `resolveTest` (`success`) | T « succès si dé ≥ difficulté », jets min/max |
 | RULE-TEST-003 | 10 naturel = succès, 1 naturel = jamais, avant modificateurs (§71.2) | `resolveTest` | T « 10 naturel », « 1 naturel », A « 10 naturel touche » |
 | RULE-TEST-004 | Dés supplémentaires / modificateur de résultat / succès auto / échec auto distincts (§71.3) | `TestModifiers`, `combineModifiers` | T dés supplémentaires, modificateur, auto, `combineModifiers` |
-| RULE-TEST-005 | Caractéristique 0 = Test impossible (§65.2) | `resolveCharacteristicTest`, rejet `CHARACTERISTIC_ZERO` | T « caractéristique à 0 », A « Combat à 0 » |
+| RULE-TEST-005 | Caractéristique 0 : le Test est lancé normalement, difficulté 10 (seuls les 10 naturels réussissent) ; plus de rejet `CHARACTERISTIC_ZERO` (décision du product owner, remplace §65.2) | `difficultyFor`, `resolveCharacteristicTest` | T « caractéristique à 0 », A « Combat à 0 », « Physique 0 » |
 | RULE-DUEL-001 | Chaque succès du défenseur annule un succès de l'attaquant (§71.4) | `combat/duel.ts` : `resolveDuel`, `rollDuel` | T « Duel » (la défense d'ATTACK utilise `combat/exchange.ts`, RULE-COMBAT-012) |
 | RULE-DUEL-002 | L'attaquant doit garder ≥ 1 succès | `resolveDuel.attackerWins` | T égalité / défenseur supérieur |
 | RULE-COMBAT-001 | Joueur actif et personnage actif, vivant et possédé, cible ennemie vivante ; une action par activation (OQ-COMBAT-007) | `combat/attack.ts` : handler `ATTACK` | A « validation », « mort » |

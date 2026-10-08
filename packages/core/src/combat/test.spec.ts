@@ -14,7 +14,7 @@ describe('resolveTest (§71.1-71.3)', () => {
   it('la réserve par défaut est de 4 dés et la difficulté vaut 10 − caractéristique', () => {
     expect(DEFAULT_TEST_POOL).toBe(4);
     expect(difficultyFor(6)).toBe(4);
-    expect(difficultyFor(0)).toBeNull();
+    expect(difficultyFor(0)).toBe(10);
   });
 
   it('jet minimum : 4 dés à 2 (hors 1 naturel) à difficulté 5 = aucun succès', () => {
@@ -88,13 +88,13 @@ describe('resolveTest (§71.1-71.3)', () => {
     ).toEqual({ extraDice: 3, resultModifier: -1, autoSuccesses: 1, autoFailure: true });
   });
 
-  it('caractéristique à 0 : Test impossible, aucun dé tiré (§65.2)', () => {
-    const rng = new ScriptedRng([]);
-    const r = resolveCharacteristicTest(0, 4, { autoSuccesses: 2 }, rng);
-    expect(r.impossible).toBe(true);
-    expect(r.success).toBe(false);
-    expect(r.dice).toEqual([]);
-    expect(rng.snapshot().draws).toBe(0);
+  it('caractéristique à 0 : 4 dés lancés, difficulté 10 (seuls les 10 naturels réussissent)', () => {
+    const rng = new ScriptedRng([9, 9, 10, 1]);
+    const r = resolveCharacteristicTest(0, 4, {}, rng);
+    expect(r.difficulty).toBe(10);
+    expect(r.dice).toHaveLength(4);
+    expect(r.successes).toBe(1);
+    expect(rng.snapshot().draws).toBe(4);
   });
 
   it('est déterministe pour une seed donnée et n\'altère pas ses entrées', () => {
@@ -154,8 +154,8 @@ describe('Duel (§71.4)', () => {
     expect(res.attacker.successes).toBe(2);
     expect(res.defender.successes).toBe(1);
     expect(res.outcome.remaining).toBe(1);
-    const zero = rollDuel({ characteristic: 7, pool: 1 }, { characteristic: 0, pool: 4 }, new ScriptedRng([9]));
-    expect(zero.defender.impossible).toBe(true);
+    const zero = rollDuel({ characteristic: 7, pool: 1 }, { characteristic: 0, pool: 4 }, new ScriptedRng([9, 9, 9, 9, 9]));
+    expect(zero.defender.successes).toBe(0);
     expect(zero.outcome.attackerWins).toBe(true);
   });
 });

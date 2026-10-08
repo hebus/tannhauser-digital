@@ -31,7 +31,6 @@ export interface DieResult {
 }
 
 export interface TestResult {
-  readonly impossible: boolean;
   readonly difficulty: number;
   readonly basePool: number;
   readonly extraDice: number;
@@ -61,10 +60,9 @@ export function combineModifiers(...list: readonly (TestModifiers | undefined)[]
   return out;
 }
 
-/** Difficulté pour une caractéristique ; `null` si la caractéristique est nulle (§65.2 : Test impossible). */
-export function difficultyFor(characteristic: number): number | null {
-  if (!Number.isFinite(characteristic) || characteristic <= 0) return null;
-  return DIFFICULTY_BASE - characteristic;
+/** Difficulté pour une caractéristique : 10 − valeur (jamais négative : 0 donne 10, il faut des 10 naturels). */
+export function difficultyFor(characteristic: number): number {
+  return DIFFICULTY_BASE - (Number.isFinite(characteristic) ? Math.max(0, characteristic) : 0);
 }
 
 /**
@@ -97,7 +95,6 @@ export function resolveTest(
   const autoSuccesses = Math.max(0, Math.trunc(m.autoSuccesses));
   const successes = m.autoFailure ? 0 : rolledSuccesses + autoSuccesses;
   return {
-    impossible: false,
     difficulty,
     basePool,
     extraDice: Math.trunc(m.extraDice),
@@ -112,29 +109,12 @@ export function resolveTest(
   };
 }
 
-/** Test basé sur une caractéristique : impossible (aucun dé tiré) si elle vaut 0 (§65.2). */
+/** Test basé sur une caractéristique : la valeur abaisse la difficulté ; à 0 on lance quand même la réserve. */
 export function resolveCharacteristicTest(
   characteristic: number,
   pool: number,
   modifiers: TestModifiers,
   rng: RandomSource,
 ): TestResult {
-  const difficulty = difficultyFor(characteristic);
-  if (difficulty === null) {
-    return {
-      impossible: true,
-      difficulty: DIFFICULTY_BASE,
-      basePool: Math.max(0, Math.trunc(pool)),
-      extraDice: 0,
-      poolSize: 0,
-      resultModifier: 0,
-      dice: [],
-      rolledSuccesses: 0,
-      autoSuccesses: 0,
-      autoFailure: false,
-      successes: 0,
-      success: false,
-    };
-  }
-  return resolveTest(pool, difficulty, modifiers, rng);
+  return resolveTest(pool, difficultyFor(characteristic), modifiers, rng);
 }

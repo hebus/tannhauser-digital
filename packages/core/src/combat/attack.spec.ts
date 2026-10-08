@@ -255,20 +255,17 @@ describe('ATTACK : jet de défense', () => {
     expect(hp(res.state, 'e1')).toMatchObject({ health: 0, alive: false });
   });
 
-  it('Physique 0 : aucune défense (pas de jet, pas de DEFENSE_ROLLED), toutes les blessures passent', () => {
+  it("Physique 0 : la défense est lancée avec la difficulté 10 (seul un 10 naturel pare)", () => {
     const zero = { combat: 3, physical: 0, mental: 1, movement: 1 };
     const state = makeState({
       characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'c', { health: 3, statRows: [zero] }), char('e2', 'p2', 'd')],
     });
-    const rng = new ScriptedRng([10, 10, 1, 1]);
+    const rng = new ScriptedRng([10, 10, 1, 1, 9, 9, 10, 1]);
     const res = applyCommand(state, attack(), rng);
-    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED']);
-    expect(res.events[3]).toMatchObject({ wounds: 2, healthLeft: 1 });
-    expect(rng.snapshot().draws).toBe(4);
-    const ev = res.events[1];
-    if (ev?.type !== 'COMBAT_ROLLED' || !ev.log) throw new Error('journal manquant');
-    expect(ev.log.defenseRoll).toBeNull();
-    expect(explainCombat(ev.log)).toContain('Défense impossible (Physique à 0).');
+    expect(types(res.events)).toEqual(['ATTACK_DECLARED', 'COMBAT_ROLLED', 'DEFENSE_ROLLED', 'ATTACK_HIT', 'DAMAGE_APPLIED']);
+    expect(res.events[2]).toMatchObject({ difficulty: 10, successes: 1 });
+    expect(res.events[4]).toMatchObject({ wounds: 1, healthLeft: 2 });
+    expect(rng.snapshot().draws).toBe(8);
   });
 
   it('difficulté de défense = 10 − Physique courant du défenseur blessé', () => {
@@ -458,11 +455,13 @@ describe('ATTACK : validation', () => {
     expect(code(unarmed, attack())).toBe('WEAPON_NOT_OWNED');
   });
 
-  it('Combat à 0 : attaque impossible (§65.2)', () => {
+  it("Combat à 0 : l'attaque est lancée avec la difficulté 10", () => {
     const zero = makeState({
       characters: [char('h1', 'p1', 'a', { statRows: [{ combat: 0, physical: 1, mental: 1, movement: 1 }], health: 1 }), char('e1', 'p2', 'c')],
     });
-    expect(code(zero, attack())).toBe('CHARACTERISTIC_ZERO');
+    const res = applyCommand(zero, attack(), new ScriptedRng([9, 9, 9, 9]));
+    expect(res.accepted).toBe(true);
+    expect(res.events[1]).toMatchObject({ type: 'COMBAT_ROLLED', difficulty: 10, successes: 0 });
   });
 
   it('une commande refusée renvoie l\'état d\'origine et ne consomme aucun dé', () => {

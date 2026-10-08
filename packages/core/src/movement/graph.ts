@@ -1,12 +1,18 @@
 import type { BoardState, NodeId } from '../board/types';
 import type { RuleError } from '../events/events';
-import type { CharacterState, GameState } from '../state/types';
+import type { CharacterId, CharacterState, GameState } from '../state/types';
 
 /** Mode de franchissement d'un pas : arête de plateau ou portail (porte secrète). */
 export type StepKind = 'EDGE' | 'PORTAL';
 
 export type StepCheck =
-  | { readonly ok: true; readonly kind: StepKind; readonly cost: number }
+  | {
+      readonly ok: true;
+      readonly kind: StepKind;
+      readonly cost: number;
+      /** Ennemi occupant la case : le pas n'est possible que par un passage en force (duel de Physique). */
+      readonly crossing?: CharacterId;
+    }
   | { readonly ok: false; readonly error: RuleError };
 
 const fail = (code: string, message: string): StepCheck => ({ ok: false, error: { code, message } });
@@ -39,8 +45,15 @@ export function neighborCandidates(board: BoardState, from: NodeId): readonly No
 /**
  * Vérifie un pas `from` → `to` pour `character` (hors PM disponibles et hors case d'arrivée finale).
  * Ordre des contrôles : existence, liaison (sens unique), porte, case impraticable, ennemi.
+ * Une case ennemie est refusée (ENEMY_OCCUPIED), sauf si `allowEnemy` : le pas est alors accepté et marqué `crossing`.
  */
-export function checkStep(state: GameState, character: CharacterState, from: NodeId, to: NodeId): StepCheck {
+export function checkStep(
+  state: GameState,
+  character: CharacterState,
+  from: NodeId,
+  to: NodeId,
+  allowEnemy = false,
+): StepCheck {
   const board = state.board;
   const target = board.nodes[to];
   if (!target) return fail('UNKNOWN_NODE', `Impossible : la case ${to} n'existe pas.`);
@@ -70,8 +83,8 @@ export function checkStep(state: GameState, character: CharacterState, from: Nod
   }
   const enemy = occupantsOf(state, to, character.id).find((c) => c.playerId !== character.playerId);
   if (enemy) {
-    // Point d'extension : passage en force (§69), voir force-passage.ts et OQ-MOVE-006.
-    return fail('ENEMY_OCCUPIED', `Impossible : la case ${to} est occupée par un ennemi.`);
+    if (!allowEnemy) return fail('ENEMY_OCCUPIED', `Impossible : la case ${to} est occupée par un ennemi.`);
+    return { ok: true, kind, cost: entryCost(board, to), crossing: enemy.id };
   }
   return { ok: true, kind, cost: entryCost(board, to) };
 }

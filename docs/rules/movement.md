@@ -41,14 +41,14 @@ Le plateau est un **graphe** de nœuds. La validation de contenu (ArkType) garan
 
 ## Passage en force
 
-À implémenter plus tard : décision du product owner, c'est un duel de Physique (OQ-MOVE-006). Seul un point d'extension existe ; une case ennemie reste refusée (`ENEMY_OCCUPIED`).
+Un personnage ne traverse pas un adversaire, sauf par UN passage en force par activation : duel de Physique (OQ-MOVE-006). Chacun lance 4 dés (difficulté 10 − Physique) ; chaque succès du défenseur annule un succès de l'initiateur, qui doit en garder au moins 1. Succès : le déplacement continue ; échec : arrêt sur la case précédente. La case ennemie ne peut jamais être la case d'arrivée.
 
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-MOVE-020 | Un personnage en déplacement peut tenter de traverser un nœud occupé par un ennemi via un duel physique. | `FORCE_PASSAGE_STARTED`, `PHYSICAL_DUEL_STARTED` |
 | RULE-MOVE-021 | Succès : le déplacement se poursuit comme permis. Échec : le passage est refusé. | `FORCE_PASSAGE_SUCCESS`, `FORCE_PASSAGE_FAILED` |
 | RULE-MOVE-022 | Selon les conditions de la règle, l'ennemi peut infliger une attaque gratuite de mêlée en cas d'échec. | `COUNTER_ATTACK_TRIGGERED` |
-| RULE-MOVE-023 | Ce n'est pas une phase d'action. La tentative est impossible si les PM restants sont insuffisants et ne peut pas être répétée sur le même nœud dans la même activation. | |
+| RULE-MOVE-023 | Ce n'est pas une phase d'action. Une seule tentative par activation (réussie ou non) ; le chemin doit rester dans le budget de PM. | `FORCE_PASSAGE_RESOLVED` |
 
 ## Plateformes mobiles
 

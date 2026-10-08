@@ -29,6 +29,8 @@ export interface TurnState {
   readonly activeCharacterId?: CharacterId;
   /** Le personnage actif a déjà effectué son unique action de l'activation. */
   readonly actionUsed?: boolean;
+  /** Le personnage actif a déjà tenté son unique passage en force de l'activation (réussi ou non). */
+  readonly forcePassageUsed?: boolean;
   /** Réaction d'Overwatch en attente : suspend l'activation adverse (toutes les autres commandes sont refusées). */
   readonly reaction?: PendingReaction;
   /**

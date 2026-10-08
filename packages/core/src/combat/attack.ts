@@ -2,7 +2,7 @@ import { canSee } from '../board/line-of-sight';
 import type { BoardState, NodeId } from '../board/types';
 import { registerHandler, reject, type HandlerOutcome } from '../engine/apply-command';
 import type { RuleError } from '../events/events';
-import { currentStats, type CharacterState, type GameState } from '../state/types';
+import { type CharacterState, type GameState } from '../state/types';
 import { resolveAttackExchange } from './exchange';
 import type { WeaponDefinition } from './weapons';
 
@@ -44,8 +44,6 @@ export function checkTargeting(
   target: CharacterState,
   weapon: WeaponDefinition,
 ): HandlerOutcome | null {
-  const stats = currentStats(attacker);
-  if (stats.combat <= 0) return reject('CHARACTERISTIC_ZERO', 'Combat à 0 : Test impossible (§65.2).');
   if (weapon.kind === 'CAC') {
     if (!areAdjacent(state.board, attacker.nodeId, target.nodeId)) {
       return reject('NOT_ADJACENT', 'Le corps à corps exige une cible adjacente.');

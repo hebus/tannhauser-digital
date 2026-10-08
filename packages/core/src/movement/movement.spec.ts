@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardBuilder } from '../board/builder';
 import type { BoardState } from '../board/types';
 import { applyCommand } from '../engine/apply-command';
-import { SeededRng } from '../rng/rng';
+import { ScriptedRng, SeededRng } from '../rng/rng';
 import { createInitialState } from '../state/initial-state';
 import type { CharacterState, GameState } from '../state/types';
 import { reachableNodes } from './reachable';
@@ -92,9 +92,11 @@ describe('reachableNodes', () => {
     expect(reachableNodes(makeState(board, [char('h1', 'p1', 'z')]), 'h1').has('a')).toBe(true);
   });
 
-  it('ennemi bloque ; allié traversable mais pas case d\'arrivée', () => {
+  it("ennemi : traversable seulement par passage en force ; allié traversable mais pas case d'arrivée", () => {
     const s = makeState(line().build(), [char('h1', 'p1', 'a'), char('e', 'p2', 'b')]);
-    expect([...reachableNodes(s, 'h1').keys()]).toEqual(['a']);
+    const forced = reachableNodes(s, 'h1');
+    expect([...forced.keys()]).toEqual(['a', 'c', 'd']);
+    expect(forced.get('c')).toMatchObject({ forcePassage: true });
     const s2 = makeState(line().build(), [char('h1', 'p1', 'a'), char('f', 'p1', 'b')]);
     const r = reachableNodes(s2, 'h1');
     expect(r.has('b')).toBe(false);
@@ -292,5 +294,61 @@ describe('OPEN_DOOR / CLOSE_DOOR', () => {
     const s = makeState(board('OPEN'), [char('h1', 'p1', 'a', 3)]);
     const res = applyCommand(s, { type: 'CLOSE_DOOR', playerId: 'p2', characterId: 'h1', doorId: 'D' }, new SeededRng(3));
     expect(res.errors[0]!.code).toBe('NOT_ACTIVE_PLAYER');
+  });
+});
+
+describe('passage en force', () => {
+  // a - b - c - d : l'ennemi est en c ; h1 (Physique 3 → difficulté 7) part de a.
+  const scene = (extra: Partial<CharacterState> = {}) => makeState(line().build(), [char('h1', 'p1', 'a', 4, extra), char('en', 'p2', 'c')]);
+  const force = (s: GameState, rolls: number[], path = ['b', 'c', 'd']) =>
+    applyCommand(s, { type: 'MOVE_CHARACTER', playerId: 'p1', characterId: 'h1', path }, new ScriptedRng(rolls));
+
+  it('refuse une case ennemie comme arrivée, ou une seconde traversée', () => {
+    expect(validatePath(scene(), 'h1', ['b', 'c'])).toMatchObject({ ok: false, errors: [{ code: 'ENEMY_OCCUPIED' }] });
+    const board = new BoardBuilder().node('a', ['r']).node('b', ['r']).node('c', ['r']).node('d', ['r']).node('e', ['r'])
+      .edge('a', 'b').edge('b', 'c').edge('c', 'd').edge('d', 'e').build();
+    const two = makeState(board, [char('h1', 'p1', 'a', 5), char('e1', 'p2', 'b'), char('e2', 'p2', 'd')]);
+    expect(validatePath(two, 'h1', ['b', 'c', 'd', 'e'])).toMatchObject({ ok: false, errors: [{ code: 'ENEMY_OCCUPIED' }] });
+  });
+
+  it("succès : le déplacement traverse l'ennemi et paie chaque case", () => {
+    // 4 dés du déplaçant : 10,10,10,1 → 3 succès ; 4 dés de l'ennemi : 1,1,1,1 → 0.
+    const r = force(scene(), [10, 10, 10, 1, 1, 1, 1, 1]);
+    expect(r.accepted).toBe(true);
+    expect(r.events[0]).toMatchObject({ type: 'FORCE_PASSAGE_RESOLVED', successes: 3, defenderSuccesses: 0, success: true, difficulty: 7 });
+    expect(r.state.characters.find((c) => c.id === 'h1')).toMatchObject({ nodeId: 'd', movementLeft: 1 });
+    expect(r.state.turn.forcePassageUsed).toBe(true);
+  });
+
+  it('échec (succès annulés) : arrêt sur la case précédente, PM des cases franchies seulement', () => {
+    // 2 succès contre 2 succès : annulés.
+    const r = force(scene(), [10, 10, 1, 1, 10, 10, 1, 1]);
+    expect(r.accepted).toBe(true);
+    expect(r.events[0]).toMatchObject({ type: 'FORCE_PASSAGE_RESOLVED', success: false });
+    expect(r.state.characters.find((c) => c.id === 'h1')).toMatchObject({ nodeId: 'b', movementLeft: 3 });
+    expect(r.state.turn.forcePassageUsed).toBe(true);
+  });
+
+  it('une seule tentative par activation, même ratée', () => {
+    const failed = force(scene(), [1, 1, 1, 1, 10, 10, 10, 10]);
+    expect(failed.state.characters.find((c) => c.id === 'h1')!.nodeId).toBe('b');
+    expect(validatePath(failed.state, 'h1', ['c', 'd'])).toMatchObject({ ok: false, errors: [{ code: 'ENEMY_OCCUPIED' }] });
+  });
+
+  it('échec dès la case adjacente : aucun mouvement mais la tentative est consommée', () => {
+    const s = makeState(line().build(), [char('h1', 'p1', 'b', 4), char('en', 'p2', 'c')]);
+    const r = applyCommand(s, { type: 'MOVE_CHARACTER', playerId: 'p1', characterId: 'h1', path: ['c', 'd'] }, new ScriptedRng([1, 1, 1, 1, 10, 10, 10, 10]));
+    expect(r.accepted).toBe(true);
+    expect(r.events.map((e) => e.type)).toEqual(['FORCE_PASSAGE_RESOLVED']);
+    expect(r.state.characters.find((c) => c.id === 'h1')).toMatchObject({ nodeId: 'b', movementLeft: 4 });
+    expect(r.state.turn.forcePassageUsed).toBe(true);
+  });
+
+  it("reachableNodes : case derrière l'ennemi marquée forcePassage, plus rien une fois la tentative utilisée", () => {
+    const r = reachableNodes(scene(), 'h1');
+    expect(r.get('d')).toMatchObject({ cost: 3, path: ['b', 'c', 'd'], forcePassage: true });
+    expect(r.has('c')).toBe(false);
+    const used = { ...scene(), turn: { ...scene().turn, forcePassageUsed: true } };
+    expect(reachableNodes(used, 'h1').has('d')).toBe(false);
   });
 });

@@ -101,8 +101,6 @@ export function explainCombat(log: CombatLog): string[] {
     const r = log.defenseRoll;
     lines.push(`Défense de ${r.defenderId} : Physique ${r.physicalValue}, difficulté ${r.difficulty}, ${r.poolSize} dé(s).`);
     r.dice.forEach((d, i) => lines.push(`Dé de défense ${i + 1} : ${d.natural} → ${OUTCOME_LABEL[d.outcome]}.`));
-  } else if (log.successes >= 1) {
-    lines.push('Défense impossible (Physique à 0).');
   }
   if (log.defense) {
     lines.push(`Parades : ${log.defense.defenderSuccesses} sur ${log.defense.attackerSuccesses} blessure(s) → ${log.defense.remaining} non parée(s).`);
