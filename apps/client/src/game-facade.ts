@@ -132,6 +132,15 @@ export class GameFacade {
     return result;
   }
 
+  /**
+   * Éditeur : remplace l'état par une version retouchée à la main (placement, santé…), HORS règles et sans événement.
+   * Les écouteurs sont prévenus pour redessiner ; l'historique et le RNG sont conservés tels quels.
+   */
+  replaceState(next: GameState): void {
+    this.current = next;
+    for (const l of this.listeners) l([], next);
+  }
+
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

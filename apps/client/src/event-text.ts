@@ -15,6 +15,8 @@ export function describeEvent(e: GameEvent): string | null {
       return `${e.characterId} est activé.`;
     case 'CHARACTER_MOVED':
       return `${e.characterId} se déplace (${e.cost} PM) → ${e.path[e.path.length - 1]}.`;
+    case 'FORCE_PASSAGE_RESOLVED':
+      return `Passage en force : ${e.characterId} [${e.dice.join(', ')}] → ${e.successes} succès contre ${e.enemyId} [${e.defenderDice.join(', ')}] → ${e.defenderSuccesses} : ${e.success ? 'il passe' : 'bloqué'}.`;
     case 'CHARACTER_ACTIVATION_ENDED':
       return `${e.characterId} termine son activation.`;
     case 'ATTACK_DECLARED':

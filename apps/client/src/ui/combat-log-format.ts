@@ -67,6 +67,19 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
       return info('log.event.OVERWATCH_RESUME_REFUSED', { command: e.command, message: e.message });
     case 'OVERWATCH_RESOLVED':
       return info(e.fired ? 'log.event.OVERWATCH_RESOLVED.fired' : 'log.event.OVERWATCH_RESOLVED.declined', { overwatcher: labels.character(e.overwatcherId) });
+    case 'FORCE_PASSAGE_RESOLVED': {
+      const remaining = Math.max(0, e.successes - e.defenderSuccesses);
+      return {
+        kind: 'combat',
+        tone: e.success ? 'hit' : 'miss',
+        text: t(e.success ? 'log.event.FORCE_PASSAGE.success' : 'log.event.FORCE_PASSAGE.failure', { character: labels.character(e.characterId), enemy: labels.character(e.enemyId) }),
+        lines: [
+          `${labels.character(e.characterId)} : difficulté ${e.difficulty}, dés [${e.dice.join(', ')}] → ${e.successes} succès.`,
+          `${labels.character(e.enemyId)} : difficulté ${e.defenderDifficulty}, dés [${e.defenderDice.join(', ')}] → ${e.defenderSuccesses} succès (annulent autant de succès).`,
+          `Succès restants : ${remaining} (au moins 1 requis pour passer).`,
+        ],
+      };
+    }
     case 'DOOR_OPENED':
       return info('log.event.DOOR_OPENED', { character: labels.character(e.characterId), door: e.doorId });
     case 'DOOR_CLOSED':

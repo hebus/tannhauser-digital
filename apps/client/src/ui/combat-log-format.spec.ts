@@ -91,6 +91,12 @@ describe('journal de combat', () => {
   });
 
   it('événements non-combat : une ligne chacun, bruit omis', () => {
+    const forced = formatEvent(
+      { type: 'FORCE_PASSAGE_RESOLVED', characterId: 'char.alpha.hero', enemyId: 'char.alpha.hero', nodeId: 'c', dice: [10, 3, 4, 1], difficulty: 7, successes: 1, defenderDice: [2, 2, 2, 2], defenderDifficulty: 7, defenderSuccesses: 0, success: true },
+      labels,
+    );
+    expect(forced?.text).toContain('force le passage');
+    expect(forced?.lines.at(-1)).toBe('Succès restants : 1 (au moins 1 requis pour passer).');
     expect(formatEvent({ type: 'CHARACTER_MOVED', characterId: 'char.alpha.hero', path: ['a', 'b'], cost: 1 }, labels)?.text).toBe('Héros Alpha se déplace (1 PM) vers b.');
     expect(formatEvent({ type: 'TURN_STARTED', turn: 3 }, labels)).toMatchObject({ kind: 'turn', text: 'Tour 3.' });
     expect(formatEvent({ type: 'OVERWATCH_RESOLVED', overwatcherId: 'char.beta.hero', fired: false }, labels)?.text).toBe('Héros Bêta renonce à tirer.');

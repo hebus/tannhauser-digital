@@ -17,6 +17,7 @@ import {
 } from '@tannhauser/renderer';
 import { getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
+import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
 import { startAiDriver } from './ai-driver';
 import type { GameFacade } from './game-facade';
 import { bannerText } from './ui/banner-text';
@@ -197,6 +198,15 @@ async function main(): Promise<void> {
     overlays.showPath(preview, textScaleForZoom(camera.zoom));
   }
 
+  let editor = false;
+  let editorPick: string | null = null;
+  const refreshEditor = (): void => {
+    if (!editor) return;
+    const picked = game.state.characters.find((c) => c.id === editorPick);
+    highlight.show(picked ? freeNodes(game.state, picked.id) : []);
+    overlays.showTargets(picked ? [picked.nodeId] : []);
+    overlays.showPath(null, 1);
+  };
   const refresh = () => {
     const s = game.state;
     characters.update(s);
@@ -216,7 +226,8 @@ async function main(): Promise<void> {
       s.phase === 'FINISHED'
         ? `Partie terminée : victoire de ${s.victory.winnerId}`
         : `Tour ${s.turn.number} · joue ${activePlayer()} · ${cp}${activeText}${phaseText}${reaction}`;
-    if (statusEl) statusEl.textContent = text;
+    if (statusEl) statusEl.textContent = editor ? `ÉDITEUR · ${text}` : text;
+    refreshEditor();
   };
 
   let shown: GameState = game.state;
@@ -275,7 +286,35 @@ async function main(): Promise<void> {
     return best?.id ?? null;
   };
 
+  // Éditeur (touche X) : retouches d'état hors règles pour tester des configurations ; aucune commande du moteur.
+  const applyEdit = (result: EditResult): void => {
+    log(`${result.ok ? '✎' : '✖'} ${result.message}`);
+    if (result.ok) game.replaceState(result.state);
+  };
+  const onEditorClick = (nodeId: string): void => {
+    const here = game.state.characters.find((c) => c.alive && c.nodeId === nodeId);
+    if (here) editorPick = here.id;
+    else if (editorPick) applyEdit(relocateCharacter(game.state, editorPick, nodeId));
+    refreshEditor();
+  };
+  const onEditorKey = (key: string): boolean => {
+    if (!editorPick) return false;
+    const edits: Record<string, () => EditResult> = {
+      '+': () => adjustHealth(game.state, editorPick!, +1),
+      '=': () => adjustHealth(game.state, editorPick!, +1),
+      '-': () => adjustHealth(game.state, editorPick!, -1),
+      j: () => switchOwner(game.state, editorPick!),
+      n: () => resetActivation(game.state, editorPick!),
+    };
+    const run = edits[key];
+    if (!run) return false;
+    applyEdit(run());
+    refreshEditor();
+    return true;
+  };
+
   const onNodeClick = (nodeId: string) => {
+    if (editor) return onEditorClick(nodeId);
     const s = game.state;
     const player = activePlayer();
     if (!player || s.phase === 'FINISHED' || s.turn.reaction) return;
@@ -398,6 +437,18 @@ async function main(): Promise<void> {
     if (key === ' ') {
       e.preventDefault();
       presentation.skip();
+      return;
+    }
+    if (key === 'x') {
+      editor = !editor;
+      editorPick = null;
+      refresh();
+      refreshEditor();
+      presentation.notify(t('banner.notice.editor', { state: t(editor ? 'banner.notice.on' : 'banner.notice.off') }));
+      return;
+    }
+    if (editor && onEditorKey(key)) {
+      e.preventDefault();
       return;
     }
     if (key === 'l') {
