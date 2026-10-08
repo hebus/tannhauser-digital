@@ -31,7 +31,7 @@ const deepFreeze = <T>(o: T): T => {
 
 describe('applyCommand / START_GAME', () => {
   it('démarre la partie, attribue les PC et désigne le joueur d\'initiative', () => {
-    const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([3, 8]));
+    const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([8, 3]));
     expect(res.accepted).toBe(true);
     expect(res.state.phase).toBe('OVERWATCH');
     expect(res.state.turn).toEqual({ number: 1, initiativePlayerId: 'p2', activePlayerId: 'p2', overwatchPasses: 0, overwatchDecisions: 0 });
@@ -43,7 +43,7 @@ describe('applyCommand / START_GAME', () => {
   });
 
   it('relance en cas d\'égalité à l\'initiative', () => {
-    const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([5, 5, 2, 9]));
+    const res = applyCommand(makeState(), { type: 'START_GAME' }, new ScriptedRng([5, 5, 9, 2]));
     expect(res.state.turn.initiativePlayerId).toBe('p2');
   });
 

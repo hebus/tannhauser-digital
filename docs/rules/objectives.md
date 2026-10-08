@@ -17,7 +17,7 @@
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-OBJ-010 | Un personnage adjacent à un drapeau peut le récupérer en phase d'action si aucun ennemi n'est adjacent. | `FLAG_CAPTURED` |
-| RULE-OBJ-011 | Un personnage blessé ne peut pas manipuler un drapeau. | |
+| RULE-OBJ-011 | Un personnage blessé manipule un drapeau (récupérer, porter, planter) comme un personnage non blessé. | |
 | RULE-OBJ-012 | Quand un personnage porteur est éliminé, son drapeau est déposé sur son nœud. | |
 | RULE-OBJ-013 | Planter un drapeau ennemi : phase d'action depuis un nœud adjacent à un point d'entrée ennemi sans ennemi adjacent à ce point. Plusieurs drapeaux peuvent coexister sur un point d'entrée. | `FLAG_PLANTED` |
 | RULE-OBJ-014 | Le jeton d'objectif d'un personnage éliminé est retiré de la chaîne de commandement. | |

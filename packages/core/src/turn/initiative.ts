@@ -7,7 +7,8 @@ export interface InitiativeResult {
 }
 
 /**
- * Initiative (§66.2) : 1d10 par joueur ; en cas d'égalité, seuls les ex æquo relancent.
+ * Initiative (§66.2) : 1d10 par joueur ; celui qui a PERDU l'initiative (le jet le plus bas) commence ; en cas d'égalité,
+ * seuls les ex æquo relancent. `winnerId` désigne donc le joueur qui commence (décision d'Overwatch puis première activation).
  * Aucun bonus applicable n'est défini à ce stade (cf. open-questions).
  */
 export function rollInitiative(playerIds: readonly PlayerId[], rng: RandomSource): InitiativeResult {
@@ -16,7 +17,7 @@ export function rollInitiative(playerIds: readonly PlayerId[], rng: RandomSource
   let contenders = [...playerIds];
   for (;;) {
     for (const id of contenders) rolls[id] = rng.nextInt(1, 10);
-    const best = Math.max(...contenders.map((id) => rolls[id]!));
+    const best = Math.min(...contenders.map((id) => rolls[id]!));
     contenders = contenders.filter((id) => rolls[id] === best);
     if (contenders.length === 1) return { rolls, winnerId: contenders[0]! };
   }

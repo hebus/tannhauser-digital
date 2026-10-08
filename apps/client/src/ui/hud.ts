@@ -162,7 +162,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       {
         class: `hud-btn${unavailable ? ' is-unavailable' : ''}`,
         // aria-disabled (et non disabled) : reste focalisable au clavier, l'activation explique le refus.
-        attrs: { type: 'button', 'data-fid': `action-${row.id}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? row.reason : row.label, 'aria-describedby': unavailable ? `reason-${row.id}` : undefined },
+        attrs: { type: 'button', 'data-fid': `action-${row.id}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : row.label, 'aria-describedby': unavailable ? `reason-${row.id}` : undefined },
         on: { click: onClick },
       },
       h('span', { class: 'hud-btn-label' }, h('span', { text: row.label }), row.key ? h('kbd', { text: row.key, attrs: { title: t('actions.key', { key: row.key }) } }) : null),
@@ -298,7 +298,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
             'button',
             {
               class: `hud-btn${unavailable ? ' is-unavailable' : ''}`,
-              attrs: { type: 'button', 'data-fid': `select-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? r.reason : r.name },
+              attrs: { type: 'button', 'data-fid': `select-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : r.name },
               on: {
                 click: () => {
                   if (unavailable) toast(r.reason ?? '', 'error');
@@ -315,7 +315,8 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       actionsPanel.append(actionButton(pass, () => runPassWithoutActive()));
       return;
     }
-    const rows = actionRows(state, characterId);
+    // Seules les actions réalisables sont proposées.
+    const rows = actionRows(state, characterId).filter((row) => row.available);
     const list = h('div', { class: 'hud-action-list' }, ...rows.map((row) => actionButton(row, () => runAction(row.id))));
     const menuEl = renderMenu(state, labels, characterId);
     // Le sous-menu s'ouvre au-dessus de la liste : il reste visible sans faire défiler le panneau.
@@ -339,7 +340,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
           'button',
           {
             class: `hud-btn${unavailable ? ' is-unavailable' : ''}${r.placed ? ' is-placed' : ''}`,
-            attrs: { type: 'button', 'data-fid': `place-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? r.reason : r.name },
+            attrs: { type: 'button', 'data-fid': `place-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : r.name },
             on: {
               click: () => {
                 if (unavailable) toast(r.reason ?? '', 'error');
@@ -362,7 +363,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         'button',
         {
           class: `hud-btn hud-btn-primary${p.passAvailable ? '' : ' is-unavailable'}`,
-          attrs: { type: 'button', 'data-fid': 'pass-overwatch', 'aria-disabled': p.passAvailable ? undefined : 'true', title: p.passReason ?? t('placement.passHint') },
+          attrs: { type: 'button', 'data-fid': 'pass-overwatch', 'aria-disabled': p.passAvailable ? undefined : 'true', title: p.passAvailable ? t('placement.passHint') : undefined },
           on: {
             click: () => {
               if (!p.passAvailable) toast(p.passReason ?? '', 'error');

@@ -117,12 +117,10 @@ describe('récupérer un drapeau', () => {
     expect(capture(result.state).errors[0]!.code).toBe('ACTION_ALREADY_USED');
   });
 
-  it('refuse : son propre drapeau, trop loin, blessé, ennemi adjacent', () => {
+  it('refuse : son propre drapeau, trop loin, ennemi adjacent', () => {
     expect(capture(base(), 'f.p1').errors[0]!.code).toBe('OWN_FLAG');
     const far = base();
     expect(capture(withFlags(far, [{ id: 'f.p2', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'O6' } }])).errors[0]!.code).toBe('FLAG_NOT_ADJACENT');
-    const wounded = base();
-    expect(capture({ ...wounded, characters: wounded.characters.map((c) => (c.id === 'c1' ? { ...c, health: 1 } : c)) }).errors[0]!.code).toBe('WOUNDED_CANNOT_HANDLE_FLAG');
     const enemy = base();
     expect(capture({ ...enemy, characters: enemy.characters.map((c) => (c.id === 'c2' ? { ...c, nodeId: 'O2' } : c)) }).errors[0]!.code).toBe('ENEMY_ADJACENT');
   });

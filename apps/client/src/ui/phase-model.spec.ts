@@ -27,24 +27,24 @@ setLocale('fr');
 const statuses = (s: GameState, recent: GameEvent[] = []) => phaseModel(s, createLabeler(s), recent).steps.map((x) => `${x.id}:${x.status}`);
 
 describe('frise des phases : étapes déduites de GameState.phase', () => {
-  it('ordre réel du tour : refresh, initiative, overwatch, activation', () => {
-    expect(PHASE_STEP_IDS).toEqual(['refresh', 'initiative', 'overwatch', 'activation']);
+  it('étapes affichées : overwatch puis activation (refresh et initiative sont instantanées, non affichées)', () => {
+    expect(PHASE_STEP_IDS).toEqual(['overwatch', 'activation']);
   });
 
-  it('phase d’Overwatch : refresh et initiative passées, Overwatch en cours, activation à venir', () => {
+  it('phase d’Overwatch : Overwatch en cours, activation à venir', () => {
     const m = phaseModel(game('OVERWATCH'), createLabeler(game('OVERWATCH')));
-    expect(statuses(game('OVERWATCH'))).toEqual(['refresh:done', 'initiative:done', 'overwatch:current', 'activation:upcoming']);
+    expect(statuses(game('OVERWATCH'))).toEqual(['overwatch:current', 'activation:upcoming']);
     expect(m.currentId).toBe('overwatch');
     expect(m.steps.find((x) => x.status === 'current')?.statusText).toBe('en cours');
   });
 
-  it('phase d’activation : trois premières passées, activation en cours', () => {
-    expect(statuses(game('ACTIVATION'))).toEqual(['refresh:done', 'initiative:done', 'overwatch:done', 'activation:current']);
+  it('phase d’activation : Overwatch passée, activation en cours', () => {
+    expect(statuses(game('ACTIVATION'))).toEqual(['overwatch:done', 'activation:current']);
   });
 
   it('phases transitoires, fin de tour, partie terminée, mise en place', () => {
-    expect(statuses(game('REFRESH'))).toEqual(['refresh:current', 'initiative:upcoming', 'overwatch:upcoming', 'activation:upcoming']);
-    expect(statuses(game('INITIATIVE'))).toEqual(['refresh:done', 'initiative:current', 'overwatch:upcoming', 'activation:upcoming']);
+    expect(statuses(game('REFRESH'))).toEqual(['overwatch:upcoming', 'activation:upcoming']);
+    expect(statuses(game('INITIATIVE'))).toEqual(['overwatch:upcoming', 'activation:upcoming']);
     expect(statuses(game('END_OF_TURN')).every((s) => s.endsWith(':done'))).toBe(true);
     expect(phaseModel(game('FINISHED'), createLabeler(game('FINISHED'))).currentId).toBeNull();
     expect(statuses(game('SETUP')).every((s) => s.endsWith(':upcoming'))).toBe(true);
@@ -64,21 +64,17 @@ describe('frise des phases : étapes déduites de GameState.phase', () => {
     }
   });
 
-  it('précisions lues dans l’état : joueur d’initiative, Overwatch posés ; fresh d’après les événements récents', () => {
+  it('précisions lues dans l’état : Overwatch posés ; fresh d’après les événements récents', () => {
     const s = game('OVERWATCH', { initiativePlayerId: 'p2' }, [char('h1', 'p1', 'a', { overwatch: true }), char('e1', 'p2', 'b')]);
-    const m = phaseModel(s, createLabeler(s), [{ type: 'INITIATIVE_ROLLED', rolls: {}, winnerId: 'p2' }]);
-    expect(m.steps.find((x) => x.id === 'initiative')).toMatchObject({ detail: 'Joueur 2 d’abord', fresh: true });
-    expect(m.steps.find((x) => x.id === 'overwatch')).toMatchObject({ detail: '1 en Overwatch', fresh: false });
+    const m = phaseModel(s, createLabeler(s), [{ type: 'OVERWATCH_PLACED', characterId: 'h1', playerId: 'p1' } as GameEvent]);
+    expect(m.steps.find((x) => x.id === 'overwatch')).toMatchObject({ detail: '1 en Overwatch', fresh: true });
     expect(m.steps.find((x) => x.id === 'activation')?.detail).toBeNull();
   });
 
-  it('l’étape Initiative nomme le gagnant et donne son marqueur (index du joueur), sans afficher les jets (ils sont dans le journal)', () => {
-    const base = game('OVERWATCH', { initiativePlayerId: 'p2' }, [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')]);
-    const s = { ...base, history: [{ type: 'TURN_STARTED', turn: 1 }, { type: 'INITIATIVE_ROLLED', rolls: { p1: 3, p2: 8 }, winnerId: 'p2' }] } as typeof base;
-    const step = phaseModel(s, createLabeler(s)).steps.find((x) => x.id === 'initiative')!;
-    expect(step.detail).toBe('Joueur 2 d’abord');
-    expect(step.detail).not.toMatch(/jets|8/);
-    expect(step.detailPlayerIndex).toBe(1);
+  it('la pastille d’initiative nomme le joueur qui commence et donne son marqueur (index du joueur), sans afficher les jets', () => {
+    const s = game('OVERWATCH', { initiativePlayerId: 'p2' }, [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')]);
+    const { initiative } = phaseModel(s, createLabeler(s));
+    expect(initiative).toMatchObject({ decided: true, playerName: 'Joueur 2', playerIndex: 1 });
   });
 });
 
@@ -118,8 +114,8 @@ describe('bandeau : numéro de tour, sous-ligne, pastille d’initiative, capsul
   });
 
   it('sous-ligne : seulement sur l’étape courante, selon la phase', () => {
-    expect(subline(game('REFRESH'))).toBe('PC rendus');
-    expect(subline(game('INITIATIVE', { initiativePlayerId: null }))).toBe('Jet en cours');
+    expect(subline(game('REFRESH'))).toBeNull();
+    expect(subline(game('INITIATIVE', { initiativePlayerId: null }))).toBeNull();
     expect(subline(game('OVERWATCH', { activePlayerId: 'p1' }))).toBe('Joueur 1 décide');
     expect(subline(game('ACTIVATION', { activePlayerId: 'p2' }))).toBe('Joueur 2 joue');
     expect(subline(game('ACTIVATION', { activePlayerId: 'p1', reaction: { overwatcherId: 'e1', targetId: 'h1', forPlayerId: 'p2' } }))).toBe('Joueur 2 décide');
@@ -129,9 +125,9 @@ describe('bandeau : numéro de tour, sous-ligne, pastille d’initiative, capsul
     expect(phaseModel(game('SETUP'), createLabeler(game('SETUP'))).steps.every((x) => x.subline === null)).toBe(true);
   });
 
-  it('numéros d’ordre des étapes : 1 à 4', () => {
+  it('numéros d’ordre des étapes : 1 et 2', () => {
     const s = game('OVERWATCH');
-    expect(phaseModel(s, createLabeler(s)).steps.map((x) => x.number)).toEqual([1, 2, 3, 4]);
+    expect(phaseModel(s, createLabeler(s)).steps.map((x) => x.number)).toEqual([1, 2]);
   });
 
   it('initiative : « à venir » avant le tirage, gagnant (sans les jets) ensuite, et pendant tout le tour', () => {
@@ -194,7 +190,7 @@ describe('bandeau : numéro de tour, sous-ligne, pastille d’initiative, capsul
       for (const phase of ['SETUP', 'REFRESH', 'INITIATIVE', 'OVERWATCH', 'ACTIVATION', 'END_OF_TURN', 'FINISHED'] as const) {
         const s = withRolls(game(phase));
         const m = phaseModel(s, createLabeler(s));
-        expect(m.steps).toHaveLength(4);
+        expect(m.steps).toHaveLength(2);
         expect(m.players).toHaveLength(2);
         expect(m.context).not.toBe('');
         expect(JSON.stringify(m)).not.toMatch(/\{\w+\}|phase\.|status\./);

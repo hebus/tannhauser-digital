@@ -123,7 +123,7 @@ const endTurn = (playerId: string): GameCommand => ({ type: 'END_TURN', playerId
 describe('tour complet : start → select → move → attack → end', () => {
   it('enchaîne les commandes avec les contrôles d\'activation cohérents', () => {
     // Initiative : p1 = 9, p2 = 2 ; attaque : 4 x 10 naturel (4 blessures) ; défense : 4 x 1 (aucune parade).
-    const rng = new ScriptedRng([9, 2, 10, 10, 10, 10, 1, 1, 1, 1]);
+    const rng = new ScriptedRng([2, 9, 10, 10, 10, 10, 1, 1, 1, 1]);
     const d = driver(start(rng, [character('h1', 'p1', 'a'), character('h2', 'p2', 'c')], true), rng);
     expect(d.state.turn.activePlayerId).toBe('p1');
 
@@ -141,7 +141,7 @@ describe('tour complet : start → select → move → attack → end', () => {
   });
 
   it('rejette un déplacement sans activation en cours pour un personnage déjà activé', () => {
-    const rng = new ScriptedRng([9, 2]);
+    const rng = new ScriptedRng([2, 9]);
     const d = driver(start(rng, [character('h1', 'p1', 'a'), character('h2', 'p2', 'c')]), rng);
     d.run(select('p1', 'h1'));
     d.run(endTurn('p1'));
@@ -149,7 +149,7 @@ describe('tour complet : start → select → move → attack → end', () => {
   });
 
   it('refuse une attaque sans SELECT_CHARACTER préalable', () => {
-    const rng = new ScriptedRng([9, 2]);
+    const rng = new ScriptedRng([2, 9]);
     const d = driver(start(rng, [character('h1', 'p1', 'a'), character('h2', 'p2', 'b')]), rng);
     d.refuse(shoot('p1', 'h1', 'h2'), 'NOT_ACTIVE_CHARACTER');
   });
@@ -158,7 +158,7 @@ describe('tour complet : start → select → move → attack → end', () => {
 describe('parcours move → action → move', () => {
   it('déplacement, attaque (action unique), puis déplacement avec les PM restants', () => {
     // Initiative p1 ; attaque [10,10,1,1] = 2 blessures ; défense [5,1,1,1] (difficulté 5) = 1 parée -> 1 dégât.
-    const rng = new ScriptedRng([9, 2, 10, 10, 1, 1, 5, 1, 1, 1]);
+    const rng = new ScriptedRng([2, 9, 10, 10, 1, 1, 1, 5, 1, 1]);
     const d = driver(start(rng, [character('h1', 'p1', 'a'), character('h2', 'p2', 'c', 3)], true), rng);
 
     d.run(select('p1', 'h1'));
@@ -197,7 +197,7 @@ describe('parcours Overwatch complet', () => {
     // Initiative : p2 = 9 gagne (p1 = 2). h1 a 2 de santé, h2 (en e) n'en a qu'une.
     // Tir de réaction de h2 : attaque [10,10,1,1] (2 blessures), défense de h1 [10,1,1,1] (1 parée) -> 1 dégât.
     // Attaque de h1 : [10,10,10,10] ; défense de h2 [1,1,1,1] -> h2 meurt.
-    const rng = new ScriptedRng([2, 9, 10, 10, 1, 1, 10, 1, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
+    const rng = new ScriptedRng([9, 2, 10, 10, 1, 1, 1, 10, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
     const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e')], false, [place('p2', 'h2')]), rng);
     expect(d.hero('h2')).toMatchObject({ overwatch: true, activated: true });
     expect(d.state.players.find((p) => p.id === 'p2')?.commandPoints).toBe(1);
@@ -240,7 +240,7 @@ describe('parcours Overwatch complet', () => {
 
   it('phase d\'Overwatch : alternance stricte, passe puis placement adverse, deux passes consécutives, replay identique', () => {
     const play = () => {
-      const rng = new ScriptedRng([2, 9]);
+      const rng = new ScriptedRng([9, 2]);
       const initial = createInitialState({
         gameId: 'it',
         scenarioId: 'it',
@@ -286,7 +286,7 @@ describe('parcours Overwatch complet', () => {
   it('adversaire déjà en vue qui tente une attaque : la réaction passe avant, puis l\'attaque annoncée est exécutée', () => {
     // Initiative p2 = 9. h2 (en e, Overwatch) voit d ; h1 est en d (vu). h1 annonce une attaque sur h2.
     // Réaction : h2 tire [1,1,1,1] (raté). Puis l'attaque de h1 : [10,10,10,10] ; défense [1,1,1,1] -> h2 meurt.
-    const rng = new ScriptedRng([2, 9, 1, 1, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
+    const rng = new ScriptedRng([9, 2, 1, 1, 1, 1, 10, 10, 10, 10, 1, 1, 1, 1]);
     const d = driver(start(rng, [character('h1', 'p1', 'd', 2), character('h2', 'p2', 'e')], false, [place('p2', 'h2')]), rng);
     d.run(select('p1', 'h1'));
     const announce = d.run(shoot('p1', 'h1', 'h2'));
@@ -306,7 +306,7 @@ describe('parcours Overwatch complet', () => {
 
   it('renoncer : le mouvement reprend, l\'Overwatch reste, et il est retiré au refresh du tour suivant (PC rendus)', () => {
     // Tour 1 : p2 gagne. Tour 2 : initiative [4, 3] -> p1 gagne.
-    const rng = new ScriptedRng([2, 9, 4, 3]);
+    const rng = new ScriptedRng([9, 2, 3, 4]);
     const d = driver(start(rng, [character('h1', 'p1', 'a', 2), character('h2', 'p2', 'e', 2), character('h3', 'p2', 'a', 2)], false, [place('p2', 'h2')]), rng);
     // p2 a encore h3 à activer : il commence.
     d.run(select('p2', 'h3'));

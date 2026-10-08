@@ -3,7 +3,7 @@ import { areAdjacent } from '../combat/attack';
 import type { GameEvent, RuleError } from '../events/events';
 import { checkActor } from '../movement/handlers';
 import type { CharacterState, FlagState, GameState } from '../state/types';
-import { FLAGS_PER_PLAYER, flagsOf, isCaptureTheFlag, isWounded, objectiveNodes } from './state';
+import { FLAGS_PER_PLAYER, flagsOf, isCaptureTheFlag, objectiveNodes } from './state';
 
 const fail = (code: string, message: string): { ok: false; error: RuleError } => ({ ok: false, error: { code, message } });
 
@@ -25,14 +25,13 @@ function checkFlagActor(state: GameState, playerId: string, characterId: string,
   const { character } = actor;
   if (state.turn.activeCharacterId !== character.id) return fail('NOT_ACTIVE_CHARACTER', "Ce personnage n'est pas en cours d'activation.");
   if (state.turn.actionUsed) return fail('ACTION_ALREADY_USED', 'Une seule action par activation : elle est déjà utilisée.');
-  if (isWounded(character)) return fail('WOUNDED_CANNOT_HANDLE_FLAG', 'Un personnage blessé ne peut pas manipuler un drapeau.');
   const flag = flagsOf(state).find((f) => f.id === flagId);
   if (!flag) return fail('UNKNOWN_FLAG', `Drapeau inconnu : ${flagId}.`);
   return { ok: true, character, flag, nodeId: character.nodeId };
 }
 
 /**
- * Récupérer un drapeau ennemi au sol (RULE-OBJ-010) : personnage non blessé, sur la case du drapeau ou à côté,
+ * Récupérer un drapeau ennemi au sol (RULE-OBJ-010) : personnage (même blessé), sur la case du drapeau ou à côté,
  * sans ennemi adjacent au personnage (lecture à confirmer : OQ-FLAG-002). Une action.
  */
 export function checkCaptureFlag(state: GameState, playerId: string, characterId: string, flagId: string): FlagCheck {

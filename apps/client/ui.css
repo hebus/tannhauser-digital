@@ -132,8 +132,27 @@
 .hud-btn-small { display: inline-block; width: auto; min-height: 36px; margin: 0 6px 6px 0; }
 .hud-btn-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .hud-btn.is-unavailable { background: #1f232a; color: var(--ui-muted); border-style: dashed; cursor: not-allowed; }
-.hud-btn-reason { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 400; color: var(--ui-bad); }
-.hud-btn.is-unavailable .hud-btn-reason::before { content: '⛔ '; }
+.hud-btn { position: relative; }
+.hud-btn-reason {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--ui-bad);
+  border-radius: 6px;
+  background: #1b1d22;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 50%);
+  font-size: 12.5px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--ui-bad);
+  pointer-events: none;
+}
+.hud-btn.is-unavailable:hover .hud-btn-reason,
+.hud-btn.is-unavailable:focus-visible .hud-btn-reason { display: block; }
 kbd {
   font: 600 12px/1 ui-monospace, Consolas, monospace;
   border: 1px solid var(--ui-muted);
@@ -209,7 +228,7 @@ kbd {
   /* Entre les panneaux gauche et droit ; marge auto : centré et plafonné en largeur sur les grands écrans. */
   left: calc(var(--hud-left-w) + 20px);
   right: calc(var(--hud-right-w) + 20px);
-  max-width: 780px;
+  max-width: 600px;
   margin-inline: auto;
   box-sizing: border-box;
   background: var(--ph-bg);
@@ -239,10 +258,10 @@ kbd {
 .phase-turn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ph-muted); }
 .phase-turn-n { font-size: 18px; line-height: 1.1; font-weight: 800; }
 
-.phase-steps { flex: 1 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
+.phase-steps { flex: 0 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
 .phase-step {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -253,8 +272,7 @@ kbd {
 /* Segment qui précède le nœud ; vert quand la phase précédente est terminée. */
 .phase-step + .phase-step::before {
   content: '';
-  flex: 1 1 8px;
-  min-width: 6px;
+  flex: 0 0 22px;
   height: 3px;
   margin-right: 2px;
   background: var(--ph-line);
@@ -303,6 +321,7 @@ kbd {
 /* Pastille d'initiative : drapeau + marqueur forme/couleur + nom du gagnant (les jets sont dans le journal) ; en pointillé avant le tirage. */
 .phase-initiative {
   flex: 0 0 auto;
+  margin-left: 32px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -372,7 +391,7 @@ kbd {
 @container (max-width: 700px) {
   .phase-card { gap: 6px; }
   .phase-step { gap: 4px; }
-  .phase-step + .phase-step::before { min-width: 10px; margin-right: 0; }
+  .phase-step + .phase-step::before { flex-basis: 16px; margin-right: 0; }
   .phase-label { font-size: 11.5px; }
   .phase-turn { padding: 3px 6px; }
   .phase-initiative { padding-right: 8px; }

@@ -3,7 +3,6 @@ import {
   flagsOf,
   getLegalActions,
   isCaptureTheFlag,
-  isWounded,
   getReactionOptions,
   reachableNodes,
   type BoardState,
@@ -144,7 +143,7 @@ function activate(state: GameState, playerId: string, character: CharacterState)
   // valide sans ennemi adjacent, sinon l'ennemi (porteurs d'abord).
   let goal: 'CAMP' | 'FLAG' | null = null;
   if (ctf && carries(state, character)) goal = 'CAMP';
-  else if (ctf && !isWounded(character) && !enemyAdjacent(state, character) && groundEnemyFlagNodes(state, playerId).length > 0) goal = 'FLAG';
+  else if (ctf && !enemyAdjacent(state, character) && groundEnemyFlagNodes(state, playerId).length > 0) goal = 'FLAG';
 
   const moveToward = (dist: Map<NodeId, number>): GameCommand | null => {
     if (!action('MOVE')) return null;

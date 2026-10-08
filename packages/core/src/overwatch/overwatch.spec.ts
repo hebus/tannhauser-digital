@@ -618,7 +618,7 @@ describe('OVERWATCH_FIRE', () => {
   });
 
   it('ne consomme que les dés de l\'échange (attaque puis défense)', () => {
-    const rng = new ScriptedRng([10, 1, 1, 1, 1, 1, 1, 1]);
+    const rng = new ScriptedRng([1, 10, 1, 1, 1, 1, 1, 1]);
     const res = applyCommand(triggered(), fire(), rng);
     expect(res.accepted).toBe(true);
     expect(rng.snapshot().draws).toBe(8);
@@ -851,7 +851,7 @@ describe('OVERWATCH : cycle de vie', () => {
   /** Fin du tour 1 : tout le monde est activé ; END_TURN de p1 démarre le tour 2 (initiative 9 vs 2 : p1). */
   function nextTurnState(characters: CharacterState[]): GameState {
     const state = makeState({ characters });
-    return run(state, endTurn(), [9, 2]).state;
+    return run(state, endTurn(), [2, 9]).state;
   }
 
   it('le refresh du tour suivant retire l\'Overwatch et rend les PC (on peut alors le replacer pour 1 PC)', () => {

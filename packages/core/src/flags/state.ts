@@ -12,7 +12,7 @@ export const isCaptureTheFlag = (state: GameState): boolean => state.mode === 'C
 
 export const flagsOf = (state: GameState): readonly FlagState[] => state.flags ?? [];
 
-/** Personnage blessé : il a perdu au moins un niveau de santé (un blessé ne manipule pas de drapeau, RULE-OBJ-011). */
+/** Personnage blessé : il a perdu au moins un niveau de santé (sans effet sur la manipulation des drapeaux, RULE-OBJ-011). */
 export const isWounded = (character: CharacterState): boolean => character.health < character.statRows.length;
 
 export const carriedFlags = (state: GameState, characterId: string): readonly FlagState[] =>

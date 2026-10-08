@@ -104,7 +104,12 @@ async function main(): Promise<void> {
   const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
   presentationRef = presentation;
   world.addChild(boardView, highlight, overlays, flags, characters, presentation.worldLayer);
-  app.stage.addChild(presentation.screenLayer);
+  // Bannières et avis : dessinés sur un second canevas transparent posé AU-DESSUS du HUD (qui est en DOM) ; il laisse passer les clics.
+  const overlayApp = new Application();
+  await overlayApp.init({ resizeTo: window, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
+  Object.assign(overlayApp.canvas.style, { position: 'fixed', inset: '0', zIndex: '1000', pointerEvents: 'none' });
+  document.body.appendChild(overlayApp.canvas);
+  overlayApp.stage.addChild(presentation.screenLayer);
 
   // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
   const lifetime = new AbortController();
@@ -305,35 +310,60 @@ async function main(): Promise<void> {
     if (target) send({ type: 'MOVE_CHARACTER', playerId: player, characterId: active.id, path: target.path });
   };
 
-  let dragging = false;
+  // Pointeurs actifs (souris, doigt, stylet) : un seul = glisser pour déplacer / cliquer ; deux = pincer pour zoomer et déplacer.
+  app.canvas.style.touchAction = 'none'; // les gestes tactiles sont gérés ici, pas par le navigateur
+  const pointers = new Map<number, { x: number; y: number }>();
   let moved = 0;
+  let multiTouch = false; // un geste à deux doigts a eu lieu : le relâchement n'est pas un clic
+  const pinchState = () => {
+    const [a, b] = [...pointers.values()];
+    return { cx: (a!.x + b!.x) / 2, cy: (a!.y + b!.y) / 2, dist: Math.hypot(a!.x - b!.x, a!.y - b!.y) };
+  };
   app.canvas.addEventListener(
     'pointerdown',
-    () => {
-      presentation.skip(); // un clic termine les animations en cours
-      dragging = true;
-      moved = 0;
-    },
-    { signal },
-  );
-  window.addEventListener(
-    'pointerup',
     (e) => {
-      const wasClick = dragging && moved < 4;
-      dragging = false;
-      if (wasClick && e.target === app.canvas) {
-        const id = nodeAt(e.offsetX, e.offsetY);
-        if (id) onNodeClick(id);
-      }
+      presentation.skip(); // un clic termine les animations en cours
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      app.canvas.setPointerCapture?.(e.pointerId);
+      if (pointers.size === 1) {
+        moved = 0;
+        multiTouch = false;
+      } else multiTouch = true;
     },
     { signal },
   );
+  const endPointer = (e: PointerEvent, click: boolean) => {
+    if (!pointers.has(e.pointerId)) return;
+    const wasClick = click && pointers.size === 1 && !multiTouch && moved < 4;
+    pointers.delete(e.pointerId);
+    if (wasClick && e.target === app.canvas) {
+      const id = nodeAt(e.offsetX, e.offsetY);
+      if (id) onNodeClick(id);
+    }
+  };
+  window.addEventListener('pointerup', (e) => endPointer(e, true), { signal });
+  window.addEventListener('pointercancel', (e) => endPointer(e, false), { signal });
   window.addEventListener(
     'pointermove',
     (e) => {
-      if (dragging) {
-        moved += Math.abs(e.movementX) + Math.abs(e.movementY);
-        if (moved >= 4) camera.pan(e.movementX, e.movementY);
+      const prev = pointers.get(e.pointerId);
+      if (prev) {
+        if (pointers.size >= 2) {
+          const before = pinchState();
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          const after = pinchState();
+          const rect = app.canvas.getBoundingClientRect();
+          if (before.dist > 0) camera.zoomAt(after.dist / before.dist, after.cx - rect.left, after.cy - rect.top);
+          camera.pan(after.cx - before.cx, after.cy - before.cy);
+          syncTextScale();
+          updatePath();
+        } else {
+          const dx = e.clientX - prev.x;
+          const dy = e.clientY - prev.y;
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          moved += Math.abs(dx) + Math.abs(dy);
+          if (moved >= 4) camera.pan(dx, dy);
+        }
         return;
       }
       const next = e.target === app.canvas ? nodeAt(e.offsetX, e.offsetY) : null;
@@ -420,6 +450,7 @@ async function main(): Promise<void> {
     presentation.destroy();
     unsubscribeReducedAttr();
     reducedMotion.destroy();
+    overlayApp.destroy(true, { children: true });
     app.destroy(true, { children: true });
   };
   window.addEventListener('pagehide', cleanup, { once: true });
