@@ -14,8 +14,8 @@ const castleSetup = (seed: number, teamSize?: number): SetupConfig => {
 };
 
 describe('sélection du château', () => {
-  it('les deux plateaux sont proposés, le plateau de dev reste celui par défaut', () => {
-    expect(available.boards.map((b) => b.id)).toEqual(['dev-board', 'castle']);
+  it('les trois plateaux sont proposés, le plateau de dev reste celui par défaut', () => {
+    expect(available.boards.map((b) => b.id)).toEqual(['dev-board', 'castle', 'manoir']);
     expect(defaultSetup(available, 1).boardId).toBe('dev-board');
     expect(validateSetup(castleSetup(1), available)).toEqual([]);
   });

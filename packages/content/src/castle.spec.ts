@@ -53,7 +53,7 @@ const reach = (b: BoardState, from: string, pm = 99) => reachableNodes(stateWith
 
 describe('chargement du château', () => {
   it('loadDevContent expose le plateau de dev ET le château (board reste le plateau de dev)', () => {
-    expect(content.boards.map((b) => b.id)).toEqual(['dev-board', 'castle']);
+    expect(content.boards.map((b) => b.id)).toEqual(['dev-board', 'castle', 'manoir']);
     expect(content.board).toBe(content.boards[0]);
     expect(castle.nameKey).toBe('board.castle.name');
     expect(content.boards[0]!.layout).toBeUndefined();

@@ -37,7 +37,7 @@ describe('IA basique', () => {
     expect(chooseCommand(game.state, p)).toEqual(chooseCommand(game.state, p));
   });
 
-  for (const boardId of ['dev-board', 'castle']) {
+  for (const boardId of ['dev-board', 'castle', 'manoir']) {
     it(`mène des parties complètes sur ${boardId} sans jamais jouer de coup illégal`, () => {
       for (const seed of [1, 2, 3, 4, 5]) {
         const { state, decisions } = playOut(boardId, seed);
@@ -54,7 +54,7 @@ describe('IA basique', () => {
 
   describe('Capture du drapeau', () => {
     const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
-    const runs = ['dev-board', 'castle'].flatMap((boardId) => seeds.map((seed) => ({ boardId, seed, ...playOut(boardId, seed, 3000, 'CAPTURE_THE_FLAG') })));
+    const runs = ['dev-board', 'castle', 'manoir'].flatMap((boardId) => seeds.map((seed) => ({ boardId, seed, ...playOut(boardId, seed, 3000, 'CAPTURE_THE_FLAG') })));
 
     it('joue des parties complètes sans commande refusée', () => {
       for (const r of runs) expect(r.state.turn.number, `${r.boardId} seed ${r.seed}`).toBeGreaterThan(1);

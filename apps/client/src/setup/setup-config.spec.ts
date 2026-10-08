@@ -160,7 +160,7 @@ describe('mode Capture du drapeau', () => {
     expect(validateSetup({ ...ctf('bare'), teams: [{ playerId: 'p1', characterIds: [available.characters[0]!.id] }, { playerId: 'p2', characterIds: [available.characters[1]!.id] }] }, bare).map((i) => i.code)).toContain('MODE_UNSUPPORTED_BOARD');
   });
 
-  for (const boardId of ['dev-board', 'castle']) {
+  for (const boardId of ['dev-board', 'castle', 'manoir']) {
     it(`démarre une partie sur ${boardId} : 6 drapeaux posés, un camp par joueur`, () => {
       const game = createGameFromSetup(ctf(boardId));
       expect(game.state.mode).toBe('CAPTURE_THE_FLAG');

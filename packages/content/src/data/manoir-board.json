@@ -1,0 +1,5911 @@
+{
+  "id": "manoir",
+  "nameKey": "board.manoir.name",
+  "nodes": [
+    {
+      "id": "bureau-nord-01",
+      "x": 591.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "p.tour-bureau",
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-02",
+      "x": 661.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "bureau-nord-03",
+      "x": 731.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-04",
+      "x": 801.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-05",
+      "x": 871.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-06",
+      "x": 941.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-07",
+      "x": 1011.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-08",
+      "x": 1081.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-09",
+      "x": 1151.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-10",
+      "x": 1221.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-11",
+      "x": 1291.5,
+      "y": 93,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "p.bureau-escalier",
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-12",
+      "x": 591.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-13",
+      "x": 661.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "p.bureau-hall",
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-14",
+      "x": 731.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-15",
+      "x": 801.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-16",
+      "x": 871.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-17",
+      "x": 941.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-18",
+      "x": 1011.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-19",
+      "x": 1081.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-20",
+      "x": 1151.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "bureau-nord-21",
+      "x": 1221.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "bureau-nord-22",
+      "x": 1291.5,
+      "y": 163,
+      "zoneId": "bureau-nord",
+      "colors": [
+        "r.bureau-nord"
+      ]
+    },
+    {
+      "id": "cabinet-01",
+      "x": 1048,
+      "y": 1513,
+      "zoneId": "cabinet",
+      "colors": [
+        "p.central-cabinet",
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-02",
+      "x": 1118,
+      "y": 1513,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-03",
+      "x": 1188,
+      "y": 1513,
+      "zoneId": "cabinet",
+      "colors": [
+        "p.cabinet-rotonde",
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-04",
+      "x": 1048,
+      "y": 1583,
+      "zoneId": "cabinet",
+      "colors": [
+        "p.cabinet-escalier",
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-05",
+      "x": 1118,
+      "y": 1583,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "cabinet-06",
+      "x": 1188,
+      "y": 1583,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-07",
+      "x": 1048,
+      "y": 1653,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-08",
+      "x": 1118,
+      "y": 1653,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cabinet-09",
+      "x": 1188,
+      "y": 1653,
+      "zoneId": "cabinet",
+      "colors": [
+        "r.cabinet"
+      ]
+    },
+    {
+      "id": "cave-01",
+      "x": 210,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-02",
+      "x": 280,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-03",
+      "x": 350,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-04",
+      "x": 420,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-05",
+      "x": 490,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ],
+      "properties": {
+        "movementCostModifier": 1
+      }
+    },
+    {
+      "id": "cave-06",
+      "x": 560,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-07",
+      "x": 630,
+      "y": 1528,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-08",
+      "x": 210,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-09",
+      "x": 280,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-10",
+      "x": 350,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-11",
+      "x": 420,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "cave-12",
+      "x": 490,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-13",
+      "x": 560,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-14",
+      "x": 630,
+      "y": 1598,
+      "zoneId": "cave",
+      "colors": [
+        "p.escalier-cave",
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-15",
+      "x": 210,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-16",
+      "x": 280,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-17",
+      "x": 350,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ],
+      "properties": {
+        "movementCostModifier": 1
+      }
+    },
+    {
+      "id": "cave-18",
+      "x": 420,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-19",
+      "x": 490,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-20",
+      "x": 560,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "cave-21",
+      "x": 630,
+      "y": 1668,
+      "zoneId": "cave",
+      "colors": [
+        "r.cave"
+      ]
+    },
+    {
+      "id": "chambre-01",
+      "x": 608,
+      "y": 660,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-02",
+      "x": 678,
+      "y": 660,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-03",
+      "x": 748,
+      "y": 660,
+      "zoneId": "chambre",
+      "colors": [
+        "p.hall-chambre",
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-04",
+      "x": 818,
+      "y": 660,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-05",
+      "x": 608,
+      "y": 730,
+      "zoneId": "chambre",
+      "colors": [
+        "p.carrelee-chambre",
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-06",
+      "x": 678,
+      "y": 730,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "chambre-07",
+      "x": 748,
+      "y": 730,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-08",
+      "x": 818,
+      "y": 730,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-09",
+      "x": 608,
+      "y": 800,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-10",
+      "x": 678,
+      "y": 800,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-11",
+      "x": 748,
+      "y": 800,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-12",
+      "x": 818,
+      "y": 800,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-13",
+      "x": 608,
+      "y": 870,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-14",
+      "x": 678,
+      "y": 870,
+      "zoneId": "chambre",
+      "colors": [
+        "p.chambre-studio",
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-15",
+      "x": 748,
+      "y": 870,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "chambre-16",
+      "x": 818,
+      "y": 870,
+      "zoneId": "chambre",
+      "colors": [
+        "r.chambre"
+      ]
+    },
+    {
+      "id": "couloir-central-01",
+      "x": 1013,
+      "y": 450,
+      "zoneId": "couloir-central",
+      "colors": [
+        "p.hall-central",
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-02",
+      "x": 1013,
+      "y": 520,
+      "zoneId": "couloir-central",
+      "colors": [
+        "p.central-salon",
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-03",
+      "x": 1013,
+      "y": 590,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-04",
+      "x": 1013,
+      "y": 660,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-05",
+      "x": 1013,
+      "y": 730,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-06",
+      "x": 1013,
+      "y": 800,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-07",
+      "x": 1013,
+      "y": 870,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-08",
+      "x": 1013,
+      "y": 940,
+      "zoneId": "couloir-central",
+      "colors": [
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-09",
+      "x": 1013,
+      "y": 1010,
+      "zoneId": "couloir-central",
+      "colors": [
+        "p.central-manger",
+        "p.studio-central",
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-central-10",
+      "x": 1013,
+      "y": 1080,
+      "zoneId": "couloir-central",
+      "colors": [
+        "p.central-cabinet",
+        "r.couloir-central"
+      ]
+    },
+    {
+      "id": "couloir-ouest-01",
+      "x": 190,
+      "y": 305,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "p.tour-ouest",
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "couloir-ouest-02",
+      "x": 260,
+      "y": 305,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "couloir-ouest-03",
+      "x": 190,
+      "y": 375,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "couloir-ouest-04",
+      "x": 260,
+      "y": 375,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "p.ouest-hall",
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "couloir-ouest-05",
+      "x": 190,
+      "y": 445,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "p.ouest-carrelee",
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "couloir-ouest-06",
+      "x": 260,
+      "y": 445,
+      "zoneId": "couloir-ouest",
+      "colors": [
+        "r.couloir-ouest"
+      ]
+    },
+    {
+      "id": "escalier-cave-01",
+      "x": 820,
+      "y": 1513,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "p.escalier-studio",
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-cave-02",
+      "x": 890,
+      "y": 1513,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-cave-03",
+      "x": 820,
+      "y": 1583,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-cave-04",
+      "x": 890,
+      "y": 1583,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "p.cabinet-escalier",
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-cave-05",
+      "x": 820,
+      "y": 1653,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "p.escalier-cave",
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-cave-06",
+      "x": 890,
+      "y": 1653,
+      "zoneId": "escalier-cave",
+      "colors": [
+        "r.escalier-cave"
+      ]
+    },
+    {
+      "id": "escalier-nord-01",
+      "x": 1600,
+      "y": 115,
+      "zoneId": "escalier-nord",
+      "colors": [
+        "p.bureau-escalier",
+        "r.escalier-nord"
+      ]
+    },
+    {
+      "id": "escalier-nord-02",
+      "x": 1670,
+      "y": 115,
+      "zoneId": "escalier-nord",
+      "colors": [
+        "r.escalier-nord"
+      ]
+    },
+    {
+      "id": "escalier-nord-03",
+      "x": 1600,
+      "y": 185,
+      "zoneId": "escalier-nord",
+      "colors": [
+        "r.escalier-nord"
+      ]
+    },
+    {
+      "id": "escalier-nord-04",
+      "x": 1670,
+      "y": 185,
+      "zoneId": "escalier-nord",
+      "colors": [
+        "p.escalier-salon",
+        "r.escalier-nord"
+      ]
+    },
+    {
+      "id": "grand-hall-01",
+      "x": 470,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-02",
+      "x": 540,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-03",
+      "x": 610,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-04",
+      "x": 680,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "p.bureau-hall",
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-05",
+      "x": 750,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-06",
+      "x": 820,
+      "y": 305,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-07",
+      "x": 470,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "p.ouest-hall",
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-08",
+      "x": 540,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-09",
+      "x": 610,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-10",
+      "x": 680,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-11",
+      "x": 750,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-12",
+      "x": 820,
+      "y": 375,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-13",
+      "x": 470,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-14",
+      "x": 540,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-15",
+      "x": 610,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-16",
+      "x": 680,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "p.hall-chambre",
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-17",
+      "x": 750,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "grand-hall-18",
+      "x": 820,
+      "y": 445,
+      "zoneId": "grand-hall",
+      "colors": [
+        "p.hall-central",
+        "r.grand-hall"
+      ]
+    },
+    {
+      "id": "pass-bureau-escalier-01",
+      "x": 1394.33,
+      "y": 100.33,
+      "zoneId": "pass-bureau-escalier",
+      "colors": [
+        "p.bureau-escalier"
+      ]
+    },
+    {
+      "id": "pass-bureau-escalier-02",
+      "x": 1497.17,
+      "y": 107.67,
+      "zoneId": "pass-bureau-escalier",
+      "colors": [
+        "p.bureau-escalier"
+      ]
+    },
+    {
+      "id": "pass-bureau-hall-01",
+      "x": 691,
+      "y": 210.33,
+      "zoneId": "pass-bureau-hall",
+      "colors": [
+        "p.bureau-hall"
+      ]
+    },
+    {
+      "id": "pass-bureau-hall-02",
+      "x": 650.5,
+      "y": 257.67,
+      "zoneId": "pass-bureau-hall",
+      "colors": [
+        "p.bureau-hall"
+      ]
+    },
+    {
+      "id": "pass-cabinet-escalier-01",
+      "x": 995.33,
+      "y": 1583,
+      "zoneId": "pass-cabinet-escalier",
+      "colors": [
+        "p.cabinet-escalier"
+      ]
+    },
+    {
+      "id": "pass-cabinet-escalier-02",
+      "x": 942.67,
+      "y": 1583,
+      "zoneId": "pass-cabinet-escalier",
+      "colors": [
+        "p.cabinet-escalier"
+      ]
+    },
+    {
+      "id": "pass-cabinet-rotonde-01",
+      "x": 1264.67,
+      "y": 1530.33,
+      "zoneId": "pass-cabinet-rotonde",
+      "colors": [
+        "p.cabinet-rotonde"
+      ]
+    },
+    {
+      "id": "pass-cabinet-rotonde-02",
+      "x": 1341.33,
+      "y": 1477.67,
+      "zoneId": "pass-cabinet-rotonde",
+      "colors": [
+        "p.cabinet-rotonde"
+      ]
+    },
+    {
+      "id": "pass-carrelee-chambre-01",
+      "x": 393,
+      "y": 730,
+      "zoneId": "pass-carrelee-chambre",
+      "colors": [
+        "p.carrelee-chambre"
+      ]
+    },
+    {
+      "id": "pass-carrelee-chambre-02",
+      "x": 503,
+      "y": 730,
+      "zoneId": "pass-carrelee-chambre",
+      "colors": [
+        "p.carrelee-chambre"
+      ]
+    },
+    {
+      "id": "pass-carrelee-studio-01",
+      "x": 244.67,
+      "y": 947.67,
+      "zoneId": "pass-carrelee-studio",
+      "colors": [
+        "p.carrelee-studio"
+      ]
+    },
+    {
+      "id": "pass-carrelee-studio-02",
+      "x": 271.33,
+      "y": 1025.33,
+      "zoneId": "pass-carrelee-studio",
+      "colors": [
+        "p.carrelee-studio"
+      ]
+    },
+    {
+      "id": "pass-central-cabinet-01",
+      "x": 1021.46,
+      "y": 1184.66,
+      "zoneId": "pass-central-cabinet",
+      "colors": [
+        "p.central-cabinet"
+      ]
+    },
+    {
+      "id": "pass-central-cabinet-02",
+      "x": 1030.5,
+      "y": 1296.5,
+      "zoneId": "pass-central-cabinet",
+      "colors": [
+        "p.central-cabinet"
+      ]
+    },
+    {
+      "id": "pass-central-cabinet-03",
+      "x": 1039.54,
+      "y": 1408.34,
+      "zoneId": "pass-central-cabinet",
+      "colors": [
+        "p.central-cabinet"
+      ]
+    },
+    {
+      "id": "pass-central-manger-01",
+      "x": 1083.17,
+      "y": 1024.33,
+      "zoneId": "pass-central-manger",
+      "colors": [
+        "p.central-manger"
+      ]
+    },
+    {
+      "id": "pass-central-manger-02",
+      "x": 1153.33,
+      "y": 1038.67,
+      "zoneId": "pass-central-manger",
+      "colors": [
+        "p.central-manger"
+      ]
+    },
+    {
+      "id": "pass-central-salon-01",
+      "x": 1083.17,
+      "y": 523.33,
+      "zoneId": "pass-central-salon",
+      "colors": [
+        "p.central-salon"
+      ]
+    },
+    {
+      "id": "pass-central-salon-02",
+      "x": 1153.33,
+      "y": 526.67,
+      "zoneId": "pass-central-salon",
+      "colors": [
+        "p.central-salon"
+      ]
+    },
+    {
+      "id": "pass-chambre-studio-01",
+      "x": 672.66,
+      "y": 943.14,
+      "zoneId": "pass-chambre-studio",
+      "colors": [
+        "p.chambre-studio"
+      ]
+    },
+    {
+      "id": "pass-chambre-studio-02",
+      "x": 583.34,
+      "y": 1029.86,
+      "zoneId": "pass-chambre-studio",
+      "colors": [
+        "p.chambre-studio"
+      ]
+    },
+    {
+      "id": "pass-escalier-cave-01",
+      "x": 756.67,
+      "y": 1634.67,
+      "zoneId": "pass-escalier-cave",
+      "colors": [
+        "p.escalier-cave"
+      ]
+    },
+    {
+      "id": "pass-escalier-cave-02",
+      "x": 693.33,
+      "y": 1616.33,
+      "zoneId": "pass-escalier-cave",
+      "colors": [
+        "p.escalier-cave"
+      ]
+    },
+    {
+      "id": "pass-escalier-salon-01",
+      "x": 1637.83,
+      "y": 276.67,
+      "zoneId": "pass-escalier-salon",
+      "colors": [
+        "p.escalier-salon"
+      ]
+    },
+    {
+      "id": "pass-escalier-salon-02",
+      "x": 1605.67,
+      "y": 368.33,
+      "zoneId": "pass-escalier-salon",
+      "colors": [
+        "p.escalier-salon"
+      ]
+    },
+    {
+      "id": "pass-escalier-studio-01",
+      "x": 739.33,
+      "y": 1446.33,
+      "zoneId": "pass-escalier-studio",
+      "colors": [
+        "p.escalier-studio"
+      ]
+    },
+    {
+      "id": "pass-escalier-studio-02",
+      "x": 658.67,
+      "y": 1379.67,
+      "zoneId": "pass-escalier-studio",
+      "colors": [
+        "p.escalier-studio"
+      ]
+    },
+    {
+      "id": "pass-hall-central-01",
+      "x": 884.33,
+      "y": 423.33,
+      "zoneId": "pass-hall-central",
+      "colors": [
+        "p.hall-central"
+      ]
+    },
+    {
+      "id": "pass-hall-central-02",
+      "x": 948.67,
+      "y": 471.67,
+      "zoneId": "pass-hall-central",
+      "colors": [
+        "p.hall-central"
+      ]
+    },
+    {
+      "id": "pass-hall-chambre-01",
+      "x": 702.67,
+      "y": 516.67,
+      "zoneId": "pass-hall-chambre",
+      "colors": [
+        "p.hall-chambre"
+      ]
+    },
+    {
+      "id": "pass-hall-chambre-02",
+      "x": 725.33,
+      "y": 588.33,
+      "zoneId": "pass-hall-chambre",
+      "colors": [
+        "p.hall-chambre"
+      ]
+    },
+    {
+      "id": "pass-manger-rotonde-01",
+      "x": 1591.67,
+      "y": 1270.33,
+      "zoneId": "pass-manger-rotonde",
+      "colors": [
+        "p.manger-rotonde"
+      ]
+    },
+    {
+      "id": "pass-manger-rotonde-02",
+      "x": 1609.83,
+      "y": 1347.67,
+      "zoneId": "pass-manger-rotonde",
+      "colors": [
+        "p.manger-rotonde"
+      ]
+    },
+    {
+      "id": "pass-ouest-carrelee-01",
+      "x": 199.33,
+      "y": 516.67,
+      "zoneId": "pass-ouest-carrelee",
+      "colors": [
+        "p.ouest-carrelee"
+      ]
+    },
+    {
+      "id": "pass-ouest-carrelee-02",
+      "x": 208.67,
+      "y": 588.33,
+      "zoneId": "pass-ouest-carrelee",
+      "colors": [
+        "p.ouest-carrelee"
+      ]
+    },
+    {
+      "id": "pass-ouest-hall-01",
+      "x": 330,
+      "y": 375,
+      "zoneId": "pass-ouest-hall",
+      "colors": [
+        "p.ouest-hall"
+      ]
+    },
+    {
+      "id": "pass-ouest-hall-02",
+      "x": 400,
+      "y": 375,
+      "zoneId": "pass-ouest-hall",
+      "colors": [
+        "p.ouest-hall"
+      ]
+    },
+    {
+      "id": "pass-salon-manger-01",
+      "x": 1433.5,
+      "y": 821,
+      "zoneId": "pass-salon-manger",
+      "colors": [
+        "p.salon-manger"
+      ]
+    },
+    {
+      "id": "pass-salon-manger-02",
+      "x": 1433.5,
+      "y": 902,
+      "zoneId": "pass-salon-manger",
+      "colors": [
+        "p.salon-manger"
+      ]
+    },
+    {
+      "id": "pass-studio-central-01",
+      "x": 736.5,
+      "y": 1116.5,
+      "zoneId": "pass-studio-central",
+      "colors": [
+        "p.studio-central"
+      ]
+    },
+    {
+      "id": "pass-studio-central-02",
+      "x": 830.5,
+      "y": 1056.5,
+      "zoneId": "pass-studio-central",
+      "colors": [
+        "p.studio-central"
+      ]
+    },
+    {
+      "id": "pass-studio-central-03",
+      "x": 924.5,
+      "y": 996.5,
+      "zoneId": "pass-studio-central",
+      "colors": [
+        "p.studio-central"
+      ]
+    },
+    {
+      "id": "pass-tour-bureau-01",
+      "x": 363,
+      "y": 93,
+      "zoneId": "pass-tour-bureau",
+      "colors": [
+        "p.tour-bureau"
+      ]
+    },
+    {
+      "id": "pass-tour-bureau-02",
+      "x": 486.5,
+      "y": 93,
+      "zoneId": "pass-tour-bureau",
+      "colors": [
+        "p.tour-bureau"
+      ]
+    },
+    {
+      "id": "pass-tour-ouest-01",
+      "x": 142,
+      "y": 210.33,
+      "zoneId": "pass-tour-ouest",
+      "colors": [
+        "p.tour-ouest"
+      ]
+    },
+    {
+      "id": "pass-tour-ouest-02",
+      "x": 166,
+      "y": 257.67,
+      "zoneId": "pass-tour-ouest",
+      "colors": [
+        "p.tour-ouest"
+      ]
+    },
+    {
+      "id": "rotonde-01",
+      "x": 1418,
+      "y": 1425,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-02",
+      "x": 1488,
+      "y": 1425,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-03",
+      "x": 1558,
+      "y": 1425,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-04",
+      "x": 1628,
+      "y": 1425,
+      "zoneId": "rotonde",
+      "colors": [
+        "p.manger-rotonde",
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-05",
+      "x": 1418,
+      "y": 1495,
+      "zoneId": "rotonde",
+      "colors": [
+        "p.cabinet-rotonde",
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-06",
+      "x": 1488,
+      "y": 1495,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-07",
+      "x": 1558,
+      "y": 1495,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-08",
+      "x": 1628,
+      "y": 1495,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-09",
+      "x": 1418,
+      "y": 1565,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-10",
+      "x": 1488,
+      "y": 1565,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "rotonde-11",
+      "x": 1558,
+      "y": 1565,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-12",
+      "x": 1628,
+      "y": 1565,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-13",
+      "x": 1418,
+      "y": 1635,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-14",
+      "x": 1488,
+      "y": 1635,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-15",
+      "x": 1558,
+      "y": 1635,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "rotonde-16",
+      "x": 1628,
+      "y": 1635,
+      "zoneId": "rotonde",
+      "colors": [
+        "r.rotonde"
+      ]
+    },
+    {
+      "id": "salle-a-manger-01",
+      "x": 1223.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-02",
+      "x": 1293.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-03",
+      "x": 1363.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-04",
+      "x": 1433.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "p.salon-manger",
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-05",
+      "x": 1503.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-06",
+      "x": 1573.5,
+      "y": 983,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-07",
+      "x": 1223.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "p.central-manger",
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-08",
+      "x": 1293.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-09",
+      "x": 1363.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ],
+      "properties": {
+        "passable": false
+      }
+    },
+    {
+      "id": "salle-a-manger-10",
+      "x": 1433.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ],
+      "properties": {
+        "passable": false
+      }
+    },
+    {
+      "id": "salle-a-manger-11",
+      "x": 1503.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-12",
+      "x": 1573.5,
+      "y": 1053,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-13",
+      "x": 1223.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-14",
+      "x": 1293.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-15",
+      "x": 1363.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-16",
+      "x": 1433.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-17",
+      "x": 1503.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-18",
+      "x": 1573.5,
+      "y": 1123,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    },
+    {
+      "id": "salle-a-manger-19",
+      "x": 1223.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-20",
+      "x": 1293.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-21",
+      "x": 1363.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-22",
+      "x": 1433.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-23",
+      "x": 1503.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-a-manger-24",
+      "x": 1573.5,
+      "y": 1193,
+      "zoneId": "salle-a-manger",
+      "colors": [
+        "p.manger-rotonde",
+        "r.salle-a-manger"
+      ]
+    },
+    {
+      "id": "salle-carrelee-01",
+      "x": 148,
+      "y": 660,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-02",
+      "x": 218,
+      "y": 660,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "p.ouest-carrelee",
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-03",
+      "x": 288,
+      "y": 660,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-04",
+      "x": 148,
+      "y": 730,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ],
+      "properties": {
+        "kind": "ENTRY_POINT"
+      }
+    },
+    {
+      "id": "salle-carrelee-05",
+      "x": 218,
+      "y": 730,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-06",
+      "x": 288,
+      "y": 730,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "p.carrelee-chambre",
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-07",
+      "x": 148,
+      "y": 800,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-08",
+      "x": 218,
+      "y": 800,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-09",
+      "x": 288,
+      "y": 800,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-10",
+      "x": 148,
+      "y": 870,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-11",
+      "x": 218,
+      "y": 870,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "p.carrelee-studio",
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salle-carrelee-12",
+      "x": 288,
+      "y": 870,
+      "zoneId": "salle-carrelee",
+      "colors": [
+        "r.salle-carrelee"
+      ]
+    },
+    {
+      "id": "salon-01",
+      "x": 1223.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-02",
+      "x": 1293.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-03",
+      "x": 1363.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-04",
+      "x": 1433.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-05",
+      "x": 1503.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-06",
+      "x": 1573.5,
+      "y": 460,
+      "zoneId": "salon",
+      "colors": [
+        "p.escalier-salon",
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-07",
+      "x": 1223.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "p.central-salon",
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-08",
+      "x": 1293.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-09",
+      "x": 1363.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-10",
+      "x": 1433.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-11",
+      "x": 1503.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-12",
+      "x": 1573.5,
+      "y": 530,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-13",
+      "x": 1223.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-14",
+      "x": 1293.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-15",
+      "x": 1363.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-16",
+      "x": 1433.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-17",
+      "x": 1503.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-18",
+      "x": 1573.5,
+      "y": 600,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-19",
+      "x": 1223.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-20",
+      "x": 1293.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-21",
+      "x": 1363.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-22",
+      "x": 1433.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "salon-23",
+      "x": 1503.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-24",
+      "x": 1573.5,
+      "y": 670,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-25",
+      "x": 1223.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-26",
+      "x": 1293.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-27",
+      "x": 1363.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-28",
+      "x": 1433.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "p.salon-manger",
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-29",
+      "x": 1503.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "salon-30",
+      "x": 1573.5,
+      "y": 740,
+      "zoneId": "salon",
+      "colors": [
+        "r.salon"
+      ]
+    },
+    {
+      "id": "studio-01",
+      "x": 298,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "p.carrelee-studio",
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-02",
+      "x": 368,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-03",
+      "x": 438,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-04",
+      "x": 508,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-05",
+      "x": 578,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "p.chambre-studio",
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-06",
+      "x": 648,
+      "y": 1103,
+      "zoneId": "studio",
+      "colors": [
+        "p.studio-central",
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-07",
+      "x": 298,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-08",
+      "x": 368,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-09",
+      "x": 438,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-10",
+      "x": 508,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-11",
+      "x": 578,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-12",
+      "x": 648,
+      "y": 1173,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-13",
+      "x": 298,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-14",
+      "x": 368,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-15",
+      "x": 438,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ],
+      "properties": {
+        "kind": "OBJECTIVE"
+      }
+    },
+    {
+      "id": "studio-16",
+      "x": 508,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-17",
+      "x": 578,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-18",
+      "x": 648,
+      "y": 1243,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-19",
+      "x": 298,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-20",
+      "x": 368,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-21",
+      "x": 438,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-22",
+      "x": 508,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-23",
+      "x": 578,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "r.studio"
+      ]
+    },
+    {
+      "id": "studio-24",
+      "x": 648,
+      "y": 1313,
+      "zoneId": "studio",
+      "colors": [
+        "p.escalier-studio",
+        "r.studio"
+      ]
+    },
+    {
+      "id": "tour-01",
+      "x": 118,
+      "y": 93,
+      "zoneId": "tour",
+      "colors": [
+        "r.tour"
+      ]
+    },
+    {
+      "id": "tour-02",
+      "x": 188,
+      "y": 93,
+      "zoneId": "tour",
+      "colors": [
+        "r.tour"
+      ]
+    },
+    {
+      "id": "tour-03",
+      "x": 258,
+      "y": 93,
+      "zoneId": "tour",
+      "colors": [
+        "p.tour-bureau",
+        "r.tour"
+      ]
+    },
+    {
+      "id": "tour-04",
+      "x": 118,
+      "y": 163,
+      "zoneId": "tour",
+      "colors": [
+        "p.tour-ouest",
+        "r.tour"
+      ]
+    },
+    {
+      "id": "tour-05",
+      "x": 188,
+      "y": 163,
+      "zoneId": "tour",
+      "colors": [
+        "r.tour"
+      ]
+    },
+    {
+      "id": "tour-06",
+      "x": 258,
+      "y": 163,
+      "zoneId": "tour",
+      "colors": [
+        "r.tour"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "bureau-nord-01",
+      "to": "bureau-nord-02"
+    },
+    {
+      "from": "bureau-nord-01",
+      "to": "bureau-nord-12"
+    },
+    {
+      "from": "bureau-nord-01",
+      "to": "bureau-nord-13"
+    },
+    {
+      "from": "bureau-nord-01",
+      "to": "pass-tour-bureau-02"
+    },
+    {
+      "from": "bureau-nord-02",
+      "to": "bureau-nord-03"
+    },
+    {
+      "from": "bureau-nord-02",
+      "to": "bureau-nord-12"
+    },
+    {
+      "from": "bureau-nord-02",
+      "to": "bureau-nord-13"
+    },
+    {
+      "from": "bureau-nord-02",
+      "to": "bureau-nord-14"
+    },
+    {
+      "from": "bureau-nord-03",
+      "to": "bureau-nord-04"
+    },
+    {
+      "from": "bureau-nord-03",
+      "to": "bureau-nord-13"
+    },
+    {
+      "from": "bureau-nord-03",
+      "to": "bureau-nord-14"
+    },
+    {
+      "from": "bureau-nord-03",
+      "to": "bureau-nord-15"
+    },
+    {
+      "from": "bureau-nord-04",
+      "to": "bureau-nord-05"
+    },
+    {
+      "from": "bureau-nord-04",
+      "to": "bureau-nord-14"
+    },
+    {
+      "from": "bureau-nord-04",
+      "to": "bureau-nord-15"
+    },
+    {
+      "from": "bureau-nord-04",
+      "to": "bureau-nord-16"
+    },
+    {
+      "from": "bureau-nord-05",
+      "to": "bureau-nord-06"
+    },
+    {
+      "from": "bureau-nord-05",
+      "to": "bureau-nord-15"
+    },
+    {
+      "from": "bureau-nord-05",
+      "to": "bureau-nord-16"
+    },
+    {
+      "from": "bureau-nord-05",
+      "to": "bureau-nord-17"
+    },
+    {
+      "from": "bureau-nord-06",
+      "to": "bureau-nord-07"
+    },
+    {
+      "from": "bureau-nord-06",
+      "to": "bureau-nord-16"
+    },
+    {
+      "from": "bureau-nord-06",
+      "to": "bureau-nord-17"
+    },
+    {
+      "from": "bureau-nord-06",
+      "to": "bureau-nord-18"
+    },
+    {
+      "from": "bureau-nord-07",
+      "to": "bureau-nord-08"
+    },
+    {
+      "from": "bureau-nord-07",
+      "to": "bureau-nord-17"
+    },
+    {
+      "from": "bureau-nord-07",
+      "to": "bureau-nord-18"
+    },
+    {
+      "from": "bureau-nord-07",
+      "to": "bureau-nord-19"
+    },
+    {
+      "from": "bureau-nord-08",
+      "to": "bureau-nord-09"
+    },
+    {
+      "from": "bureau-nord-08",
+      "to": "bureau-nord-18"
+    },
+    {
+      "from": "bureau-nord-08",
+      "to": "bureau-nord-19"
+    },
+    {
+      "from": "bureau-nord-08",
+      "to": "bureau-nord-20"
+    },
+    {
+      "from": "bureau-nord-09",
+      "to": "bureau-nord-10"
+    },
+    {
+      "from": "bureau-nord-09",
+      "to": "bureau-nord-19"
+    },
+    {
+      "from": "bureau-nord-09",
+      "to": "bureau-nord-20"
+    },
+    {
+      "from": "bureau-nord-09",
+      "to": "bureau-nord-21"
+    },
+    {
+      "from": "bureau-nord-10",
+      "to": "bureau-nord-11"
+    },
+    {
+      "from": "bureau-nord-10",
+      "to": "bureau-nord-20"
+    },
+    {
+      "from": "bureau-nord-10",
+      "to": "bureau-nord-21"
+    },
+    {
+      "from": "bureau-nord-10",
+      "to": "bureau-nord-22"
+    },
+    {
+      "from": "bureau-nord-11",
+      "to": "bureau-nord-21"
+    },
+    {
+      "from": "bureau-nord-11",
+      "to": "bureau-nord-22"
+    },
+    {
+      "from": "bureau-nord-11",
+      "to": "pass-bureau-escalier-01"
+    },
+    {
+      "from": "bureau-nord-12",
+      "to": "bureau-nord-13"
+    },
+    {
+      "from": "bureau-nord-13",
+      "to": "bureau-nord-14"
+    },
+    {
+      "from": "bureau-nord-13",
+      "to": "pass-bureau-hall-01"
+    },
+    {
+      "from": "bureau-nord-14",
+      "to": "bureau-nord-15"
+    },
+    {
+      "from": "bureau-nord-15",
+      "to": "bureau-nord-16"
+    },
+    {
+      "from": "bureau-nord-16",
+      "to": "bureau-nord-17"
+    },
+    {
+      "from": "bureau-nord-17",
+      "to": "bureau-nord-18"
+    },
+    {
+      "from": "bureau-nord-18",
+      "to": "bureau-nord-19"
+    },
+    {
+      "from": "bureau-nord-19",
+      "to": "bureau-nord-20"
+    },
+    {
+      "from": "bureau-nord-20",
+      "to": "bureau-nord-21"
+    },
+    {
+      "from": "bureau-nord-21",
+      "to": "bureau-nord-22"
+    },
+    {
+      "from": "cabinet-01",
+      "to": "cabinet-02"
+    },
+    {
+      "from": "cabinet-01",
+      "to": "cabinet-04"
+    },
+    {
+      "from": "cabinet-01",
+      "to": "cabinet-05"
+    },
+    {
+      "from": "cabinet-01",
+      "to": "pass-central-cabinet-03"
+    },
+    {
+      "from": "cabinet-02",
+      "to": "cabinet-03"
+    },
+    {
+      "from": "cabinet-02",
+      "to": "cabinet-04"
+    },
+    {
+      "from": "cabinet-02",
+      "to": "cabinet-05"
+    },
+    {
+      "from": "cabinet-02",
+      "to": "cabinet-06"
+    },
+    {
+      "from": "cabinet-03",
+      "to": "cabinet-05"
+    },
+    {
+      "from": "cabinet-03",
+      "to": "cabinet-06"
+    },
+    {
+      "from": "cabinet-03",
+      "to": "pass-cabinet-rotonde-01"
+    },
+    {
+      "from": "cabinet-04",
+      "to": "cabinet-05"
+    },
+    {
+      "from": "cabinet-04",
+      "to": "cabinet-07"
+    },
+    {
+      "from": "cabinet-04",
+      "to": "cabinet-08"
+    },
+    {
+      "from": "cabinet-04",
+      "to": "pass-cabinet-escalier-01"
+    },
+    {
+      "from": "cabinet-05",
+      "to": "cabinet-06"
+    },
+    {
+      "from": "cabinet-05",
+      "to": "cabinet-07"
+    },
+    {
+      "from": "cabinet-05",
+      "to": "cabinet-08"
+    },
+    {
+      "from": "cabinet-05",
+      "to": "cabinet-09"
+    },
+    {
+      "from": "cabinet-06",
+      "to": "cabinet-08"
+    },
+    {
+      "from": "cabinet-06",
+      "to": "cabinet-09"
+    },
+    {
+      "from": "cabinet-07",
+      "to": "cabinet-08"
+    },
+    {
+      "from": "cabinet-08",
+      "to": "cabinet-09"
+    },
+    {
+      "from": "cave-01",
+      "to": "cave-02"
+    },
+    {
+      "from": "cave-01",
+      "to": "cave-08"
+    },
+    {
+      "from": "cave-01",
+      "to": "cave-09"
+    },
+    {
+      "from": "cave-02",
+      "to": "cave-03"
+    },
+    {
+      "from": "cave-02",
+      "to": "cave-08"
+    },
+    {
+      "from": "cave-02",
+      "to": "cave-09"
+    },
+    {
+      "from": "cave-02",
+      "to": "cave-10"
+    },
+    {
+      "from": "cave-03",
+      "to": "cave-04"
+    },
+    {
+      "from": "cave-03",
+      "to": "cave-09"
+    },
+    {
+      "from": "cave-03",
+      "to": "cave-10"
+    },
+    {
+      "from": "cave-03",
+      "to": "cave-11"
+    },
+    {
+      "from": "cave-04",
+      "to": "cave-05"
+    },
+    {
+      "from": "cave-04",
+      "to": "cave-10"
+    },
+    {
+      "from": "cave-04",
+      "to": "cave-11"
+    },
+    {
+      "from": "cave-04",
+      "to": "cave-12"
+    },
+    {
+      "from": "cave-05",
+      "to": "cave-06"
+    },
+    {
+      "from": "cave-05",
+      "to": "cave-11"
+    },
+    {
+      "from": "cave-05",
+      "to": "cave-12"
+    },
+    {
+      "from": "cave-05",
+      "to": "cave-13"
+    },
+    {
+      "from": "cave-06",
+      "to": "cave-07"
+    },
+    {
+      "from": "cave-06",
+      "to": "cave-12"
+    },
+    {
+      "from": "cave-06",
+      "to": "cave-13"
+    },
+    {
+      "from": "cave-06",
+      "to": "cave-14"
+    },
+    {
+      "from": "cave-07",
+      "to": "cave-13"
+    },
+    {
+      "from": "cave-07",
+      "to": "cave-14"
+    },
+    {
+      "from": "cave-08",
+      "to": "cave-09"
+    },
+    {
+      "from": "cave-08",
+      "to": "cave-15"
+    },
+    {
+      "from": "cave-08",
+      "to": "cave-16"
+    },
+    {
+      "from": "cave-09",
+      "to": "cave-10"
+    },
+    {
+      "from": "cave-09",
+      "to": "cave-15"
+    },
+    {
+      "from": "cave-09",
+      "to": "cave-16"
+    },
+    {
+      "from": "cave-09",
+      "to": "cave-17"
+    },
+    {
+      "from": "cave-10",
+      "to": "cave-11"
+    },
+    {
+      "from": "cave-10",
+      "to": "cave-16"
+    },
+    {
+      "from": "cave-10",
+      "to": "cave-17"
+    },
+    {
+      "from": "cave-10",
+      "to": "cave-18"
+    },
+    {
+      "from": "cave-11",
+      "to": "cave-12"
+    },
+    {
+      "from": "cave-11",
+      "to": "cave-17"
+    },
+    {
+      "from": "cave-11",
+      "to": "cave-18"
+    },
+    {
+      "from": "cave-11",
+      "to": "cave-19"
+    },
+    {
+      "from": "cave-12",
+      "to": "cave-13"
+    },
+    {
+      "from": "cave-12",
+      "to": "cave-18"
+    },
+    {
+      "from": "cave-12",
+      "to": "cave-19"
+    },
+    {
+      "from": "cave-12",
+      "to": "cave-20"
+    },
+    {
+      "from": "cave-13",
+      "to": "cave-14"
+    },
+    {
+      "from": "cave-13",
+      "to": "cave-19"
+    },
+    {
+      "from": "cave-13",
+      "to": "cave-20"
+    },
+    {
+      "from": "cave-13",
+      "to": "cave-21"
+    },
+    {
+      "from": "cave-14",
+      "to": "cave-20"
+    },
+    {
+      "from": "cave-14",
+      "to": "cave-21"
+    },
+    {
+      "from": "cave-14",
+      "to": "pass-escalier-cave-02"
+    },
+    {
+      "from": "cave-15",
+      "to": "cave-16"
+    },
+    {
+      "from": "cave-16",
+      "to": "cave-17"
+    },
+    {
+      "from": "cave-17",
+      "to": "cave-18"
+    },
+    {
+      "from": "cave-18",
+      "to": "cave-19"
+    },
+    {
+      "from": "cave-19",
+      "to": "cave-20"
+    },
+    {
+      "from": "cave-20",
+      "to": "cave-21"
+    },
+    {
+      "from": "chambre-01",
+      "to": "chambre-02"
+    },
+    {
+      "from": "chambre-01",
+      "to": "chambre-05"
+    },
+    {
+      "from": "chambre-01",
+      "to": "chambre-06"
+    },
+    {
+      "from": "chambre-02",
+      "to": "chambre-03"
+    },
+    {
+      "from": "chambre-02",
+      "to": "chambre-05"
+    },
+    {
+      "from": "chambre-02",
+      "to": "chambre-06"
+    },
+    {
+      "from": "chambre-02",
+      "to": "chambre-07"
+    },
+    {
+      "from": "chambre-03",
+      "to": "chambre-04"
+    },
+    {
+      "from": "chambre-03",
+      "to": "chambre-06"
+    },
+    {
+      "from": "chambre-03",
+      "to": "chambre-07"
+    },
+    {
+      "from": "chambre-03",
+      "to": "chambre-08"
+    },
+    {
+      "from": "chambre-03",
+      "to": "pass-hall-chambre-02"
+    },
+    {
+      "from": "chambre-04",
+      "to": "chambre-07"
+    },
+    {
+      "from": "chambre-04",
+      "to": "chambre-08"
+    },
+    {
+      "from": "chambre-05",
+      "to": "chambre-06"
+    },
+    {
+      "from": "chambre-05",
+      "to": "chambre-09"
+    },
+    {
+      "from": "chambre-05",
+      "to": "chambre-10"
+    },
+    {
+      "from": "chambre-05",
+      "to": "pass-carrelee-chambre-02"
+    },
+    {
+      "from": "chambre-06",
+      "to": "chambre-07"
+    },
+    {
+      "from": "chambre-06",
+      "to": "chambre-09"
+    },
+    {
+      "from": "chambre-06",
+      "to": "chambre-10"
+    },
+    {
+      "from": "chambre-06",
+      "to": "chambre-11"
+    },
+    {
+      "from": "chambre-07",
+      "to": "chambre-08"
+    },
+    {
+      "from": "chambre-07",
+      "to": "chambre-10"
+    },
+    {
+      "from": "chambre-07",
+      "to": "chambre-11"
+    },
+    {
+      "from": "chambre-07",
+      "to": "chambre-12"
+    },
+    {
+      "from": "chambre-08",
+      "to": "chambre-11"
+    },
+    {
+      "from": "chambre-08",
+      "to": "chambre-12"
+    },
+    {
+      "from": "chambre-09",
+      "to": "chambre-10"
+    },
+    {
+      "from": "chambre-09",
+      "to": "chambre-13"
+    },
+    {
+      "from": "chambre-09",
+      "to": "chambre-14"
+    },
+    {
+      "from": "chambre-10",
+      "to": "chambre-11"
+    },
+    {
+      "from": "chambre-10",
+      "to": "chambre-13"
+    },
+    {
+      "from": "chambre-10",
+      "to": "chambre-14"
+    },
+    {
+      "from": "chambre-10",
+      "to": "chambre-15"
+    },
+    {
+      "from": "chambre-11",
+      "to": "chambre-12"
+    },
+    {
+      "from": "chambre-11",
+      "to": "chambre-14"
+    },
+    {
+      "from": "chambre-11",
+      "to": "chambre-15"
+    },
+    {
+      "from": "chambre-11",
+      "to": "chambre-16"
+    },
+    {
+      "from": "chambre-12",
+      "to": "chambre-15"
+    },
+    {
+      "from": "chambre-12",
+      "to": "chambre-16"
+    },
+    {
+      "from": "chambre-13",
+      "to": "chambre-14"
+    },
+    {
+      "from": "chambre-14",
+      "to": "chambre-15"
+    },
+    {
+      "from": "chambre-14",
+      "to": "pass-chambre-studio-01"
+    },
+    {
+      "from": "chambre-15",
+      "to": "chambre-16"
+    },
+    {
+      "from": "couloir-central-01",
+      "to": "couloir-central-02"
+    },
+    {
+      "from": "couloir-central-01",
+      "to": "pass-hall-central-02"
+    },
+    {
+      "from": "couloir-central-02",
+      "to": "couloir-central-03"
+    },
+    {
+      "from": "couloir-central-02",
+      "to": "pass-central-salon-01"
+    },
+    {
+      "from": "couloir-central-03",
+      "to": "couloir-central-04"
+    },
+    {
+      "from": "couloir-central-04",
+      "to": "couloir-central-05"
+    },
+    {
+      "from": "couloir-central-05",
+      "to": "couloir-central-06"
+    },
+    {
+      "from": "couloir-central-06",
+      "to": "couloir-central-07"
+    },
+    {
+      "from": "couloir-central-07",
+      "to": "couloir-central-08"
+    },
+    {
+      "from": "couloir-central-08",
+      "to": "couloir-central-09"
+    },
+    {
+      "from": "couloir-central-09",
+      "to": "couloir-central-10"
+    },
+    {
+      "from": "couloir-central-09",
+      "to": "pass-central-manger-01",
+      "doorId": "door-central-manger"
+    },
+    {
+      "from": "couloir-central-09",
+      "to": "pass-studio-central-03"
+    },
+    {
+      "from": "couloir-central-10",
+      "to": "pass-central-cabinet-01"
+    },
+    {
+      "from": "couloir-ouest-01",
+      "to": "couloir-ouest-02"
+    },
+    {
+      "from": "couloir-ouest-01",
+      "to": "couloir-ouest-03"
+    },
+    {
+      "from": "couloir-ouest-01",
+      "to": "couloir-ouest-04"
+    },
+    {
+      "from": "couloir-ouest-01",
+      "to": "pass-tour-ouest-02"
+    },
+    {
+      "from": "couloir-ouest-02",
+      "to": "couloir-ouest-03"
+    },
+    {
+      "from": "couloir-ouest-02",
+      "to": "couloir-ouest-04"
+    },
+    {
+      "from": "couloir-ouest-03",
+      "to": "couloir-ouest-04"
+    },
+    {
+      "from": "couloir-ouest-03",
+      "to": "couloir-ouest-05"
+    },
+    {
+      "from": "couloir-ouest-03",
+      "to": "couloir-ouest-06"
+    },
+    {
+      "from": "couloir-ouest-04",
+      "to": "couloir-ouest-05"
+    },
+    {
+      "from": "couloir-ouest-04",
+      "to": "couloir-ouest-06"
+    },
+    {
+      "from": "couloir-ouest-04",
+      "to": "pass-ouest-hall-01"
+    },
+    {
+      "from": "couloir-ouest-05",
+      "to": "couloir-ouest-06"
+    },
+    {
+      "from": "couloir-ouest-05",
+      "to": "pass-ouest-carrelee-01"
+    },
+    {
+      "from": "escalier-cave-01",
+      "to": "escalier-cave-02"
+    },
+    {
+      "from": "escalier-cave-01",
+      "to": "escalier-cave-03"
+    },
+    {
+      "from": "escalier-cave-01",
+      "to": "escalier-cave-04"
+    },
+    {
+      "from": "escalier-cave-01",
+      "to": "pass-escalier-studio-01"
+    },
+    {
+      "from": "escalier-cave-02",
+      "to": "escalier-cave-03"
+    },
+    {
+      "from": "escalier-cave-02",
+      "to": "escalier-cave-04"
+    },
+    {
+      "from": "escalier-cave-03",
+      "to": "escalier-cave-04"
+    },
+    {
+      "from": "escalier-cave-03",
+      "to": "escalier-cave-05"
+    },
+    {
+      "from": "escalier-cave-03",
+      "to": "escalier-cave-06"
+    },
+    {
+      "from": "escalier-cave-04",
+      "to": "escalier-cave-05"
+    },
+    {
+      "from": "escalier-cave-04",
+      "to": "escalier-cave-06"
+    },
+    {
+      "from": "escalier-cave-04",
+      "to": "pass-cabinet-escalier-02"
+    },
+    {
+      "from": "escalier-cave-05",
+      "to": "escalier-cave-06"
+    },
+    {
+      "from": "escalier-cave-05",
+      "to": "pass-escalier-cave-01"
+    },
+    {
+      "from": "escalier-nord-01",
+      "to": "escalier-nord-02"
+    },
+    {
+      "from": "escalier-nord-01",
+      "to": "escalier-nord-03"
+    },
+    {
+      "from": "escalier-nord-01",
+      "to": "escalier-nord-04"
+    },
+    {
+      "from": "escalier-nord-01",
+      "to": "pass-bureau-escalier-02"
+    },
+    {
+      "from": "escalier-nord-02",
+      "to": "escalier-nord-03"
+    },
+    {
+      "from": "escalier-nord-02",
+      "to": "escalier-nord-04"
+    },
+    {
+      "from": "escalier-nord-03",
+      "to": "escalier-nord-04"
+    },
+    {
+      "from": "escalier-nord-04",
+      "to": "pass-escalier-salon-01"
+    },
+    {
+      "from": "grand-hall-01",
+      "to": "grand-hall-02"
+    },
+    {
+      "from": "grand-hall-01",
+      "to": "grand-hall-07"
+    },
+    {
+      "from": "grand-hall-01",
+      "to": "grand-hall-08"
+    },
+    {
+      "from": "grand-hall-02",
+      "to": "grand-hall-03"
+    },
+    {
+      "from": "grand-hall-02",
+      "to": "grand-hall-07"
+    },
+    {
+      "from": "grand-hall-02",
+      "to": "grand-hall-08"
+    },
+    {
+      "from": "grand-hall-02",
+      "to": "grand-hall-09"
+    },
+    {
+      "from": "grand-hall-03",
+      "to": "grand-hall-04"
+    },
+    {
+      "from": "grand-hall-03",
+      "to": "grand-hall-08"
+    },
+    {
+      "from": "grand-hall-03",
+      "to": "grand-hall-09"
+    },
+    {
+      "from": "grand-hall-03",
+      "to": "grand-hall-10"
+    },
+    {
+      "from": "grand-hall-04",
+      "to": "grand-hall-05"
+    },
+    {
+      "from": "grand-hall-04",
+      "to": "grand-hall-09"
+    },
+    {
+      "from": "grand-hall-04",
+      "to": "grand-hall-10"
+    },
+    {
+      "from": "grand-hall-04",
+      "to": "grand-hall-11"
+    },
+    {
+      "from": "grand-hall-04",
+      "to": "pass-bureau-hall-02"
+    },
+    {
+      "from": "grand-hall-05",
+      "to": "grand-hall-06"
+    },
+    {
+      "from": "grand-hall-05",
+      "to": "grand-hall-10"
+    },
+    {
+      "from": "grand-hall-05",
+      "to": "grand-hall-11"
+    },
+    {
+      "from": "grand-hall-05",
+      "to": "grand-hall-12"
+    },
+    {
+      "from": "grand-hall-06",
+      "to": "grand-hall-11"
+    },
+    {
+      "from": "grand-hall-06",
+      "to": "grand-hall-12"
+    },
+    {
+      "from": "grand-hall-07",
+      "to": "grand-hall-08"
+    },
+    {
+      "from": "grand-hall-07",
+      "to": "grand-hall-13"
+    },
+    {
+      "from": "grand-hall-07",
+      "to": "grand-hall-14"
+    },
+    {
+      "from": "grand-hall-07",
+      "to": "pass-ouest-hall-02"
+    },
+    {
+      "from": "grand-hall-08",
+      "to": "grand-hall-09"
+    },
+    {
+      "from": "grand-hall-08",
+      "to": "grand-hall-13"
+    },
+    {
+      "from": "grand-hall-08",
+      "to": "grand-hall-14"
+    },
+    {
+      "from": "grand-hall-08",
+      "to": "grand-hall-15"
+    },
+    {
+      "from": "grand-hall-09",
+      "to": "grand-hall-10"
+    },
+    {
+      "from": "grand-hall-09",
+      "to": "grand-hall-14"
+    },
+    {
+      "from": "grand-hall-09",
+      "to": "grand-hall-15"
+    },
+    {
+      "from": "grand-hall-09",
+      "to": "grand-hall-16"
+    },
+    {
+      "from": "grand-hall-10",
+      "to": "grand-hall-11"
+    },
+    {
+      "from": "grand-hall-10",
+      "to": "grand-hall-15"
+    },
+    {
+      "from": "grand-hall-10",
+      "to": "grand-hall-16"
+    },
+    {
+      "from": "grand-hall-10",
+      "to": "grand-hall-17"
+    },
+    {
+      "from": "grand-hall-11",
+      "to": "grand-hall-12"
+    },
+    {
+      "from": "grand-hall-11",
+      "to": "grand-hall-16"
+    },
+    {
+      "from": "grand-hall-11",
+      "to": "grand-hall-17"
+    },
+    {
+      "from": "grand-hall-11",
+      "to": "grand-hall-18"
+    },
+    {
+      "from": "grand-hall-12",
+      "to": "grand-hall-17"
+    },
+    {
+      "from": "grand-hall-12",
+      "to": "grand-hall-18"
+    },
+    {
+      "from": "grand-hall-13",
+      "to": "grand-hall-14"
+    },
+    {
+      "from": "grand-hall-14",
+      "to": "grand-hall-15"
+    },
+    {
+      "from": "grand-hall-15",
+      "to": "grand-hall-16"
+    },
+    {
+      "from": "grand-hall-16",
+      "to": "grand-hall-17"
+    },
+    {
+      "from": "grand-hall-16",
+      "to": "pass-hall-chambre-01",
+      "doorId": "door-hall-chambre"
+    },
+    {
+      "from": "grand-hall-17",
+      "to": "grand-hall-18"
+    },
+    {
+      "from": "grand-hall-18",
+      "to": "pass-hall-central-01"
+    },
+    {
+      "from": "pass-bureau-escalier-01",
+      "to": "pass-bureau-escalier-02"
+    },
+    {
+      "from": "pass-bureau-hall-01",
+      "to": "pass-bureau-hall-02"
+    },
+    {
+      "from": "pass-cabinet-escalier-01",
+      "to": "pass-cabinet-escalier-02"
+    },
+    {
+      "from": "pass-cabinet-rotonde-01",
+      "to": "pass-cabinet-rotonde-02"
+    },
+    {
+      "from": "pass-cabinet-rotonde-02",
+      "to": "rotonde-05"
+    },
+    {
+      "from": "pass-carrelee-chambre-01",
+      "to": "pass-carrelee-chambre-02"
+    },
+    {
+      "from": "pass-carrelee-chambre-01",
+      "to": "salle-carrelee-06"
+    },
+    {
+      "from": "pass-carrelee-studio-01",
+      "to": "pass-carrelee-studio-02"
+    },
+    {
+      "from": "pass-carrelee-studio-01",
+      "to": "salle-carrelee-11"
+    },
+    {
+      "from": "pass-carrelee-studio-02",
+      "to": "studio-01"
+    },
+    {
+      "from": "pass-central-cabinet-01",
+      "to": "pass-central-cabinet-02"
+    },
+    {
+      "from": "pass-central-cabinet-02",
+      "to": "pass-central-cabinet-03"
+    },
+    {
+      "from": "pass-central-manger-01",
+      "to": "pass-central-manger-02"
+    },
+    {
+      "from": "pass-central-manger-02",
+      "to": "salle-a-manger-07"
+    },
+    {
+      "from": "pass-central-salon-01",
+      "to": "pass-central-salon-02"
+    },
+    {
+      "from": "pass-central-salon-02",
+      "to": "salon-07"
+    },
+    {
+      "from": "pass-chambre-studio-01",
+      "to": "pass-chambre-studio-02"
+    },
+    {
+      "from": "pass-chambre-studio-02",
+      "to": "studio-05"
+    },
+    {
+      "from": "pass-escalier-cave-01",
+      "to": "pass-escalier-cave-02"
+    },
+    {
+      "from": "pass-escalier-salon-01",
+      "to": "pass-escalier-salon-02"
+    },
+    {
+      "from": "pass-escalier-salon-02",
+      "to": "salon-06"
+    },
+    {
+      "from": "pass-escalier-studio-01",
+      "to": "pass-escalier-studio-02"
+    },
+    {
+      "from": "pass-escalier-studio-02",
+      "to": "studio-24"
+    },
+    {
+      "from": "pass-hall-central-01",
+      "to": "pass-hall-central-02"
+    },
+    {
+      "from": "pass-hall-chambre-01",
+      "to": "pass-hall-chambre-02"
+    },
+    {
+      "from": "pass-manger-rotonde-01",
+      "to": "pass-manger-rotonde-02"
+    },
+    {
+      "from": "pass-manger-rotonde-01",
+      "to": "salle-a-manger-24"
+    },
+    {
+      "from": "pass-manger-rotonde-02",
+      "to": "rotonde-04"
+    },
+    {
+      "from": "pass-ouest-carrelee-01",
+      "to": "pass-ouest-carrelee-02"
+    },
+    {
+      "from": "pass-ouest-carrelee-02",
+      "to": "salle-carrelee-02"
+    },
+    {
+      "from": "pass-ouest-hall-01",
+      "to": "pass-ouest-hall-02"
+    },
+    {
+      "from": "pass-salon-manger-01",
+      "to": "pass-salon-manger-02"
+    },
+    {
+      "from": "pass-salon-manger-01",
+      "to": "salon-28"
+    },
+    {
+      "from": "pass-salon-manger-02",
+      "to": "salle-a-manger-04"
+    },
+    {
+      "from": "pass-studio-central-01",
+      "to": "pass-studio-central-02"
+    },
+    {
+      "from": "pass-studio-central-01",
+      "to": "studio-06",
+      "doorId": "door-studio-central"
+    },
+    {
+      "from": "pass-studio-central-02",
+      "to": "pass-studio-central-03"
+    },
+    {
+      "from": "pass-tour-bureau-01",
+      "to": "pass-tour-bureau-02"
+    },
+    {
+      "from": "pass-tour-bureau-01",
+      "to": "tour-03",
+      "doorId": "door-tour-bureau"
+    },
+    {
+      "from": "pass-tour-ouest-01",
+      "to": "pass-tour-ouest-02"
+    },
+    {
+      "from": "pass-tour-ouest-01",
+      "to": "tour-04",
+      "doorId": "door-tour-ouest"
+    },
+    {
+      "from": "rotonde-01",
+      "to": "rotonde-02"
+    },
+    {
+      "from": "rotonde-01",
+      "to": "rotonde-05"
+    },
+    {
+      "from": "rotonde-01",
+      "to": "rotonde-06"
+    },
+    {
+      "from": "rotonde-02",
+      "to": "rotonde-03"
+    },
+    {
+      "from": "rotonde-02",
+      "to": "rotonde-05"
+    },
+    {
+      "from": "rotonde-02",
+      "to": "rotonde-06"
+    },
+    {
+      "from": "rotonde-02",
+      "to": "rotonde-07"
+    },
+    {
+      "from": "rotonde-03",
+      "to": "rotonde-04"
+    },
+    {
+      "from": "rotonde-03",
+      "to": "rotonde-06"
+    },
+    {
+      "from": "rotonde-03",
+      "to": "rotonde-07"
+    },
+    {
+      "from": "rotonde-03",
+      "to": "rotonde-08"
+    },
+    {
+      "from": "rotonde-04",
+      "to": "rotonde-07"
+    },
+    {
+      "from": "rotonde-04",
+      "to": "rotonde-08"
+    },
+    {
+      "from": "rotonde-05",
+      "to": "rotonde-06"
+    },
+    {
+      "from": "rotonde-05",
+      "to": "rotonde-09"
+    },
+    {
+      "from": "rotonde-05",
+      "to": "rotonde-10"
+    },
+    {
+      "from": "rotonde-06",
+      "to": "rotonde-07"
+    },
+    {
+      "from": "rotonde-06",
+      "to": "rotonde-09"
+    },
+    {
+      "from": "rotonde-06",
+      "to": "rotonde-10"
+    },
+    {
+      "from": "rotonde-06",
+      "to": "rotonde-11"
+    },
+    {
+      "from": "rotonde-07",
+      "to": "rotonde-08"
+    },
+    {
+      "from": "rotonde-07",
+      "to": "rotonde-10"
+    },
+    {
+      "from": "rotonde-07",
+      "to": "rotonde-11"
+    },
+    {
+      "from": "rotonde-07",
+      "to": "rotonde-12"
+    },
+    {
+      "from": "rotonde-08",
+      "to": "rotonde-11"
+    },
+    {
+      "from": "rotonde-08",
+      "to": "rotonde-12"
+    },
+    {
+      "from": "rotonde-09",
+      "to": "rotonde-10"
+    },
+    {
+      "from": "rotonde-09",
+      "to": "rotonde-13"
+    },
+    {
+      "from": "rotonde-09",
+      "to": "rotonde-14"
+    },
+    {
+      "from": "rotonde-10",
+      "to": "rotonde-11"
+    },
+    {
+      "from": "rotonde-10",
+      "to": "rotonde-13"
+    },
+    {
+      "from": "rotonde-10",
+      "to": "rotonde-14"
+    },
+    {
+      "from": "rotonde-10",
+      "to": "rotonde-15"
+    },
+    {
+      "from": "rotonde-11",
+      "to": "rotonde-12"
+    },
+    {
+      "from": "rotonde-11",
+      "to": "rotonde-14"
+    },
+    {
+      "from": "rotonde-11",
+      "to": "rotonde-15"
+    },
+    {
+      "from": "rotonde-11",
+      "to": "rotonde-16"
+    },
+    {
+      "from": "rotonde-12",
+      "to": "rotonde-15"
+    },
+    {
+      "from": "rotonde-12",
+      "to": "rotonde-16"
+    },
+    {
+      "from": "rotonde-13",
+      "to": "rotonde-14"
+    },
+    {
+      "from": "rotonde-14",
+      "to": "rotonde-15"
+    },
+    {
+      "from": "rotonde-15",
+      "to": "rotonde-16"
+    },
+    {
+      "from": "salle-a-manger-01",
+      "to": "salle-a-manger-02"
+    },
+    {
+      "from": "salle-a-manger-01",
+      "to": "salle-a-manger-07"
+    },
+    {
+      "from": "salle-a-manger-01",
+      "to": "salle-a-manger-08"
+    },
+    {
+      "from": "salle-a-manger-02",
+      "to": "salle-a-manger-03"
+    },
+    {
+      "from": "salle-a-manger-02",
+      "to": "salle-a-manger-07"
+    },
+    {
+      "from": "salle-a-manger-02",
+      "to": "salle-a-manger-08"
+    },
+    {
+      "from": "salle-a-manger-02",
+      "to": "salle-a-manger-09"
+    },
+    {
+      "from": "salle-a-manger-03",
+      "to": "salle-a-manger-04"
+    },
+    {
+      "from": "salle-a-manger-03",
+      "to": "salle-a-manger-08"
+    },
+    {
+      "from": "salle-a-manger-03",
+      "to": "salle-a-manger-09"
+    },
+    {
+      "from": "salle-a-manger-03",
+      "to": "salle-a-manger-10"
+    },
+    {
+      "from": "salle-a-manger-04",
+      "to": "salle-a-manger-05"
+    },
+    {
+      "from": "salle-a-manger-04",
+      "to": "salle-a-manger-09"
+    },
+    {
+      "from": "salle-a-manger-04",
+      "to": "salle-a-manger-10"
+    },
+    {
+      "from": "salle-a-manger-04",
+      "to": "salle-a-manger-11"
+    },
+    {
+      "from": "salle-a-manger-05",
+      "to": "salle-a-manger-06"
+    },
+    {
+      "from": "salle-a-manger-05",
+      "to": "salle-a-manger-10"
+    },
+    {
+      "from": "salle-a-manger-05",
+      "to": "salle-a-manger-11"
+    },
+    {
+      "from": "salle-a-manger-05",
+      "to": "salle-a-manger-12"
+    },
+    {
+      "from": "salle-a-manger-06",
+      "to": "salle-a-manger-11"
+    },
+    {
+      "from": "salle-a-manger-06",
+      "to": "salle-a-manger-12"
+    },
+    {
+      "from": "salle-a-manger-07",
+      "to": "salle-a-manger-08"
+    },
+    {
+      "from": "salle-a-manger-07",
+      "to": "salle-a-manger-13"
+    },
+    {
+      "from": "salle-a-manger-07",
+      "to": "salle-a-manger-14"
+    },
+    {
+      "from": "salle-a-manger-08",
+      "to": "salle-a-manger-09"
+    },
+    {
+      "from": "salle-a-manger-08",
+      "to": "salle-a-manger-13"
+    },
+    {
+      "from": "salle-a-manger-08",
+      "to": "salle-a-manger-14"
+    },
+    {
+      "from": "salle-a-manger-08",
+      "to": "salle-a-manger-15"
+    },
+    {
+      "from": "salle-a-manger-09",
+      "to": "salle-a-manger-10"
+    },
+    {
+      "from": "salle-a-manger-09",
+      "to": "salle-a-manger-14"
+    },
+    {
+      "from": "salle-a-manger-09",
+      "to": "salle-a-manger-15"
+    },
+    {
+      "from": "salle-a-manger-09",
+      "to": "salle-a-manger-16"
+    },
+    {
+      "from": "salle-a-manger-10",
+      "to": "salle-a-manger-11"
+    },
+    {
+      "from": "salle-a-manger-10",
+      "to": "salle-a-manger-15"
+    },
+    {
+      "from": "salle-a-manger-10",
+      "to": "salle-a-manger-16"
+    },
+    {
+      "from": "salle-a-manger-10",
+      "to": "salle-a-manger-17"
+    },
+    {
+      "from": "salle-a-manger-11",
+      "to": "salle-a-manger-12"
+    },
+    {
+      "from": "salle-a-manger-11",
+      "to": "salle-a-manger-16"
+    },
+    {
+      "from": "salle-a-manger-11",
+      "to": "salle-a-manger-17"
+    },
+    {
+      "from": "salle-a-manger-11",
+      "to": "salle-a-manger-18"
+    },
+    {
+      "from": "salle-a-manger-12",
+      "to": "salle-a-manger-17"
+    },
+    {
+      "from": "salle-a-manger-12",
+      "to": "salle-a-manger-18"
+    },
+    {
+      "from": "salle-a-manger-13",
+      "to": "salle-a-manger-14"
+    },
+    {
+      "from": "salle-a-manger-13",
+      "to": "salle-a-manger-19"
+    },
+    {
+      "from": "salle-a-manger-13",
+      "to": "salle-a-manger-20"
+    },
+    {
+      "from": "salle-a-manger-14",
+      "to": "salle-a-manger-15"
+    },
+    {
+      "from": "salle-a-manger-14",
+      "to": "salle-a-manger-19"
+    },
+    {
+      "from": "salle-a-manger-14",
+      "to": "salle-a-manger-20"
+    },
+    {
+      "from": "salle-a-manger-14",
+      "to": "salle-a-manger-21"
+    },
+    {
+      "from": "salle-a-manger-15",
+      "to": "salle-a-manger-16"
+    },
+    {
+      "from": "salle-a-manger-15",
+      "to": "salle-a-manger-20"
+    },
+    {
+      "from": "salle-a-manger-15",
+      "to": "salle-a-manger-21"
+    },
+    {
+      "from": "salle-a-manger-15",
+      "to": "salle-a-manger-22"
+    },
+    {
+      "from": "salle-a-manger-16",
+      "to": "salle-a-manger-17"
+    },
+    {
+      "from": "salle-a-manger-16",
+      "to": "salle-a-manger-21"
+    },
+    {
+      "from": "salle-a-manger-16",
+      "to": "salle-a-manger-22"
+    },
+    {
+      "from": "salle-a-manger-16",
+      "to": "salle-a-manger-23"
+    },
+    {
+      "from": "salle-a-manger-17",
+      "to": "salle-a-manger-18"
+    },
+    {
+      "from": "salle-a-manger-17",
+      "to": "salle-a-manger-22"
+    },
+    {
+      "from": "salle-a-manger-17",
+      "to": "salle-a-manger-23"
+    },
+    {
+      "from": "salle-a-manger-17",
+      "to": "salle-a-manger-24"
+    },
+    {
+      "from": "salle-a-manger-18",
+      "to": "salle-a-manger-23"
+    },
+    {
+      "from": "salle-a-manger-18",
+      "to": "salle-a-manger-24"
+    },
+    {
+      "from": "salle-a-manger-19",
+      "to": "salle-a-manger-20"
+    },
+    {
+      "from": "salle-a-manger-20",
+      "to": "salle-a-manger-21"
+    },
+    {
+      "from": "salle-a-manger-21",
+      "to": "salle-a-manger-22"
+    },
+    {
+      "from": "salle-a-manger-22",
+      "to": "salle-a-manger-23"
+    },
+    {
+      "from": "salle-a-manger-23",
+      "to": "salle-a-manger-24"
+    },
+    {
+      "from": "salle-carrelee-01",
+      "to": "salle-carrelee-02"
+    },
+    {
+      "from": "salle-carrelee-01",
+      "to": "salle-carrelee-04"
+    },
+    {
+      "from": "salle-carrelee-01",
+      "to": "salle-carrelee-05"
+    },
+    {
+      "from": "salle-carrelee-02",
+      "to": "salle-carrelee-03"
+    },
+    {
+      "from": "salle-carrelee-02",
+      "to": "salle-carrelee-04"
+    },
+    {
+      "from": "salle-carrelee-02",
+      "to": "salle-carrelee-05"
+    },
+    {
+      "from": "salle-carrelee-02",
+      "to": "salle-carrelee-06"
+    },
+    {
+      "from": "salle-carrelee-03",
+      "to": "salle-carrelee-05"
+    },
+    {
+      "from": "salle-carrelee-03",
+      "to": "salle-carrelee-06"
+    },
+    {
+      "from": "salle-carrelee-04",
+      "to": "salle-carrelee-05"
+    },
+    {
+      "from": "salle-carrelee-04",
+      "to": "salle-carrelee-07"
+    },
+    {
+      "from": "salle-carrelee-04",
+      "to": "salle-carrelee-08"
+    },
+    {
+      "from": "salle-carrelee-05",
+      "to": "salle-carrelee-06"
+    },
+    {
+      "from": "salle-carrelee-05",
+      "to": "salle-carrelee-07"
+    },
+    {
+      "from": "salle-carrelee-05",
+      "to": "salle-carrelee-08"
+    },
+    {
+      "from": "salle-carrelee-05",
+      "to": "salle-carrelee-09"
+    },
+    {
+      "from": "salle-carrelee-06",
+      "to": "salle-carrelee-08"
+    },
+    {
+      "from": "salle-carrelee-06",
+      "to": "salle-carrelee-09"
+    },
+    {
+      "from": "salle-carrelee-07",
+      "to": "salle-carrelee-08"
+    },
+    {
+      "from": "salle-carrelee-07",
+      "to": "salle-carrelee-10"
+    },
+    {
+      "from": "salle-carrelee-07",
+      "to": "salle-carrelee-11"
+    },
+    {
+      "from": "salle-carrelee-08",
+      "to": "salle-carrelee-09"
+    },
+    {
+      "from": "salle-carrelee-08",
+      "to": "salle-carrelee-10"
+    },
+    {
+      "from": "salle-carrelee-08",
+      "to": "salle-carrelee-11"
+    },
+    {
+      "from": "salle-carrelee-08",
+      "to": "salle-carrelee-12"
+    },
+    {
+      "from": "salle-carrelee-09",
+      "to": "salle-carrelee-11"
+    },
+    {
+      "from": "salle-carrelee-09",
+      "to": "salle-carrelee-12"
+    },
+    {
+      "from": "salle-carrelee-10",
+      "to": "salle-carrelee-11"
+    },
+    {
+      "from": "salle-carrelee-11",
+      "to": "salle-carrelee-12"
+    },
+    {
+      "from": "salon-01",
+      "to": "salon-02"
+    },
+    {
+      "from": "salon-01",
+      "to": "salon-07"
+    },
+    {
+      "from": "salon-01",
+      "to": "salon-08"
+    },
+    {
+      "from": "salon-02",
+      "to": "salon-03"
+    },
+    {
+      "from": "salon-02",
+      "to": "salon-07"
+    },
+    {
+      "from": "salon-02",
+      "to": "salon-08"
+    },
+    {
+      "from": "salon-02",
+      "to": "salon-09"
+    },
+    {
+      "from": "salon-03",
+      "to": "salon-04"
+    },
+    {
+      "from": "salon-03",
+      "to": "salon-08"
+    },
+    {
+      "from": "salon-03",
+      "to": "salon-09"
+    },
+    {
+      "from": "salon-03",
+      "to": "salon-10"
+    },
+    {
+      "from": "salon-04",
+      "to": "salon-05"
+    },
+    {
+      "from": "salon-04",
+      "to": "salon-09"
+    },
+    {
+      "from": "salon-04",
+      "to": "salon-10"
+    },
+    {
+      "from": "salon-04",
+      "to": "salon-11"
+    },
+    {
+      "from": "salon-05",
+      "to": "salon-06"
+    },
+    {
+      "from": "salon-05",
+      "to": "salon-10"
+    },
+    {
+      "from": "salon-05",
+      "to": "salon-11"
+    },
+    {
+      "from": "salon-05",
+      "to": "salon-12"
+    },
+    {
+      "from": "salon-06",
+      "to": "salon-11"
+    },
+    {
+      "from": "salon-06",
+      "to": "salon-12"
+    },
+    {
+      "from": "salon-07",
+      "to": "salon-08"
+    },
+    {
+      "from": "salon-07",
+      "to": "salon-13"
+    },
+    {
+      "from": "salon-07",
+      "to": "salon-14"
+    },
+    {
+      "from": "salon-08",
+      "to": "salon-09"
+    },
+    {
+      "from": "salon-08",
+      "to": "salon-13"
+    },
+    {
+      "from": "salon-08",
+      "to": "salon-14"
+    },
+    {
+      "from": "salon-08",
+      "to": "salon-15"
+    },
+    {
+      "from": "salon-09",
+      "to": "salon-10"
+    },
+    {
+      "from": "salon-09",
+      "to": "salon-14"
+    },
+    {
+      "from": "salon-09",
+      "to": "salon-15"
+    },
+    {
+      "from": "salon-09",
+      "to": "salon-16"
+    },
+    {
+      "from": "salon-10",
+      "to": "salon-11"
+    },
+    {
+      "from": "salon-10",
+      "to": "salon-15"
+    },
+    {
+      "from": "salon-10",
+      "to": "salon-16"
+    },
+    {
+      "from": "salon-10",
+      "to": "salon-17"
+    },
+    {
+      "from": "salon-11",
+      "to": "salon-12"
+    },
+    {
+      "from": "salon-11",
+      "to": "salon-16"
+    },
+    {
+      "from": "salon-11",
+      "to": "salon-17"
+    },
+    {
+      "from": "salon-11",
+      "to": "salon-18"
+    },
+    {
+      "from": "salon-12",
+      "to": "salon-17"
+    },
+    {
+      "from": "salon-12",
+      "to": "salon-18"
+    },
+    {
+      "from": "salon-13",
+      "to": "salon-14"
+    },
+    {
+      "from": "salon-13",
+      "to": "salon-19"
+    },
+    {
+      "from": "salon-13",
+      "to": "salon-20"
+    },
+    {
+      "from": "salon-14",
+      "to": "salon-15"
+    },
+    {
+      "from": "salon-14",
+      "to": "salon-19"
+    },
+    {
+      "from": "salon-14",
+      "to": "salon-20"
+    },
+    {
+      "from": "salon-14",
+      "to": "salon-21"
+    },
+    {
+      "from": "salon-15",
+      "to": "salon-16"
+    },
+    {
+      "from": "salon-15",
+      "to": "salon-20"
+    },
+    {
+      "from": "salon-15",
+      "to": "salon-21"
+    },
+    {
+      "from": "salon-15",
+      "to": "salon-22"
+    },
+    {
+      "from": "salon-16",
+      "to": "salon-17"
+    },
+    {
+      "from": "salon-16",
+      "to": "salon-21"
+    },
+    {
+      "from": "salon-16",
+      "to": "salon-22"
+    },
+    {
+      "from": "salon-16",
+      "to": "salon-23"
+    },
+    {
+      "from": "salon-17",
+      "to": "salon-18"
+    },
+    {
+      "from": "salon-17",
+      "to": "salon-22"
+    },
+    {
+      "from": "salon-17",
+      "to": "salon-23"
+    },
+    {
+      "from": "salon-17",
+      "to": "salon-24"
+    },
+    {
+      "from": "salon-18",
+      "to": "salon-23"
+    },
+    {
+      "from": "salon-18",
+      "to": "salon-24"
+    },
+    {
+      "from": "salon-19",
+      "to": "salon-20"
+    },
+    {
+      "from": "salon-19",
+      "to": "salon-25"
+    },
+    {
+      "from": "salon-19",
+      "to": "salon-26"
+    },
+    {
+      "from": "salon-20",
+      "to": "salon-21"
+    },
+    {
+      "from": "salon-20",
+      "to": "salon-25"
+    },
+    {
+      "from": "salon-20",
+      "to": "salon-26"
+    },
+    {
+      "from": "salon-20",
+      "to": "salon-27"
+    },
+    {
+      "from": "salon-21",
+      "to": "salon-22"
+    },
+    {
+      "from": "salon-21",
+      "to": "salon-26"
+    },
+    {
+      "from": "salon-21",
+      "to": "salon-27"
+    },
+    {
+      "from": "salon-21",
+      "to": "salon-28"
+    },
+    {
+      "from": "salon-22",
+      "to": "salon-23"
+    },
+    {
+      "from": "salon-22",
+      "to": "salon-27"
+    },
+    {
+      "from": "salon-22",
+      "to": "salon-28"
+    },
+    {
+      "from": "salon-22",
+      "to": "salon-29"
+    },
+    {
+      "from": "salon-23",
+      "to": "salon-24"
+    },
+    {
+      "from": "salon-23",
+      "to": "salon-28"
+    },
+    {
+      "from": "salon-23",
+      "to": "salon-29"
+    },
+    {
+      "from": "salon-23",
+      "to": "salon-30"
+    },
+    {
+      "from": "salon-24",
+      "to": "salon-29"
+    },
+    {
+      "from": "salon-24",
+      "to": "salon-30"
+    },
+    {
+      "from": "salon-25",
+      "to": "salon-26"
+    },
+    {
+      "from": "salon-26",
+      "to": "salon-27"
+    },
+    {
+      "from": "salon-27",
+      "to": "salon-28"
+    },
+    {
+      "from": "salon-28",
+      "to": "salon-29"
+    },
+    {
+      "from": "salon-29",
+      "to": "salon-30"
+    },
+    {
+      "from": "studio-01",
+      "to": "studio-02"
+    },
+    {
+      "from": "studio-01",
+      "to": "studio-07"
+    },
+    {
+      "from": "studio-01",
+      "to": "studio-08"
+    },
+    {
+      "from": "studio-02",
+      "to": "studio-03"
+    },
+    {
+      "from": "studio-02",
+      "to": "studio-07"
+    },
+    {
+      "from": "studio-02",
+      "to": "studio-08"
+    },
+    {
+      "from": "studio-02",
+      "to": "studio-09"
+    },
+    {
+      "from": "studio-03",
+      "to": "studio-04"
+    },
+    {
+      "from": "studio-03",
+      "to": "studio-08"
+    },
+    {
+      "from": "studio-03",
+      "to": "studio-09"
+    },
+    {
+      "from": "studio-03",
+      "to": "studio-10"
+    },
+    {
+      "from": "studio-04",
+      "to": "studio-05"
+    },
+    {
+      "from": "studio-04",
+      "to": "studio-09"
+    },
+    {
+      "from": "studio-04",
+      "to": "studio-10"
+    },
+    {
+      "from": "studio-04",
+      "to": "studio-11"
+    },
+    {
+      "from": "studio-05",
+      "to": "studio-06"
+    },
+    {
+      "from": "studio-05",
+      "to": "studio-10"
+    },
+    {
+      "from": "studio-05",
+      "to": "studio-11"
+    },
+    {
+      "from": "studio-05",
+      "to": "studio-12"
+    },
+    {
+      "from": "studio-06",
+      "to": "studio-11"
+    },
+    {
+      "from": "studio-06",
+      "to": "studio-12"
+    },
+    {
+      "from": "studio-07",
+      "to": "studio-08"
+    },
+    {
+      "from": "studio-07",
+      "to": "studio-13"
+    },
+    {
+      "from": "studio-07",
+      "to": "studio-14"
+    },
+    {
+      "from": "studio-08",
+      "to": "studio-09"
+    },
+    {
+      "from": "studio-08",
+      "to": "studio-13"
+    },
+    {
+      "from": "studio-08",
+      "to": "studio-14"
+    },
+    {
+      "from": "studio-08",
+      "to": "studio-15"
+    },
+    {
+      "from": "studio-09",
+      "to": "studio-10"
+    },
+    {
+      "from": "studio-09",
+      "to": "studio-14"
+    },
+    {
+      "from": "studio-09",
+      "to": "studio-15"
+    },
+    {
+      "from": "studio-09",
+      "to": "studio-16"
+    },
+    {
+      "from": "studio-10",
+      "to": "studio-11"
+    },
+    {
+      "from": "studio-10",
+      "to": "studio-15"
+    },
+    {
+      "from": "studio-10",
+      "to": "studio-16"
+    },
+    {
+      "from": "studio-10",
+      "to": "studio-17"
+    },
+    {
+      "from": "studio-11",
+      "to": "studio-12"
+    },
+    {
+      "from": "studio-11",
+      "to": "studio-16"
+    },
+    {
+      "from": "studio-11",
+      "to": "studio-17"
+    },
+    {
+      "from": "studio-11",
+      "to": "studio-18"
+    },
+    {
+      "from": "studio-12",
+      "to": "studio-17"
+    },
+    {
+      "from": "studio-12",
+      "to": "studio-18"
+    },
+    {
+      "from": "studio-13",
+      "to": "studio-14"
+    },
+    {
+      "from": "studio-13",
+      "to": "studio-19"
+    },
+    {
+      "from": "studio-13",
+      "to": "studio-20"
+    },
+    {
+      "from": "studio-14",
+      "to": "studio-15"
+    },
+    {
+      "from": "studio-14",
+      "to": "studio-19"
+    },
+    {
+      "from": "studio-14",
+      "to": "studio-20"
+    },
+    {
+      "from": "studio-14",
+      "to": "studio-21"
+    },
+    {
+      "from": "studio-15",
+      "to": "studio-16"
+    },
+    {
+      "from": "studio-15",
+      "to": "studio-20"
+    },
+    {
+      "from": "studio-15",
+      "to": "studio-21"
+    },
+    {
+      "from": "studio-15",
+      "to": "studio-22"
+    },
+    {
+      "from": "studio-16",
+      "to": "studio-17"
+    },
+    {
+      "from": "studio-16",
+      "to": "studio-21"
+    },
+    {
+      "from": "studio-16",
+      "to": "studio-22"
+    },
+    {
+      "from": "studio-16",
+      "to": "studio-23"
+    },
+    {
+      "from": "studio-17",
+      "to": "studio-18"
+    },
+    {
+      "from": "studio-17",
+      "to": "studio-22"
+    },
+    {
+      "from": "studio-17",
+      "to": "studio-23"
+    },
+    {
+      "from": "studio-17",
+      "to": "studio-24"
+    },
+    {
+      "from": "studio-18",
+      "to": "studio-23"
+    },
+    {
+      "from": "studio-18",
+      "to": "studio-24"
+    },
+    {
+      "from": "studio-19",
+      "to": "studio-20"
+    },
+    {
+      "from": "studio-20",
+      "to": "studio-21"
+    },
+    {
+      "from": "studio-21",
+      "to": "studio-22"
+    },
+    {
+      "from": "studio-22",
+      "to": "studio-23"
+    },
+    {
+      "from": "studio-23",
+      "to": "studio-24"
+    },
+    {
+      "from": "tour-01",
+      "to": "tour-02"
+    },
+    {
+      "from": "tour-01",
+      "to": "tour-04"
+    },
+    {
+      "from": "tour-01",
+      "to": "tour-05"
+    },
+    {
+      "from": "tour-02",
+      "to": "tour-03"
+    },
+    {
+      "from": "tour-02",
+      "to": "tour-04"
+    },
+    {
+      "from": "tour-02",
+      "to": "tour-05"
+    },
+    {
+      "from": "tour-02",
+      "to": "tour-06"
+    },
+    {
+      "from": "tour-03",
+      "to": "tour-05"
+    },
+    {
+      "from": "tour-03",
+      "to": "tour-06"
+    },
+    {
+      "from": "tour-04",
+      "to": "tour-05"
+    },
+    {
+      "from": "tour-05",
+      "to": "tour-06"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door-central-manger",
+      "type": "WOODEN",
+      "state": "CLOSED"
+    },
+    {
+      "id": "door-hall-chambre",
+      "type": "WOODEN",
+      "state": "OPEN"
+    },
+    {
+      "id": "door-studio-central",
+      "type": "WOODEN",
+      "state": "OPEN"
+    },
+    {
+      "id": "door-tour-bureau",
+      "type": "REINFORCED",
+      "state": "CLOSED"
+    },
+    {
+      "id": "door-tour-ouest",
+      "type": "WOODEN",
+      "state": "OPEN"
+    }
+  ],
+  "portals": [
+    {
+      "id": "portal-secret",
+      "from": "salle-carrelee-08",
+      "to": "cave-01",
+      "type": "SECRET_DOOR"
+    }
+  ],
+  "layout": {
+    "rooms": [
+      {
+        "id": "tour",
+        "nameKey": "room.tour",
+        "polygon": [
+          {
+            "x": 98,
+            "y": 73
+          },
+          {
+            "x": 278,
+            "y": 73
+          },
+          {
+            "x": 278,
+            "y": 183
+          },
+          {
+            "x": 98,
+            "y": 183
+          }
+        ],
+        "fill": "#4a463f"
+      },
+      {
+        "id": "bureau-nord",
+        "nameKey": "room.bureau-nord",
+        "polygon": [
+          {
+            "x": 559,
+            "y": 73
+          },
+          {
+            "x": 1324,
+            "y": 73
+          },
+          {
+            "x": 1324,
+            "y": 183
+          },
+          {
+            "x": 559,
+            "y": 183
+          }
+        ],
+        "fill": "#5a4535"
+      },
+      {
+        "id": "escalier-nord",
+        "nameKey": "room.escalier-nord",
+        "polygon": [
+          {
+            "x": 1575,
+            "y": 80
+          },
+          {
+            "x": 1695,
+            "y": 80
+          },
+          {
+            "x": 1695,
+            "y": 220
+          },
+          {
+            "x": 1575,
+            "y": 220
+          }
+        ],
+        "fill": "#4d4a45"
+      },
+      {
+        "id": "couloir-ouest",
+        "nameKey": "room.couloir-ouest",
+        "polygon": [
+          {
+            "x": 145,
+            "y": 275
+          },
+          {
+            "x": 305,
+            "y": 275
+          },
+          {
+            "x": 305,
+            "y": 475
+          },
+          {
+            "x": 145,
+            "y": 475
+          }
+        ],
+        "fill": "#46443f"
+      },
+      {
+        "id": "grand-hall",
+        "nameKey": "room.grand-hall",
+        "polygon": [
+          {
+            "x": 455,
+            "y": 275
+          },
+          {
+            "x": 835,
+            "y": 275
+          },
+          {
+            "x": 835,
+            "y": 475
+          },
+          {
+            "x": 455,
+            "y": 475
+          }
+        ],
+        "fill": "#6a5233"
+      },
+      {
+        "id": "couloir-central",
+        "nameKey": "room.couloir-central",
+        "polygon": [
+          {
+            "x": 973,
+            "y": 405
+          },
+          {
+            "x": 1053,
+            "y": 405
+          },
+          {
+            "x": 1053,
+            "y": 1125
+          },
+          {
+            "x": 973,
+            "y": 1125
+          }
+        ],
+        "fill": "#5f553f"
+      },
+      {
+        "id": "salon",
+        "nameKey": "room.salon",
+        "polygon": [
+          {
+            "x": 1191,
+            "y": 430
+          },
+          {
+            "x": 1606,
+            "y": 430
+          },
+          {
+            "x": 1606,
+            "y": 770
+          },
+          {
+            "x": 1191,
+            "y": 770
+          }
+        ],
+        "fill": "#5b5a58"
+      },
+      {
+        "id": "chambre",
+        "nameKey": "room.chambre",
+        "polygon": [
+          {
+            "x": 563,
+            "y": 625
+          },
+          {
+            "x": 863,
+            "y": 625
+          },
+          {
+            "x": 863,
+            "y": 905
+          },
+          {
+            "x": 563,
+            "y": 905
+          }
+        ],
+        "fill": "#5b3a33"
+      },
+      {
+        "id": "salle-carrelee",
+        "nameKey": "room.salle-carrelee",
+        "polygon": [
+          {
+            "x": 103,
+            "y": 625
+          },
+          {
+            "x": 333,
+            "y": 625
+          },
+          {
+            "x": 333,
+            "y": 905
+          },
+          {
+            "x": 103,
+            "y": 905
+          }
+        ],
+        "fill": "#58585a"
+      },
+      {
+        "id": "studio",
+        "nameKey": "room.studio",
+        "polygon": [
+          {
+            "x": 278,
+            "y": 1063
+          },
+          {
+            "x": 668,
+            "y": 1063
+          },
+          {
+            "x": 668,
+            "y": 1353
+          },
+          {
+            "x": 278,
+            "y": 1353
+          }
+        ],
+        "fill": "#573f2c"
+      },
+      {
+        "id": "salle-a-manger",
+        "nameKey": "room.salle-a-manger",
+        "polygon": [
+          {
+            "x": 1191,
+            "y": 953
+          },
+          {
+            "x": 1606,
+            "y": 953
+          },
+          {
+            "x": 1606,
+            "y": 1223
+          },
+          {
+            "x": 1191,
+            "y": 1223
+          }
+        ],
+        "fill": "#4b3a2d"
+      },
+      {
+        "id": "rotonde",
+        "nameKey": "room.rotonde",
+        "polygon": [
+          {
+            "x": 1378,
+            "y": 1380
+          },
+          {
+            "x": 1668,
+            "y": 1380
+          },
+          {
+            "x": 1668,
+            "y": 1680
+          },
+          {
+            "x": 1378,
+            "y": 1680
+          }
+        ],
+        "fill": "#554a3a"
+      },
+      {
+        "id": "cabinet",
+        "nameKey": "room.cabinet",
+        "polygon": [
+          {
+            "x": 1003,
+            "y": 1488
+          },
+          {
+            "x": 1233,
+            "y": 1488
+          },
+          {
+            "x": 1233,
+            "y": 1678
+          },
+          {
+            "x": 1003,
+            "y": 1678
+          }
+        ],
+        "fill": "#4a4136"
+      },
+      {
+        "id": "escalier-cave",
+        "nameKey": "room.escalier-cave",
+        "polygon": [
+          {
+            "x": 805,
+            "y": 1488
+          },
+          {
+            "x": 905,
+            "y": 1488
+          },
+          {
+            "x": 905,
+            "y": 1678
+          },
+          {
+            "x": 805,
+            "y": 1678
+          }
+        ],
+        "fill": "#44423f"
+      },
+      {
+        "id": "cave",
+        "nameKey": "room.cave",
+        "polygon": [
+          {
+            "x": 190,
+            "y": 1493
+          },
+          {
+            "x": 650,
+            "y": 1493
+          },
+          {
+            "x": 650,
+            "y": 1703
+          },
+          {
+            "x": 190,
+            "y": 1703
+          }
+        ],
+        "fill": "#3d3a36"
+      }
+    ],
+    "corridors": [
+      {
+        "id": "pass-tour-ouest",
+        "points": [
+          {
+            "x": 118,
+            "y": 163
+          },
+          {
+            "x": 142,
+            "y": 210.33
+          },
+          {
+            "x": 166,
+            "y": 257.67
+          },
+          {
+            "x": 190,
+            "y": 305
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-tour-bureau",
+        "points": [
+          {
+            "x": 258,
+            "y": 93
+          },
+          {
+            "x": 363,
+            "y": 93
+          },
+          {
+            "x": 486.5,
+            "y": 93
+          },
+          {
+            "x": 591.5,
+            "y": 93
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-bureau-hall",
+        "points": [
+          {
+            "x": 661.5,
+            "y": 163
+          },
+          {
+            "x": 691,
+            "y": 210.33
+          },
+          {
+            "x": 650.5,
+            "y": 257.67
+          },
+          {
+            "x": 680,
+            "y": 305
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-bureau-escalier",
+        "points": [
+          {
+            "x": 1291.5,
+            "y": 93
+          },
+          {
+            "x": 1394.33,
+            "y": 100.33
+          },
+          {
+            "x": 1497.17,
+            "y": 107.67
+          },
+          {
+            "x": 1600,
+            "y": 115
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-escalier-salon",
+        "points": [
+          {
+            "x": 1670,
+            "y": 185
+          },
+          {
+            "x": 1637.83,
+            "y": 276.67
+          },
+          {
+            "x": 1605.67,
+            "y": 368.33
+          },
+          {
+            "x": 1573.5,
+            "y": 460
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-ouest-hall",
+        "points": [
+          {
+            "x": 260,
+            "y": 375
+          },
+          {
+            "x": 330,
+            "y": 375
+          },
+          {
+            "x": 400,
+            "y": 375
+          },
+          {
+            "x": 470,
+            "y": 375
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-ouest-carrelee",
+        "points": [
+          {
+            "x": 190,
+            "y": 445
+          },
+          {
+            "x": 199.33,
+            "y": 516.67
+          },
+          {
+            "x": 208.67,
+            "y": 588.33
+          },
+          {
+            "x": 218,
+            "y": 660
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-hall-central",
+        "points": [
+          {
+            "x": 820,
+            "y": 445
+          },
+          {
+            "x": 884.33,
+            "y": 423.33
+          },
+          {
+            "x": 948.67,
+            "y": 471.67
+          },
+          {
+            "x": 1013,
+            "y": 450
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-hall-chambre",
+        "points": [
+          {
+            "x": 680,
+            "y": 445
+          },
+          {
+            "x": 702.67,
+            "y": 516.67
+          },
+          {
+            "x": 725.33,
+            "y": 588.33
+          },
+          {
+            "x": 748,
+            "y": 660
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-carrelee-chambre",
+        "points": [
+          {
+            "x": 288,
+            "y": 730
+          },
+          {
+            "x": 393,
+            "y": 730
+          },
+          {
+            "x": 503,
+            "y": 730
+          },
+          {
+            "x": 608,
+            "y": 730
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-carrelee-studio",
+        "points": [
+          {
+            "x": 218,
+            "y": 870
+          },
+          {
+            "x": 244.67,
+            "y": 947.67
+          },
+          {
+            "x": 271.33,
+            "y": 1025.33
+          },
+          {
+            "x": 298,
+            "y": 1103
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-chambre-studio",
+        "points": [
+          {
+            "x": 678,
+            "y": 870
+          },
+          {
+            "x": 672.66,
+            "y": 943.14
+          },
+          {
+            "x": 583.34,
+            "y": 1029.86
+          },
+          {
+            "x": 578,
+            "y": 1103
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-studio-central",
+        "points": [
+          {
+            "x": 648,
+            "y": 1103
+          },
+          {
+            "x": 736.5,
+            "y": 1116.5
+          },
+          {
+            "x": 924.5,
+            "y": 996.5
+          },
+          {
+            "x": 1013,
+            "y": 1010
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-central-salon",
+        "points": [
+          {
+            "x": 1013,
+            "y": 520
+          },
+          {
+            "x": 1083.17,
+            "y": 523.33
+          },
+          {
+            "x": 1153.33,
+            "y": 526.67
+          },
+          {
+            "x": 1223.5,
+            "y": 530
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-central-manger",
+        "points": [
+          {
+            "x": 1013,
+            "y": 1010
+          },
+          {
+            "x": 1083.17,
+            "y": 1024.33
+          },
+          {
+            "x": 1153.33,
+            "y": 1038.67
+          },
+          {
+            "x": 1223.5,
+            "y": 1053
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-salon-manger",
+        "points": [
+          {
+            "x": 1433.5,
+            "y": 740
+          },
+          {
+            "x": 1433.5,
+            "y": 821
+          },
+          {
+            "x": 1433.5,
+            "y": 902
+          },
+          {
+            "x": 1433.5,
+            "y": 983
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-manger-rotonde",
+        "points": [
+          {
+            "x": 1573.5,
+            "y": 1193
+          },
+          {
+            "x": 1591.67,
+            "y": 1270.33
+          },
+          {
+            "x": 1609.83,
+            "y": 1347.67
+          },
+          {
+            "x": 1628,
+            "y": 1425
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-central-cabinet",
+        "points": [
+          {
+            "x": 1013,
+            "y": 1080
+          },
+          {
+            "x": 1021.46,
+            "y": 1184.66
+          },
+          {
+            "x": 1039.54,
+            "y": 1408.34
+          },
+          {
+            "x": 1048,
+            "y": 1513
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-cabinet-rotonde",
+        "points": [
+          {
+            "x": 1188,
+            "y": 1513
+          },
+          {
+            "x": 1264.67,
+            "y": 1530.33
+          },
+          {
+            "x": 1341.33,
+            "y": 1477.67
+          },
+          {
+            "x": 1418,
+            "y": 1495
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-cabinet-escalier",
+        "points": [
+          {
+            "x": 1048,
+            "y": 1583
+          },
+          {
+            "x": 995.33,
+            "y": 1583
+          },
+          {
+            "x": 942.67,
+            "y": 1583
+          },
+          {
+            "x": 890,
+            "y": 1583
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-escalier-studio",
+        "points": [
+          {
+            "x": 820,
+            "y": 1513
+          },
+          {
+            "x": 739.33,
+            "y": 1446.33
+          },
+          {
+            "x": 658.67,
+            "y": 1379.67
+          },
+          {
+            "x": 648,
+            "y": 1313
+          }
+        ],
+        "width": 36
+      },
+      {
+        "id": "pass-escalier-cave",
+        "points": [
+          {
+            "x": 820,
+            "y": 1653
+          },
+          {
+            "x": 756.67,
+            "y": 1634.67
+          },
+          {
+            "x": 693.33,
+            "y": 1616.33
+          },
+          {
+            "x": 630,
+            "y": 1598
+          }
+        ],
+        "width": 36
+      }
+    ]
+  }
+}

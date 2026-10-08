@@ -75,5 +75,6 @@ Données d'**affichage uniquement** (contrat `BoardLayout` de `packages/renderer
 |---|---|---|---|
 | `dev-board` | Plateau de développement | 16 | grille 4×4, cas spéciaux de test, sans mise en page |
 | `castle` | Château | 50 | 6 pièces, 6 couloirs diagonaux, 2 entrées (grande porte au sud dans la cour, poterne au nord-est), portail bibliothèque ↔ chapelle, porte renforcée fermée sur la salle d'armes, porte de bois fermée vers la chapelle, puits (impraticable), gravats (+1) dans la cuisine, escalier à sens unique bibliothèque → hall |
+| `manoir` | Manoir | 270 | plateau carré inspiré du plateau d'origine : 15 pièces (rangée nord, grand hall, chambre, salle carrelée, couloir central, salon, salle à manger, cabinets, cave, rotonde) reliées par 20 passages (3 portes de bois, 1 porte renforcée fermée, 1 porte de bois fermée), 2 points d'entrée (ouest / est), 8 cases d'objectif, table impraticable, gravats (+1) et passage secret salle carrelée ↔ cave. Spec : `tools/board-generator/manoir.map.ts` |
 
 Le lien de rejeu `#board=castle&seed=…` fonctionne comme pour le plateau de dev.
