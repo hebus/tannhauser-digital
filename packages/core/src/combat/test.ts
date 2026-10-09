@@ -19,6 +19,19 @@ export interface TestModifiers {
   readonly autoFailure?: boolean;
 }
 
+/**
+ * Règles d'effet d'un Test (équipements). Toutes optionnelles : sans elles, le Test est celui des règles de base.
+ * Ordre d'application : lancer de la réserve, puis relances, puis dés supplémentaires sur 10 naturel.
+ */
+export interface TestRules {
+  /** Succès comptés par un 10 naturel (défaut 1). */
+  readonly naturalTenSuccesses?: number;
+  /** Relance une fois les N dés ratés de plus basse valeur (les 1 naturels sont relançables). */
+  readonly rerollLowest?: number;
+  /** Si au moins un 10 naturel est présent après les relances : lance ce nombre de dés de plus (sans enchaînement). */
+  readonly extraDiceOnNaturalTen?: number;
+}
+
 export type DieOutcome = 'NATURAL_10' | 'NATURAL_1' | 'SUCCESS' | 'FAILURE';
 
 export interface DieResult {
@@ -28,6 +41,12 @@ export interface DieResult {
   readonly modified: number;
   readonly success: boolean;
   readonly outcome: DieOutcome;
+  /** Nombre de succès que compte ce dé s'il réussit (absent = 1 ; 2 pour un 10 naturel avec Coup critique). */
+  readonly weight?: number;
+  /** Résultat naturel avant relance, si le dé a été relancé. */
+  readonly rerolledFrom?: number;
+  /** Dé supplémentaire gagné par un effet (ex. 10 naturel du Flash-Gun). */
+  readonly bonus?: boolean;
 }
 
 export interface TestResult {
@@ -77,21 +96,49 @@ export function resolveTest(
   difficulty: number,
   modifiers: TestModifiers,
   rng: RandomSource,
+  rules: TestRules = {},
 ): TestResult {
   const m = combineModifiers(modifiers);
   const basePool = Math.max(0, Math.trunc(pool));
   const poolSize = Math.max(0, basePool + Math.trunc(m.extraDice));
-  const dice: DieResult[] = [];
-  for (let i = 0; i < poolSize; i += 1) {
+  const tenWeight = Math.max(1, Math.trunc(rules.naturalTenSuccesses ?? 1));
+  const rollDie = (extra: Pick<DieResult, 'rerolledFrom' | 'bonus'> = {}): DieResult => {
     const natural = rng.nextInt(1, 10);
     const modified = natural + m.resultModifier;
     let outcome: DieOutcome;
     if (natural === 10) outcome = 'NATURAL_10';
     else if (natural === 1) outcome = 'NATURAL_1';
     else outcome = modified >= difficulty ? 'SUCCESS' : 'FAILURE';
-    dice.push({ natural, modified, success: outcome === 'NATURAL_10' || outcome === 'SUCCESS', outcome });
+    return {
+      natural,
+      modified,
+      success: outcome === 'NATURAL_10' || outcome === 'SUCCESS',
+      outcome,
+      ...(outcome === 'NATURAL_10' && tenWeight > 1 ? { weight: tenWeight } : {}),
+      ...extra,
+    };
+  };
+  const dice: DieResult[] = [];
+  for (let i = 0; i < poolSize; i += 1) dice.push(rollDie());
+
+  // Relances : les dés ratés de plus basse valeur (un dé réussi n'est jamais relancé : ce serait perdre au change).
+  const rerolls = Math.max(0, Math.trunc(rules.rerollLowest ?? 0));
+  if (rerolls > 0) {
+    const lowestFailures = dice
+      .map((die, index) => ({ die, index }))
+      .filter(({ die }) => !die.success)
+      .sort((a, b) => a.die.natural - b.die.natural || a.index - b.index)
+      .slice(0, rerolls)
+      .sort((a, b) => a.index - b.index);
+    for (const { die, index } of lowestFailures) dice[index] = rollDie({ rerolledFrom: die.natural });
   }
-  const rolledSuccesses = dice.filter((d) => d.success).length;
+
+  // Dés supplémentaires déclenchés par un 10 naturel (une seule fois, sans enchaînement).
+  const bonusDice = Math.max(0, Math.trunc(rules.extraDiceOnNaturalTen ?? 0));
+  if (bonusDice > 0 && dice.some((d) => d.natural === 10)) {
+    for (let i = 0; i < bonusDice; i += 1) dice.push(rollDie({ bonus: true }));
+  }
+  const rolledSuccesses = dice.reduce((sum, d) => sum + (d.success ? (d.weight ?? 1) : 0), 0);
   const autoSuccesses = Math.max(0, Math.trunc(m.autoSuccesses));
   const successes = m.autoFailure ? 0 : rolledSuccesses + autoSuccesses;
   return {
@@ -115,6 +162,7 @@ export function resolveCharacteristicTest(
   pool: number,
   modifiers: TestModifiers,
   rng: RandomSource,
+  rules: TestRules = {},
 ): TestResult {
-  return resolveTest(pool, difficultyFor(characteristic), modifiers, rng);
+  return resolveTest(pool, difficultyFor(characteristic), modifiers, rng, rules);
 }

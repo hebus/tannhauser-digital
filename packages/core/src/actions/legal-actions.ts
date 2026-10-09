@@ -2,6 +2,7 @@ import { checkAttacker, checkTargeting, validateAttack } from '../combat/attack'
 import { capturableFlags, checkCaptureFlag, checkPlantFlag, plantableFlags } from '../flags/rules';
 import { flagsOf, isCaptureTheFlag } from '../flags/state';
 import { checkCommandGate } from '../engine/apply-command';
+import { usableTokens } from '../equipment/handlers';
 import type { RuleError } from '../events/events';
 import { checkActor, checkDoorToggle, doorsAdjacentTo } from '../movement/handlers';
 import { reachableNodes } from '../movement/reachable';
@@ -14,7 +15,7 @@ import type { GameCommand, GameCommandType } from '../commands/commands';
  * Actions qu'un personnage peut tenter. `SELECT` (début d'activation) s'ajoute aux actions de jeu
  * pour que l'interface explique aussi pourquoi un personnage ne peut pas être activé.
  */
-export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'OVERWATCH' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
+export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'OVERWATCH' | 'USE_EQUIPMENT' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
 
 export interface AttackOption {
   readonly targetId: string;
@@ -37,6 +38,8 @@ export interface ActionDetails {
   readonly doorIds?: readonly string[];
   /** CAPTURE_FLAG / PLANT_FLAG : drapeaux utilisables maintenant. */
   readonly flagIds?: readonly string[];
+  /** USE_EQUIPMENT : jetons que le personnage peut défausser maintenant. */
+  readonly equipmentIds?: readonly string[];
 }
 
 export interface LegalAction {
@@ -56,6 +59,7 @@ const GAME_COMMAND_OF: Record<ActionId, GameCommandType> = {
   CAPTURE_FLAG: 'CAPTURE_FLAG',
   PLANT_FLAG: 'PLANT_FLAG',
   OVERWATCH: 'OVERWATCH',
+  USE_EQUIPMENT: 'USE_EQUIPMENT',
   OPEN_DOOR: 'OPEN_DOOR',
   CLOSE_DOOR: 'CLOSE_DOOR',
   END_ACTIVATION: 'END_TURN',
@@ -163,6 +167,10 @@ export function getLegalActions(state: GameState, characterId: string): LegalAct
       case 'OVERWATCH': {
         const c = checkOverwatchPlacement(state, character.playerId, character.id);
         return c.ok ? ok(id) : refuse(id, c.errors[0]!);
+      }
+      case 'USE_EQUIPMENT': {
+        const tokens = usableTokens(state, character).map((i) => i.id);
+        return tokens.length > 0 ? ok(id, { equipmentIds: tokens }) : refuseWith(id, 'NO_USABLE_EQUIPMENT', 'Impossible : aucun jeton utilisable maintenant.');
       }
       case 'PASS_OVERWATCH': {
         const c = checkPassOverwatch(state, character.playerId);

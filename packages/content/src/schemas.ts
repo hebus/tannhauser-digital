@@ -83,6 +83,15 @@ export const WEAPON_TYPE_TRAITS = {
   'hand-to-hand': 'CAC',
 } as const;
 
+/** Effets de règle d'un équipement : les seuls types que le moteur connaît (`EquipmentEffect` du cœur). */
+export const effectSchema = type({ type: "'CRITICAL_HIT'" })
+  .or({ type: "'BEST_CHARACTERISTIC'", characteristic: "'combat' | 'physical'" })
+  .or({ type: "'EXTRA_DICE_ON_NATURAL_10'", dice: 'number.integer > 0' })
+  .or({ type: "'REROLL_LOWEST'", count: 'number.integer > 0' })
+  .or({ type: "'EXTRA_DICE_WITH_WEAPON'", weaponId: 'string > 0', dice: 'number.integer > 0' })
+  .or({ type: "'GAIN_COMMAND_POINTS'", amount: 'number.integer > 0' })
+  .or({ type: "'FREE_OVERWATCH'" });
+
 export const equipmentSchema = type({
   id: 'string > 0',
   nameKey: 'string > 0',
@@ -92,6 +101,8 @@ export const equipmentSchema = type({
   'dice?': 'number.integer > 0',
   /** Clé i18n du texte d'effet. Les effets sont de la donnée descriptive tant que le moteur ne les implémente pas. */
   'descriptionKey?': 'string > 0',
+  /** Effets que le moteur applique (en plus du texte descriptif). */
+  'effects?': effectSchema.array(),
 });
 
 const statsRow = type({

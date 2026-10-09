@@ -87,6 +87,27 @@ describe('journal de combat', () => {
     expect(texts.filter((x) => x.includes('Touché') || x.includes('Défense :') || x.includes('Attaque : dés'))).toEqual([]);
   });
 
+  it("les effets d'équipement appliqués deviennent des pastilles à pictogramme, avec une ligne de détail", () => {
+    const withEffect = (equipment: CharacterState['equipment']): GameState => ({ ...state, characters: state.characters.map((c) => (c.id === 'char.alpha.hero' ? { ...c, equipment } : c)) });
+    const critical = [{ id: 'ability.critical-hit', traits: ['ability'], effects: [{ type: 'CRITICAL_HIT' as const }] }];
+    const res = applyCommand(withEffect(critical), { type: 'ATTACK', playerId: 'p1', attackerId: 'char.alpha.hero', targetId: 'char.beta.hero', weaponId: 'weapon.pistol' }, new ScriptedRng([10, 1, 1, 1, 1, 1, 1, 1]));
+    const [entry] = buildLogEntries(res.events, createLabeler(withEffect(critical))).filter((e) => e.kind === 'combat');
+    expect(entry!.effects).toEqual([{ icon: '✸', label: 'Coup critique' }]);
+    expect(entry!.lines.join('\n')).toContain('✸ Effet Coup critique (attaque) : Eva Krämer.');
+  });
+
+  it("sans effet appliqué, l'entrée n'a pas de pastille", () => {
+    const { events } = attackEvents([8, 1, 1, 1, 1, 1, 1, 1]);
+    expect(buildLogEntries(events, labels).find((e) => e.kind === 'combat')!.effects).toBeUndefined();
+  });
+
+  it("la défausse d'un jeton et les PC gagnés sont journalisés, avec le pictogramme de l'effet", () => {
+    const used = formatEvent({ type: 'EQUIPMENT_USED', characterId: 'char.alpha.hero', equipmentId: 'medal.iron-cross-1st-class', effect: 'GAIN_COMMAND_POINTS' }, labels);
+    expect(used?.text).toBe('Eva Krämer défausse Iron Cross 1st Class.');
+    expect(used?.effects).toEqual([{ icon: '✪', label: 'PC gagnés' }]);
+    expect(formatEvent({ type: 'COMMAND_POINTS_GAINED', playerId: 'p1', amount: 2, total: 3 }, labels)?.text).toBe('Joueur 1 gagne 2 PC (3 en réserve).');
+  });
+
   it('un tir raté est signalé comme tel', () => {
     const { events } = attackEvents([1, 1, 1, 1]);
     const [entry] = buildLogEntries(events, labels).filter((e) => e.kind === 'combat');

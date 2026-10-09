@@ -76,7 +76,7 @@ describe('modèle du HUD', () => {
   it('les raccourcis du HUD ne recoupent pas ceux traités par main.ts', () => {
     const hudKeys = Object.values(ACTION_KEYS).map((k) => k!.toLowerCase());
     const own = hudKeys.filter((k) => !MAIN_HANDLED_KEYS.has(k));
-    expect(own.sort()).toEqual(['a', 'f', 'g', 'h', 'm', 'u']);
+    expect(own.sort()).toEqual(['a', 'f', 'g', 'h', 'm', 'q', 'u']);
   });
 });
 
@@ -89,7 +89,7 @@ describe('Capture du drapeau (HUD)', () => {
 
   it('hors Capture du drapeau : ni lignes d’actions de drapeau, ni compteur de victoire', () => {
     const s = game({ activeCharacterId: 'h1', actionUsed: false });
-    expect(actionRows(s, 'h1').map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
+    expect(actionRows(s, 'h1').map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'OVERWATCH', 'USE_EQUIPMENT', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
     expect(visibleActions(s)).not.toContain('CAPTURE_FLAG');
     expect(statusModel(s, createLabeler(s)).players.every((p) => p.flags === undefined)).toBe(true);
   });
@@ -97,7 +97,7 @@ describe('Capture du drapeau (HUD)', () => {
   it('en mode : lignes Récupérer / Planter avec touches G / H, disponibilité et raison issues de getLegalActions', () => {
     const s = ctf();
     const rows = actionRows(s, 'h1');
-    expect(rows.map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
+    expect(rows.map((r) => r.id)).toEqual(['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'USE_EQUIPMENT', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS']);
     const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
     expect(byId.CAPTURE_FLAG).toMatchObject({ label: 'Récupérer le drapeau', key: 'G', available: true, flagIds: ['f2'] });
     expect(byId.PLANT_FLAG).toMatchObject({ label: 'Planter le drapeau', key: 'H', available: false, reason: 'Impossible : ce personnage ne porte aucun drapeau.' });

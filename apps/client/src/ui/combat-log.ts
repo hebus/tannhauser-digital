@@ -51,10 +51,14 @@ export function createCombatLog(root: HTMLElement): CombatLogPanel {
   });
   applyCollapsed();
 
+  /** Pastilles des effets d'équipement appliqués (pictogramme + nom en info-bulle). */
+  const effectChips = (entry: LogEntry): HTMLElement[] =>
+    (entry.effects ?? []).map((e) => h('span', { class: 'log-effect', text: e.icon, attrs: { role: 'img', title: e.label, 'aria-label': e.label } }));
+
   function entryNode(entry: LogEntry): HTMLElement {
     const icon = h('span', { class: 'log-icon', text: ICONS[entry.tone], attrs: { 'aria-hidden': 'true' } });
     if (entry.lines.length === 0) {
-      return h('li', { class: `log-entry log-${entry.tone}` }, icon, h('span', { text: entry.text }));
+      return h('li', { class: `log-entry log-${entry.tone}` }, icon, h('span', { text: entry.text }), ...effectChips(entry));
     }
     return h(
       'li',
@@ -62,7 +66,7 @@ export function createCombatLog(root: HTMLElement): CombatLogPanel {
       h(
         'details',
         { attrs: { open: true } },
-        h('summary', {}, icon, h('span', { text: entry.text })),
+        h('summary', {}, icon, h('span', { text: entry.text }), ...effectChips(entry)),
         h('ol', { class: 'log-lines', attrs: { 'aria-label': t('log.details') } }, ...entry.lines.map((line) => h('li', { text: line }))),
       ),
     );

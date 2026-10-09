@@ -1,4 +1,5 @@
 import { explainCombat, type CombatLog, type GameEvent } from '@tannhauser/core';
+import { effectBadge, type EffectBadge } from './effect-icons';
 import { t } from './i18n';
 import type { Labeler } from './labels';
 
@@ -12,6 +13,8 @@ export interface LogEntry {
   readonly text: string;
   /** Détail du jet (lignes de `explainCombat`), vide pour les événements simples. */
   readonly lines: readonly string[];
+  /** Effets d'équipement appliqués (pastilles à pictogramme) ; absent = aucun. */
+  readonly effects?: readonly EffectBadge[];
 }
 
 /** Types d'événements qui composent un échange d'attaque (repliés dans l'entrée de combat). */
@@ -25,7 +28,15 @@ function exchangeEntry(log: CombatLog, labels: Labeler): LogEntry {
     weapon: labels.weapon(log.weaponId),
     result: log.defeated ? `${result}, ${t('log.exchange.defeated')}` : result,
   });
-  return { kind: 'combat', tone: log.defeated ? 'kill' : log.wounds > 0 ? 'hit' : 'miss', text, lines: explainCombat(log).map(labels.humanize) };
+  const applied = log.effects ?? [];
+  const effectLines = applied.map((e) => t('effect.line', { icon: effectBadge(e.type).icon, name: effectBadge(e.type).label, who: labels.character(e.characterId), side: t(`effect.side.${e.side}`) }));
+  return {
+    kind: 'combat',
+    tone: log.defeated ? 'kill' : log.wounds > 0 ? 'hit' : 'miss',
+    text,
+    lines: [...explainCombat(log).map(labels.humanize), ...effectLines],
+    ...(applied.length > 0 ? { effects: applied.map((e) => effectBadge(e.type)) } : {}),
+  };
 }
 
 /** Un événement non-combat en une ligne ; `null` si l'événement n'a rien à montrer au joueur. */
@@ -51,6 +62,10 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
       return info('log.event.CHARACTER_MOVED', { character: labels.character(e.characterId), cost: e.cost, node: e.path[e.path.length - 1] ?? '?' });
     case 'CHARACTER_ACTIVATION_ENDED':
       return info('log.event.CHARACTER_ACTIVATION_ENDED', { character: labels.character(e.characterId) });
+    case 'EQUIPMENT_USED':
+      return { kind: 'event', tone: 'info', text: t('log.event.EQUIPMENT_USED', { character: labels.character(e.characterId), equipment: labels.equipment(e.equipmentId) }), lines: [], effects: [effectBadge(e.effect)] };
+    case 'COMMAND_POINTS_GAINED':
+      return info('log.event.COMMAND_POINTS_GAINED', { player: labels.player(e.playerId), amount: e.amount, total: e.total });
     case 'OVERWATCH_PLACED':
       return info('log.event.OVERWATCH_PLACED', { character: labels.character(e.characterId) });
     case 'OVERWATCH_TRIGGERED':

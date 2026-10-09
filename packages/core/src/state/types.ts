@@ -2,6 +2,7 @@ import type { BoardState, NodeId } from '../board/types';
 import type { GameCommand } from '../commands/commands';
 import type { GameEvent } from '../events/events';
 import type { WeaponDefinition } from '../combat/weapons';
+import { characterEffects, type EquipmentItem } from '../equipment/effects';
 import type { RngState } from '../rng/rng';
 
 export const STATE_SCHEMA_VERSION = 1;
@@ -92,6 +93,8 @@ export interface CharacterState {
   readonly alive: boolean;
   /** Armes possédées (définitions runtime sérialisables, copiées du contenu à la mise en place). */
   readonly weapons?: readonly WeaponDefinition[];
+  /** Équipements non-armes portés (médailles, capacités, matériel, grenades) avec leurs effets ; un jeton défaussé en sort. */
+  readonly equipment?: readonly EquipmentItem[];
   readonly activated: boolean;
   /**
    * En Overwatch : réagit à un adversaire (entrée dans la ligne de vue, ou action/déplacement tenté dans sa ligne
@@ -158,9 +161,23 @@ export interface GameState {
   readonly camps?: Readonly<Record<PlayerId, readonly NodeId[]>>;
 }
 
-/** Caractéristiques courantes d'un personnage (ligne active selon la santé). */
-export function currentStats(character: CharacterState): CharacterStats {
+/** Ligne de caractéristiques active selon la santé, sans aucun effet d'équipement. */
+export function baseStats(character: CharacterState): CharacterStats {
   const row = character.statRows[Math.min(character.statRows.length - 1, Math.max(0, character.statRows.length - character.health))];
   if (!row) throw new Error(`Aucune ligne de caractéristiques pour ${character.id}`);
   return row;
+}
+
+/**
+ * Caractéristiques courantes d'un personnage (ligne active selon la santé). Un effet BEST_CHARACTERISTIC remplace la
+ * valeur par la plus haute de toutes les lignes (même blessé).
+ */
+export function currentStats(character: CharacterState): CharacterStats {
+  let stats = baseStats(character);
+  for (const effect of characterEffects(character)) {
+    if (effect.type !== 'BEST_CHARACTERISTIC') continue;
+    const key = effect.characteristic;
+    stats = { ...stats, [key]: Math.max(stats[key], ...character.statRows.map((r) => r[key])) };
+  }
+  return stats;
 }

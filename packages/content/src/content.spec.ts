@@ -76,6 +76,14 @@ describe('validation des erreurs de contenu', () => {
     expect(loadCharacters([base], factions, equipment)).toHaveLength(1);
   });
 
+  it("valide les effets d'équipement : types connus et paramètres entiers positifs", () => {
+    const base = { id: 'e', nameKey: 'k', traits: ['ability'] };
+    expect(loadEquipment([{ ...base, effects: [{ type: 'CRITICAL_HIT' }, { type: 'REROLL_LOWEST', count: 2 }] }])).toHaveLength(1);
+    expect(() => loadEquipment([{ ...base, effects: [{ type: 'TELEPORT' }] }])).toThrow(ContentError);
+    expect(() => loadEquipment([{ ...base, effects: [{ type: 'REROLL_LOWEST', count: 0 }] }])).toThrow(ContentError);
+    expect(() => loadEquipment([{ ...base, effects: [{ type: 'BEST_CHARACTERISTIC', characteristic: 'mental' }] }])).toThrow(ContentError);
+  });
+
   it('refuse une relation vers une faction inconnue et un nombre de dés invalide', () => {
     expect(() => loadFactions({ factions: [{ id: 'f', nameKey: 'k' }], relations: [{ factionA: 'f', factionB: 'g', relation: 'ENEMY' }] })).toThrow(/inconnue/);
     expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol'], dice: 0 }])).toThrow(ContentError);

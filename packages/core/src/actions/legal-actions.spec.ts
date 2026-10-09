@@ -69,7 +69,7 @@ const by = (actions: LegalAction[], id: ActionId): LegalAction => actions.find((
 describe('getLegalActions', () => {
   it('renvoie toutes les actions, chacune avec un motif français quand elle est indisponible', () => {
     const actions = getLegalActions(makeState(), 'h1');
-    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS', 'PASS_OVERWATCH']);
+    expect(actions.map((a) => a.id)).toEqual(['SELECT', 'MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'USE_EQUIPMENT', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS', 'PASS_OVERWATCH']);
     for (const a of actions) if (!a.available) expect(a.reason).toMatch(/\S/);
   });
 

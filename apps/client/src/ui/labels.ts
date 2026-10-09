@@ -5,6 +5,8 @@ import { hasKey, t } from './i18n';
 export interface Labeler {
   character(id: string): string;
   weapon(id: string): string;
+  /** Nom d'un équipement quelconque (arme, médaille, capacité…) ; l'id lui-même si inconnu. */
+  equipment(id: string): string;
   player(id: string): string;
   /** Nom du joueur propriétaire d'un drapeau (l'id du drapeau si inconnu). */
   flagOwner(flagId: string): string;
@@ -58,6 +60,7 @@ export function createLabeler(state: Pick<GameState, 'characters' | 'players'> &
   return {
     character,
     weapon,
+    equipment: weapon,
     player,
     flagOwner,
     humanize: (text) => (pattern ? text.replace(pattern, (id) => byId.get(id) ?? id) : text),

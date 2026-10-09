@@ -1,5 +1,15 @@
+import type { EquipmentEffect } from '../equipment/effects';
 import type { DuelOutcome } from './duel';
 import type { DieResult, TestResult } from './test';
+
+/** Effet d'équipement qui a réellement joué dans un jet (et non simplement possédé), pour le journal. */
+export interface AppliedEffect {
+  readonly type: EquipmentEffect['type'];
+  /** Jet concerné. */
+  readonly side: 'ATTACK' | 'DEFENSE';
+  /** Personnage qui en bénéficie. */
+  readonly characterId: string;
+}
 
 /** Journal de combat structuré (§85) : base + bonus − pénalités → jet → succès → défense → blessures. */
 export interface CombatLog {
@@ -27,6 +37,8 @@ export interface CombatLog {
   readonly healthBefore: number;
   readonly healthAfter: number;
   readonly defeated: boolean;
+  /** Effets d'équipement appliqués à cet échange (absent = aucun). */
+  readonly effects?: readonly AppliedEffect[];
 }
 
 export interface DefenseRollLog {
@@ -78,6 +90,15 @@ const OUTCOME_LABEL: Record<DieResult['outcome'], string> = {
   FAILURE: 'échec',
 };
 
+/** Précisions sur un dé issu d'un effet d'équipement (relance, dé supplémentaire, succès doublé). */
+function dieNotes(d: DieResult): string {
+  const notes: string[] = [];
+  if (d.rerolledFrom !== undefined) notes.push(`relancé, avant : ${d.rerolledFrom}`);
+  if (d.bonus) notes.push('dé supplémentaire');
+  if (d.success && (d.weight ?? 1) > 1) notes.push(`compte pour ${d.weight} succès`);
+  return notes.length > 0 ? ` (${notes.join(' ; ')})` : '';
+}
+
 /** Rend le journal en lignes lisibles (français), une étape par ligne. */
 export function explainCombat(log: CombatLog): string[] {
   const lines: string[] = [];
@@ -89,7 +110,7 @@ export function explainCombat(log: CombatLog): string[] {
   if (log.resultModifier !== 0) lines.push(`Modificateur de résultat : ${signed(log.resultModifier)}.`);
   log.dice.forEach((d, i) => {
     const mod = log.resultModifier !== 0 ? ` (${d.natural}${signed(log.resultModifier)} = ${d.modified})` : '';
-    lines.push(`Dé ${i + 1} : ${d.natural}${mod} → ${OUTCOME_LABEL[d.outcome]}.`);
+    lines.push(`Dé ${i + 1} : ${d.natural}${mod} → ${OUTCOME_LABEL[d.outcome]}${dieNotes(d)}.`);
   });
   lines.push(
     `Succès : ${log.rolledSuccesses} tiré(s) + ${log.autoSuccesses} automatique(s)` +
@@ -100,7 +121,7 @@ export function explainCombat(log: CombatLog): string[] {
   if (log.defenseRoll) {
     const r = log.defenseRoll;
     lines.push(`Défense de ${r.defenderId} : Physique ${r.physicalValue}, difficulté ${r.difficulty}, ${r.poolSize} dé(s).`);
-    r.dice.forEach((d, i) => lines.push(`Dé de défense ${i + 1} : ${d.natural} → ${OUTCOME_LABEL[d.outcome]}.`));
+    r.dice.forEach((d, i) => lines.push(`Dé de défense ${i + 1} : ${d.natural} → ${OUTCOME_LABEL[d.outcome]}${dieNotes(d)}.`));
   }
   if (log.defense) {
     lines.push(`Parades : ${log.defense.defenderSuccesses} sur ${log.defense.attackerSuccesses} blessure(s) → ${log.defense.remaining} non parée(s).`);

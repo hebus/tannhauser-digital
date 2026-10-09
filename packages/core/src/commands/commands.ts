@@ -12,6 +12,7 @@ export type GameCommand =
   | { readonly type: 'CAPTURE_FLAG'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly flagId: string }
   | { readonly type: 'PLANT_FLAG'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly flagId: string }
   | { readonly type: 'OVERWATCH'; readonly playerId: PlayerId; readonly characterId: CharacterId }
+  | { readonly type: 'USE_EQUIPMENT'; readonly playerId: PlayerId; readonly characterId: CharacterId; readonly equipmentId: string }
   | { readonly type: 'PASS_OVERWATCH'; readonly playerId: PlayerId }
   | { readonly type: 'OVERWATCH_FIRE'; readonly playerId: PlayerId; readonly weaponId: string }
   | { readonly type: 'OVERWATCH_DECLINE'; readonly playerId: PlayerId }

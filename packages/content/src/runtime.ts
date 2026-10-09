@@ -1,4 +1,4 @@
-import type { CharacterState, WeaponDefinition } from '@tannhauser/core';
+import type { CharacterState, EquipmentItem, WeaponDefinition } from '@tannhauser/core';
 import { WEAPON_TRAIT, WEAPON_TYPE_TRAITS, type CharacterDefinition, type EquipmentDefinition } from './schemas';
 
 /** Identifiant de l'attaque à mains nues, ajoutée à tout personnage. */
@@ -9,7 +9,7 @@ function toWeapon(equipment: EquipmentDefinition): WeaponDefinition | undefined 
   if (!equipment.traits.includes(WEAPON_TRAIT)) return undefined;
   const type = equipment.traits.find((t): t is keyof typeof WEAPON_TYPE_TRAITS => t in WEAPON_TYPE_TRAITS);
   if (!type || equipment.dice === undefined) return undefined;
-  return { id: equipment.id, kind: WEAPON_TYPE_TRAITS[type], dice: equipment.dice };
+  return { id: equipment.id, kind: WEAPON_TYPE_TRAITS[type], dice: equipment.dice, ...(equipment.effects ? { effects: equipment.effects } : {}) };
 }
 
 /** Construit l'état runtime d'un personnage à partir de sa définition (contenu → moteur). */
@@ -23,12 +23,16 @@ export function createCharacterState(
   const ids = byId.has(UNARMED_WEAPON_ID) && !definition.equipmentIds.includes(UNARMED_WEAPON_ID)
     ? [...definition.equipmentIds, UNARMED_WEAPON_ID]
     : definition.equipmentIds;
-  const owned = ids.flatMap((id) => {
+  const owned: WeaponDefinition[] = [];
+  const items: EquipmentItem[] = [];
+  for (const id of ids) {
     const e = byId.get(id);
     if (!e) throw new Error(`Équipement inconnu pour ${definition.id} : ${id}`);
     const weapon = toWeapon(e);
-    return weapon ? [weapon] : [];
-  });
+    if (weapon) owned.push(weapon);
+    // Les armes vont dans `weapons` ; tout le reste (médailles, capacités, matériel, grenades) dans `equipment`.
+    else if (!e.traits.includes(WEAPON_TRAIT)) items.push({ id: e.id, traits: e.traits, ...(e.effects ? { effects: e.effects } : {}) });
+  }
   const first = definition.statRows[0]!;
   return {
     id: placement.id ?? definition.id,
@@ -39,6 +43,7 @@ export function createCharacterState(
     statRows: definition.statRows,
     alive: true,
     weapons: owned,
+    ...(items.length > 0 ? { equipment: items } : {}),
     activated: false,
     movementLeft: first.movement,
   };

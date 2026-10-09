@@ -59,7 +59,13 @@
     "traits": [
       "medal"
     ],
-    "descriptionKey": "medal.iron-cross-1st-class.description"
+    "descriptionKey": "medal.iron-cross-1st-class.description",
+    "effects": [
+      {
+        "type": "GAIN_COMMAND_POINTS",
+        "amount": 2
+      }
+    ]
   },
   {
     "id": "ability.critical-hit",
@@ -67,7 +73,12 @@
     "traits": [
       "ability"
     ],
-    "descriptionKey": "ability.critical-hit.description"
+    "descriptionKey": "ability.critical-hit.description",
+    "effects": [
+      {
+        "type": "CRITICAL_HIT"
+      }
+    ]
   },
   {
     "id": "grenade.stielhandgrenate",
@@ -83,7 +94,13 @@
     "traits": [
       "ability"
     ],
-    "descriptionKey": "ability.supernatural-strength.description"
+    "descriptionKey": "ability.supernatural-strength.description",
+    "effects": [
+      {
+        "type": "BEST_CHARACTERISTIC",
+        "characteristic": "combat"
+      }
+    ]
   },
   {
     "id": "ability.immunity-to-pain",
@@ -91,7 +108,13 @@
     "traits": [
       "ability"
     ],
-    "descriptionKey": "ability.immunity-to-pain.description"
+    "descriptionKey": "ability.immunity-to-pain.description",
+    "effects": [
+      {
+        "type": "BEST_CHARACTERISTIC",
+        "characteristic": "physical"
+      }
+    ]
   },
   {
     "id": "weapon.flash-gun-mk1",
@@ -101,7 +124,13 @@
       "automatic"
     ],
     "dice": 5,
-    "descriptionKey": "weapon.flash-gun-mk1.description"
+    "descriptionKey": "weapon.flash-gun-mk1.description",
+    "effects": [
+      {
+        "type": "EXTRA_DICE_ON_NATURAL_10",
+        "dice": 2
+      }
+    ]
   },
   {
     "id": "medal.combat-infantry-badge",
@@ -109,7 +138,13 @@
     "traits": [
       "medal"
     ],
-    "descriptionKey": "medal.combat-infantry-badge.description"
+    "descriptionKey": "medal.combat-infantry-badge.description",
+    "effects": [
+      {
+        "type": "REROLL_LOWEST",
+        "count": 2
+      }
+    ]
   },
   {
     "id": "medal.medal-of-honor",
@@ -117,7 +152,12 @@
     "traits": [
       "medal"
     ],
-    "descriptionKey": "medal.medal-of-honor.description"
+    "descriptionKey": "medal.medal-of-honor.description",
+    "effects": [
+      {
+        "type": "FREE_OVERWATCH"
+      }
+    ]
   },
   {
     "id": "weapon.knife",
@@ -134,7 +174,14 @@
     "traits": [
       "hardware"
     ],
-    "descriptionKey": "hardware.ba-27.description"
+    "descriptionKey": "hardware.ba-27.description",
+    "effects": [
+      {
+        "type": "EXTRA_DICE_WITH_WEAPON",
+        "weaponId": "weapon.flash-machine-gun-a6a",
+        "dice": 1
+      }
+    ]
   },
   {
     "id": "grenade.mkii-a1",

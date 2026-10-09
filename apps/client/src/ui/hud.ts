@@ -2,6 +2,7 @@ import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, typ
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';
+import { EFFECT_ICONS } from './effect-icons';
 import { reasonText, t } from './i18n';
 import { modeRules } from './mode-rules';
 import { createLabeler, type Labeler } from './labels';
@@ -24,7 +25,7 @@ export interface Hud {
   handleKey(event: KeyboardEvent): boolean;
 }
 
-type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'CAPTURE_FLAG' | 'PLANT_FLAG';
+type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'USE_EQUIPMENT';
 
 const TOAST_MS = 7000;
 
@@ -199,6 +200,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         const text = flag?.location.kind === 'NODE' ? t('actions.flag.optionAt', { owner, node: flag.location.nodeId }) : t('actions.flag.option', { owner });
         return option(`flag-${flagId}`, text, () => dispatch({ type, playerId: state.turn.activePlayerId!, characterId, flagId }));
       });
+    } else if (menu === 'USE_EQUIPMENT') {
+      titleKey = 'actions.equipment.title';
+      options = (legal?.details?.equipmentIds ?? []).map((equipmentId) =>
+        option(`equipment-${equipmentId}`, `${effectIconOf(state, characterId, equipmentId)} ${labels.equipment(equipmentId)}`, () =>
+          dispatch({ type: 'USE_EQUIPMENT', playerId: state.turn.activePlayerId!, characterId, equipmentId }),
+        ),
+      );
     } else {
       titleKey = 'actions.door.title';
       const type = menu === 'OPEN_DOOR' ? 'OPEN_DOOR' : 'CLOSE_DOOR';
@@ -207,6 +215,12 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       );
     }
     return h('div', { class: 'hud-menu', attrs: { role: 'group', 'aria-label': t(titleKey) } }, h('div', { class: 'hud-menu-title', text: t(titleKey) }), h('div', { class: 'hud-menu-options' }, ...options), cancel);
+  }
+
+  /** Pictogramme du premier effet d'un équipement porté (le jeton à défausser). */
+  function effectIconOf(state: GameState, characterId: string, equipmentId: string): string {
+    const effect = state.characters.find((c) => c.id === characterId)?.equipment?.find((i) => i.id === equipmentId)?.effects?.[0];
+    return effect ? EFFECT_ICONS[effect.type] : '';
   }
 
   function openMenu(kind: MenuKind): void {
@@ -262,6 +276,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       case 'OVERWATCH':
         dispatch({ type: 'OVERWATCH', playerId, characterId });
         break;
+      case 'USE_EQUIPMENT': {
+        // Un seul jeton utilisable : action directe ; plusieurs : menu de choix.
+        const tokens = action.details?.equipmentIds ?? [];
+        if (tokens.length === 1) dispatch({ type: 'USE_EQUIPMENT', playerId, characterId, equipmentId: tokens[0]! });
+        else openMenu(id);
+        break;
+      }
       case 'END_ACTIVATION':
         dispatch({ type: 'END_TURN', playerId });
         break;
@@ -358,6 +379,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         ),
       );
     }
+    renderPlacementTokens(game.state, p.playerId);
     actionsPanel.append(
       h(
         'button',
@@ -376,6 +398,22 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       ),
       h('p', { class: 'hud-note', text: t('placement.passHint') }),
     );
+  }
+
+  /** Phase d'Overwatch : les jetons à défausser (ex. Iron Cross : +2 PC) restent utilisables avant de placer ou de passer. */
+  function renderPlacementTokens(state: GameState, playerId: string): void {
+    for (const character of state.characters.filter((c) => c.playerId === playerId && c.alive)) {
+      const legal = getLegalActions(state, character.id).find((a) => a.id === 'USE_EQUIPMENT');
+      for (const equipmentId of legal?.details?.equipmentIds ?? []) {
+        actionsPanel.append(
+          h(
+            'button',
+            { class: 'hud-btn', attrs: { type: 'button', 'data-fid': `token-${character.id}-${equipmentId}` }, on: { click: () => dispatch({ type: 'USE_EQUIPMENT', playerId, characterId: character.id, equipmentId }) } },
+            h('span', { class: 'hud-btn-label' }, h('span', { text: t('placement.useToken', { icon: effectIconOf(state, character.id, equipmentId), equipment: createLabeler(state).equipment(equipmentId) }) })),
+          ),
+        );
+      }
+    }
   }
 
   /** PASS sans activation en cours : même chemin d'explication que les autres actions. */

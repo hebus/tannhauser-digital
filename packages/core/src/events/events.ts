@@ -1,10 +1,14 @@
 import type { CombatLog } from '../combat/log';
+import type { EquipmentEffect } from '../equipment/effects';
 
 /** Événements émis par le moteur (§83). Source unique pour animations, audio, replay, IA. */
 export type GameEvent =
   | { readonly type: 'GAME_STARTED'; readonly scenarioId: string }
   | { readonly type: 'TURN_STARTED'; readonly turn: number }
   | { readonly type: 'COMMAND_POINTS_REFRESHED'; readonly playerId: string; readonly amount: number }
+  | { readonly type: 'COMMAND_POINTS_GAINED'; readonly playerId: string; readonly amount: number; readonly total: number }
+  /** Jeton défaussé : son effet (`effect`) est appliqué par la suite d'événements. */
+  | { readonly type: 'EQUIPMENT_USED'; readonly characterId: string; readonly equipmentId: string; readonly effect: EquipmentEffect['type'] }
   | { readonly type: 'COMMAND_POINTS_SPENT'; readonly playerId: string; readonly amount: number; readonly purpose: string; readonly remaining: number }
   | { readonly type: 'SMOKE_EXPIRED'; readonly effectId: string; readonly origin: string }
   | { readonly type: 'INITIATIVE_CHANGED'; readonly previousWinnerId: string; readonly winnerId: string }

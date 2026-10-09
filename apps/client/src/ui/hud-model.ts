@@ -4,7 +4,7 @@ import type { Labeler } from './labels';
 
 /** Modèle d'affichage du HUD : pur (état → données), sans DOM, testable. Aucune règle : tout vient du moteur. */
 
-export const ACTION_ORDER: readonly ActionId[] = ['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS'];
+export const ACTION_ORDER: readonly ActionId[] = ['MOVE', 'ATTACK', 'CAPTURE_FLAG', 'PLANT_FLAG', 'OVERWATCH', 'USE_EQUIPMENT', 'OPEN_DOOR', 'CLOSE_DOOR', 'END_ACTIVATION', 'PASS'];
 
 /** Actions propres au mode Capture du drapeau : elles n'apparaissent (barre d'actions, raccourcis) que dans ce mode. */
 export const FLAG_ACTIONS: readonly ActionId[] = ['CAPTURE_FLAG', 'PLANT_FLAG'];
@@ -22,6 +22,7 @@ export const ACTION_KEYS: Readonly<Partial<Record<ActionId, string>>> = {
   CAPTURE_FLAG: 'G',
   PLANT_FLAG: 'H',
   OVERWATCH: 'O',
+  USE_EQUIPMENT: 'Q',
   OPEN_DOOR: 'U',
   CLOSE_DOOR: 'F',
   END_ACTIVATION: 'E',

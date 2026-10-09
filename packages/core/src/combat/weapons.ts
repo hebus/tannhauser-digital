@@ -1,3 +1,5 @@
+import type { EquipmentEffect } from '../equipment/effects';
+
 /** Familles d'armes (§72.1). Les dés par famille sont des DONNÉES, jamais des constantes de code. */
 export type WeaponKind = 'CAC' | 'PISTOL' | 'MENTAL' | 'AUTOMATIC';
 
@@ -18,4 +20,6 @@ export interface WeaponDefinition {
   readonly resultModifier?: number;
   /** Portée maximale en nombre de pas (arêtes ouvertes). Absente = limitée par la seule ligne de vue. */
   readonly maxRange?: number;
+  /** Effets de règle propres à l'arme (ex. dés supplémentaires sur un 10 naturel). */
+  readonly effects?: readonly EquipmentEffect[];
 }
