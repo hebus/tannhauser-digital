@@ -5,10 +5,12 @@ import {
   type BoardLayoutJson,
   characterSchema,
   factionsFileSchema,
-  weaponSchema,
+  equipmentSchema,
+  WEAPON_TRAIT,
+  WEAPON_TYPE_TRAITS,
   type CharacterDefinition,
+  type EquipmentDefinition,
   type FactionsFile,
-  type WeaponDefinition,
 } from './schemas';
 
 /** Erreur de contenu (catégorie « Content error » du plan §29) : jamais montrée brute au joueur. */
@@ -69,21 +71,32 @@ export function loadBoard(data: unknown, source = 'board'): LoadedBoard {
   return { id: json.id, nameKey: json.nameKey, board, ...(json.layout ? { layout: json.layout } : {}) };
 }
 
-export function loadWeapons(data: unknown, source = 'weapons'): WeaponDefinition[] {
-  const list = check(source, weaponSchema.array()(data));
+export function loadEquipment(data: unknown, source = 'equipment'): EquipmentDefinition[] {
+  const list = check(source, equipmentSchema.array()(data));
   assertUniqueIds(source, list);
+  const problems: string[] = [];
+  for (const e of list) {
+    if (!e.traits.includes(WEAPON_TRAIT)) continue;
+    // Une arme : le trait `weapon` et un seul trait de type, plus une réserve de dés.
+    const others = e.traits.filter((t) => t !== WEAPON_TRAIT);
+    if (others.length !== 1 || !(others[0]! in WEAPON_TYPE_TRAITS)) {
+      problems.push(`${e.id} : une arme porte \`${WEAPON_TRAIT}\` et exactement un trait de type parmi ${Object.keys(WEAPON_TYPE_TRAITS).join(', ')}`);
+    }
+    if (e.dice === undefined) problems.push(`${e.id} : une arme exige \`dice\``);
+  }
+  if (problems.length > 0) throw new ContentError(source, problems);
   return list;
 }
 
-export function loadCharacters(data: unknown, factions: FactionsFile, weapons: readonly WeaponDefinition[], source = 'characters'): CharacterDefinition[] {
+export function loadCharacters(data: unknown, factions: FactionsFile, equipment: readonly EquipmentDefinition[], source = 'characters'): CharacterDefinition[] {
   const list = check(source, characterSchema.array()(data));
   assertUniqueIds(source, list);
   const factionIds = new Set(factions.factions.map((f) => f.id));
-  const weaponIds = new Set(weapons.map((w) => w.id));
+  const equipmentIds = new Set(equipment.map((e) => e.id));
   const problems: string[] = [];
   for (const c of list) {
     if (!factionIds.has(c.factionId)) problems.push(`${c.id} : faction inconnue ${c.factionId}`);
-    for (const w of c.weaponIds) if (!weaponIds.has(w)) problems.push(`${c.id} : arme inconnue ${w}`);
+    for (const e of c.equipmentIds) if (!equipmentIds.has(e)) problems.push(`${c.id} : équipement inconnu ${e}`);
   }
   if (problems.length > 0) throw new ContentError(source, problems);
   return list;

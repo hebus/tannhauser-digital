@@ -1,0 +1,147 @@
+[
+  {
+    "id": "weapon.unarmed",
+    "nameKey": "weapon.unarmed.name",
+    "traits": [
+      "weapon",
+      "hand-to-hand"
+    ],
+    "dice": 2
+  },
+  {
+    "id": "weapon.melee",
+    "nameKey": "weapon.melee.name",
+    "traits": [
+      "weapon",
+      "hand-to-hand"
+    ],
+    "dice": 4
+  },
+  {
+    "id": "weapon.pistol",
+    "nameKey": "weapon.pistol.name",
+    "traits": [
+      "weapon",
+      "pistol"
+    ],
+    "dice": 4
+  },
+  {
+    "id": "weapon.mental",
+    "nameKey": "weapon.mental.name",
+    "traits": [
+      "weapon",
+      "mental"
+    ],
+    "dice": 4
+  },
+  {
+    "id": "weapon.automatic",
+    "nameKey": "weapon.automatic.name",
+    "traits": [
+      "weapon",
+      "automatic"
+    ],
+    "dice": 5
+  },
+  {
+    "id": "weapon.mauser-c96",
+    "nameKey": "weapon.mauser-c96.name",
+    "traits": [
+      "weapon",
+      "pistol"
+    ],
+    "dice": 4
+  },
+  {
+    "id": "medal.iron-cross-1st-class",
+    "nameKey": "medal.iron-cross-1st-class.name",
+    "traits": [
+      "medal"
+    ],
+    "descriptionKey": "medal.iron-cross-1st-class.description"
+  },
+  {
+    "id": "ability.critical-hit",
+    "nameKey": "ability.critical-hit.name",
+    "traits": [
+      "ability"
+    ],
+    "descriptionKey": "ability.critical-hit.description"
+  },
+  {
+    "id": "grenade.stielhandgrenate",
+    "nameKey": "grenade.stielhandgrenate.name",
+    "traits": [
+      "grenade"
+    ],
+    "descriptionKey": "grenade.stielhandgrenate.description"
+  },
+  {
+    "id": "ability.supernatural-strength",
+    "nameKey": "ability.supernatural-strength.name",
+    "traits": [
+      "ability"
+    ],
+    "descriptionKey": "ability.supernatural-strength.description"
+  },
+  {
+    "id": "ability.immunity-to-pain",
+    "nameKey": "ability.immunity-to-pain.name",
+    "traits": [
+      "ability"
+    ],
+    "descriptionKey": "ability.immunity-to-pain.description"
+  },
+  {
+    "id": "weapon.flash-gun-mk1",
+    "nameKey": "weapon.flash-gun-mk1.name",
+    "traits": [
+      "weapon",
+      "automatic"
+    ],
+    "dice": 5,
+    "descriptionKey": "weapon.flash-gun-mk1.description"
+  },
+  {
+    "id": "medal.combat-infantry-badge",
+    "nameKey": "medal.combat-infantry-badge.name",
+    "traits": [
+      "medal"
+    ],
+    "descriptionKey": "medal.combat-infantry-badge.description"
+  },
+  {
+    "id": "medal.medal-of-honor",
+    "nameKey": "medal.medal-of-honor.name",
+    "traits": [
+      "medal"
+    ],
+    "descriptionKey": "medal.medal-of-honor.description"
+  },
+  {
+    "id": "weapon.knife",
+    "nameKey": "weapon.knife.name",
+    "traits": [
+      "weapon",
+      "hand-to-hand"
+    ],
+    "dice": 4
+  },
+  {
+    "id": "hardware.ba-27",
+    "nameKey": "hardware.ba-27.name",
+    "traits": [
+      "hardware"
+    ],
+    "descriptionKey": "hardware.ba-27.description"
+  },
+  {
+    "id": "grenade.mkii-a1",
+    "nameKey": "grenade.mkii-a1.name",
+    "traits": [
+      "grenade"
+    ],
+    "descriptionKey": "grenade.mkii-a1.description"
+  }
+]

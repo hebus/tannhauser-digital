@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canSee } from '@tannhauser/core';
-import { ContentError, loadBoard, loadCharacters, loadDevContent, loadFactions, loadWeapons } from './index';
+import { ContentError, loadBoard, loadCharacters, loadDevContent, loadEquipment, loadFactions } from './index';
 import devBoardJson from './data/dev-board.json';
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -10,10 +10,13 @@ describe('contenu de développement', () => {
 
   it('se charge et se valide en entier', () => {
     expect(Object.keys(content.board.board.nodes)).toHaveLength(16);
-    // Tableau des réserves de dés (règles v2) : sans arme 2, corps à corps 4, pistolet 4, mental 4, automatique 5.
-    const dice = Object.fromEntries(content.weapons.map((w) => [w.id, w.dice]));
-    expect(dice).toEqual({ 'weapon.unarmed': 2, 'weapon.melee': 4, 'weapon.pistol': 4, 'weapon.mental': 4, 'weapon.automatic': 5 });
-    expect(content.characters).toHaveLength(4);
+    // Tableau des réserves de dés (règles v2) : sans arme 2, corps à corps 4, pistolet 4, mental 4, automatique 5 ; les armes des héros reprennent ces valeurs.
+    const dice = Object.fromEntries(content.equipment.filter((e) => e.traits.includes('weapon')).map((e) => [e.id, e.dice]));
+    expect(dice).toEqual({
+      'weapon.unarmed': 2, 'weapon.melee': 4, 'weapon.pistol': 4, 'weapon.mental': 4, 'weapon.automatic': 5,
+      'weapon.mauser-c96': 4, 'weapon.flash-gun-mk1': 5, 'weapon.knife': 4,
+    });
+    expect(content.characters).toHaveLength(8);
   });
 
   it('contient les cas spéciaux du plateau', () => {
@@ -64,17 +67,25 @@ describe('validation des erreurs de contenu', () => {
     expect(() => loadBoard(data)).toThrow(/BAD_COLOR_COUNT/);
   });
 
-  it('refuse un personnage avec faction ou arme inconnue', () => {
+  it('refuse un personnage avec faction ou équipement inconnu', () => {
     const factions = loadFactions({ factions: [{ id: 'f', nameKey: 'k' }], relations: [] });
-    const weapons = loadWeapons([{ id: 'w', nameKey: 'k', kind: 'PISTOL', dice: 4 }]);
-    const base = { id: 'c', factionId: 'f', nameKey: 'k', kind: 'HERO', statRows: [{ combat: 1, physical: 1, mental: 1, movement: 1 }], weaponIds: ['w'], competencies: [] };
-    expect(() => loadCharacters([{ ...base, factionId: 'zzz' }], factions, weapons)).toThrow(/faction inconnue/);
-    expect(() => loadCharacters([{ ...base, weaponIds: ['nope'] }], factions, weapons)).toThrow(/arme inconnue/);
-    expect(loadCharacters([base], factions, weapons)).toHaveLength(1);
+    const equipment = loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol'], dice: 4 }]);
+    const base = { id: 'c', factionId: 'f', nameKey: 'k', kind: 'HERO', statRows: [{ combat: 1, physical: 1, mental: 1, movement: 1 }], equipmentIds: ['w'], competencies: [] };
+    expect(() => loadCharacters([{ ...base, factionId: 'zzz' }], factions, equipment)).toThrow(/faction inconnue/);
+    expect(() => loadCharacters([{ ...base, equipmentIds: ['nope'] }], factions, equipment)).toThrow(/équipement inconnu/);
+    expect(loadCharacters([base], factions, equipment)).toHaveLength(1);
   });
 
   it('refuse une relation vers une faction inconnue et un nombre de dés invalide', () => {
     expect(() => loadFactions({ factions: [{ id: 'f', nameKey: 'k' }], relations: [{ factionA: 'f', factionB: 'g', relation: 'ENEMY' }] })).toThrow(/inconnue/);
-    expect(() => loadWeapons([{ id: 'w', nameKey: 'k', kind: 'PISTOL', dice: 0 }])).toThrow(ContentError);
+    expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol'], dice: 0 }])).toThrow(ContentError);
+  });
+
+  it('exige pour une arme le trait weapon, un seul trait de type et des dés', () => {
+    expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon'], dice: 4 }])).toThrow(/exactement un trait de type/);
+    expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol', 'mental'], dice: 4 }])).toThrow(/exactement un trait de type/);
+    expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'inconnu'], dice: 4 }])).toThrow(/exactement un trait de type/);
+    expect(() => loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol'] }])).toThrow(/exige `dice`/);
+    expect(loadEquipment([{ id: 'm', nameKey: 'k', traits: ['medal'] }])).toHaveLength(1);
   });
 });

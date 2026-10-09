@@ -5,7 +5,7 @@ import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSe
 
 export interface SetupScreenContent extends SetupContent {
   readonly boards: readonly { readonly id: string; readonly nameKey: string; readonly board: SetupContent['boards'][number]['board'] }[];
-  readonly characters: readonly { readonly id: string; readonly factionId: string; readonly kind: string; readonly nameKey: string }[];
+  readonly characters: readonly { readonly id: string; readonly factionId: string; readonly kind: SetupContent['characters'][number]['kind']; readonly nameKey: string }[];
 }
 
 /** Texte joueur d'un problème de configuration (clé `setupError.<code>`). */
@@ -40,7 +40,15 @@ const ICON_PLAY = ['M7 4.5v15l12-7.5z'];
  */
 export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, initial: SetupConfig): Promise<SetupConfig> {
   return new Promise((resolve) => {
-    const selected = new Map<string, Set<string>>(initial.teams.map((team) => [team.playerId, new Set(team.characterIds)]));
+    // Effectif par personnage : 0 ou 1 pour un héros (unique), tout entier pour une troupe.
+    const selected = new Map<string, Map<string, number>>(
+      initial.teams.map((team) => {
+        const counts = new Map<string, number>();
+        for (const id of team.characterIds) counts.set(id, (counts.get(id) ?? 0) + 1);
+        return [team.playerId, counts];
+      }),
+    );
+    const teamSize = (playerId: string): number => [...(selected.get(playerId)?.values() ?? [])].reduce((a, b) => a + b, 0);
     let boardId = initial.boardId;
     const aiPlayers = new Set(initial.ai ?? []);
     let mode = initial.mode ?? 'DEATHMATCH';
@@ -88,10 +96,24 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       ...GAME_MODES.map((m) => choiceCard('setup-mode', m.mode, m.mode === mode, () => { mode = m.mode; renderModeHelp(); }, t(`modeCard.${m.mode}.title`), t(`modeCard.${m.mode}.sub`))),
     );
 
+    // Un héros n'existe qu'une fois dans la partie : sa case est grisée dans l'équipe adverse dès qu'un camp l'a pris.
+    const heroBoxes: { readonly playerId: string; readonly id: string; readonly box: HTMLInputElement }[] = [];
+    const refreshHeroLocks = (): void => {
+      for (const { playerId, id, box } of heroBoxes) {
+        const takenByOther = [...selected].some(([other, counts]) => other !== playerId && (counts.get(id) ?? 0) > 0);
+        const lock = takenByOther && (selected.get(playerId)?.get(id) ?? 0) === 0;
+        box.disabled = lock;
+        const label = box.closest('label');
+        label?.classList.toggle('is-locked', lock);
+        // Info-bulle : la raison du blocage, sinon le nom complet (utile quand il est tronqué).
+        if (label) label.title = lock ? t('setup.heroTaken') : (label.dataset.name ?? '');
+      }
+    };
+
     const teamPanel = (playerId: string) => {
       const counter = h('span', { class: 'setup-count' });
       const updateCount = (): void => {
-        const n = selected.get(playerId)?.size ?? 0;
+        const n = teamSize(playerId);
         counter.textContent = t('setup.countOf', { n, max: MAX_TEAM_SIZE });
         counter.classList.toggle('is-bad', n === 0 || n > MAX_TEAM_SIZE);
       };
@@ -107,6 +129,53 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
           }),
           h('span', { class: 'setup-seg-body' }, icon(human ? ICON_HUMAN : ICON_AI), human ? t('setup.human') : t('setup.aiShort')),
         );
+      const cards = content.characters.map((c) => {
+        const counts = selected.get(playerId)!;
+        const box = h('input', {
+          class: 'setup-card-input',
+          attrs: { type: 'checkbox', checked: (counts.get(c.id) ?? 0) > 0 },
+          on: {
+            change: (e) => {
+              if ((e.target as HTMLInputElement).checked) counts.set(c.id, Math.max(1, counts.get(c.id) ?? 0));
+              else counts.delete(c.id);
+              if (qty) qty.value = String(counts.get(c.id) ?? 0);
+              updateCount();
+              refreshHeroLocks();
+            },
+          },
+        });
+        if (c.kind === 'HERO') heroBoxes.push({ playerId, id: c.id, box });
+        // Troupes : aucune limite par type (seule la taille de l'équipe est bornée) ; case cochée = au moins une.
+        const qty = c.kind === 'HERO'
+          ? null
+          : h('input', {
+              class: 'setup-unit-qty',
+              attrs: { type: 'number', min: 0, max: MAX_TEAM_SIZE, step: 1, value: counts.get(c.id) ?? 0, 'aria-label': t('setup.quantityOf', { name: t(c.nameKey) }) },
+              on: {
+                change: (e) => {
+                  const n = Math.max(0, Math.floor(Number((e.target as HTMLInputElement).value) || 0));
+                  if (n > 0) counts.set(c.id, n);
+                  else counts.delete(c.id);
+                  box.checked = n > 0;
+                  updateCount();
+                },
+              },
+            });
+        return h(
+          'label',
+          { class: `setup-unit setup-unit-${c.kind.toLowerCase()}`, attrs: { title: t(c.nameKey), 'data-name': t(c.nameKey) } },
+          box,
+          h('span', { class: 'setup-unit-icon', text: c.kind === 'HERO' ? '★' : '◆', attrs: { 'aria-hidden': 'true' } }),
+          h('span', { class: 'setup-unit-body' }, h('span', { class: 'setup-unit-name', text: t(c.nameKey) }), h('span', { class: 'setup-unit-kind', text: t(`kind.${c.kind}`) })),
+          qty,
+        );
+      });
+      const column = (heroes: boolean, title: string) =>
+        h(
+          'div',
+          { class: `setup-roster-col setup-roster-${heroes ? 'heroes' : 'troops'}`, attrs: { role: 'group', 'aria-label': title } },
+          ...content.characters.flatMap((c, i) => ((c.kind === 'HERO') === heroes ? [cards[i]!] : [])),
+        );
       return h(
         'fieldset',
         { class: 'setup-team', attrs: { 'data-player': playerId } },
@@ -121,26 +190,8 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
         h(
           'div',
           { class: 'setup-roster' },
-          ...content.characters.map((c) =>
-            h(
-              'label',
-              { class: `setup-unit setup-unit-${c.kind.toLowerCase()}` },
-              h('input', {
-                class: 'setup-card-input',
-                attrs: { type: 'checkbox', checked: selected.get(playerId)?.has(c.id) },
-                on: {
-                  change: (e) => {
-                    const set = selected.get(playerId)!;
-                    if ((e.target as HTMLInputElement).checked) set.add(c.id);
-                    else set.delete(c.id);
-                    updateCount();
-                  },
-                },
-              }),
-              h('span', { class: 'setup-unit-icon', text: c.kind === 'HERO' ? '★' : '◆', attrs: { 'aria-hidden': 'true' } }),
-              h('span', { class: 'setup-unit-body' }, h('span', { class: 'setup-unit-name', text: t(c.nameKey) }), h('span', { class: 'setup-unit-kind', text: t(`kind.${c.kind}`) })),
-            ),
-          ),
+          column(true, t('setup.heroes')),
+          column(false, t('setup.troops')),
         ),
       );
     };
@@ -154,7 +205,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
         teams: PLAYER_IDS.map((playerId) => ({
           playerId,
           // Ordre du contenu, pas de l'ordre de clic : le placement reste déterministe.
-          characterIds: content.characters.filter((c) => selected.get(playerId)?.has(c.id)).map((c) => c.id),
+          characterIds: content.characters.flatMap((c) => Array.from({ length: selected.get(playerId)?.get(c.id) ?? 0 }, () => c.id)),
         })),
       };
     }
@@ -206,6 +257,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
         h('button', { class: 'setup-play', attrs: { type: 'submit' } }, icon(ICON_PLAY, 18), t('setup.play')),
       ),
     );
+    refreshHeroLocks();
     const overlay = h('div', { class: 'ui-overlay ui-overlay-setup setup-backdrop' }, form);
     host.append(overlay);
     form.querySelector<HTMLElement>('.setup-play')?.focus();

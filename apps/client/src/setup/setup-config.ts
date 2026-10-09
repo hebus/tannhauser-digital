@@ -23,13 +23,14 @@ export const GAME_MODES: readonly { readonly mode: GameMode; readonly code: stri
   { mode: 'CAPTURE_THE_FLAG', code: 'ctf', nameKey: 'mode.CAPTURE_THE_FLAG' },
 ];
 
-export const MAX_TEAM_SIZE = 4;
+/** Taille maximale d'une équipe, toutes troupes comprises (aucune limite par type de troupe). */
+export const MAX_TEAM_SIZE = 5;
 export const MAX_SEED = 0xffffffff;
 export const PLAYER_IDS = ['p1', 'p2'] as const;
 
 export interface SetupContent {
   readonly boards: readonly Pick<LoadedBoard, 'id' | 'board'>[];
-  readonly characters: readonly Pick<CharacterDefinition, 'id' | 'factionId'>[];
+  readonly characters: readonly Pick<CharacterDefinition, 'id' | 'factionId' | 'kind'>[];
 }
 
 /** Problème de configuration : code stable + paramètres (le texte vient de `setupError.<code>` dans i18n). */
@@ -45,16 +46,20 @@ export function validateSetup(config: SetupConfig, content: SetupContent): Setup
   if (!Number.isInteger(config.seed) || config.seed < 0 || config.seed > MAX_SEED) issues.push({ code: 'BAD_SEED', params: { max: MAX_SEED } });
   if (config.teams.length !== 2) issues.push({ code: 'TEAM_COUNT' });
 
-  const known = new Set(content.characters.map((c) => c.id));
+  const known = new Map(content.characters.map((c) => [c.id, c]));
   let total = 0;
+  // Un héros n'existe qu'une fois dans toute la partie (tous camps confondus) ; les troupes peuvent se répéter.
+  const heroesTaken = new Set<string>();
   for (const team of config.teams) {
     if (team.characterIds.length === 0) issues.push({ code: 'TEAM_EMPTY', params: { player: team.playerId } });
     if (team.characterIds.length > MAX_TEAM_SIZE) issues.push({ code: 'TEAM_TOO_LARGE', params: { player: team.playerId, max: MAX_TEAM_SIZE } });
-    const seen = new Set<string>();
     for (const id of team.characterIds) {
-      if (!known.has(id)) issues.push({ code: 'UNKNOWN_CHARACTER', params: { id } });
-      else if (seen.has(id)) issues.push({ code: 'DUPLICATE_CHARACTER', params: { player: team.playerId, id } });
-      seen.add(id);
+      const definition = known.get(id);
+      if (!definition) issues.push({ code: 'UNKNOWN_CHARACTER', params: { id } });
+      else if (definition.kind === 'HERO') {
+        if (heroesTaken.has(id)) issues.push({ code: 'DUPLICATE_CHARACTER', params: { player: team.playerId, id } });
+        heroesTaken.add(id);
+      }
     }
     total += team.characterIds.length;
   }
@@ -77,7 +82,7 @@ export function randomSeed(random: () => number = Math.random): number {
   return Math.floor(random() * (MAX_SEED + 1));
 }
 
-/** Équipes par défaut : une faction par joueur (au plus MAX_TEAM_SIZE personnages), 2 contre 2 avec le contenu de dev. */
+/** Équipes par défaut : une faction par joueur (au plus MAX_TEAM_SIZE personnages, un exemplaire de chaque). */
 export function defaultSetup(content: SetupContent, seed: number): SetupConfig {
   const factions = [...new Set(content.characters.map((c) => c.factionId))];
   const teams: TeamConfig[] = PLAYER_IDS.map((playerId, i) => {

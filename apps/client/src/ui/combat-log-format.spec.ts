@@ -35,16 +35,26 @@ const labels = createLabeler(state);
 
 describe('labels', () => {
   it('traduit personnages, armes et joueurs, et remplace les ids dans les textes du moteur', () => {
-    expect(labels.character('char.alpha.hero')).toBe('Héros Alpha');
+    expect(labels.character('char.alpha.hero')).toBe('Eva Krämer');
     expect(labels.weapon('weapon.pistol')).toBe('Pistolet');
     expect(labels.player('p2')).toBe('Joueur 2');
-    expect(labels.humanize('char.alpha.hero attaque char.beta.hero avec weapon.pistol.')).toBe('Héros Alpha attaque Héros Bêta avec Pistolet.');
+    expect(labels.humanize('char.alpha.hero attaque char.beta.hero avec weapon.pistol.')).toBe('Eva Krämer attaque John MacNeal avec Pistolet.');
   });
 
   it('précise le joueur quand deux personnages portent le même nom', () => {
     const dup = createLabeler({ players: state.players, characters: [char('x#p1', 'char.alpha.hero', 'p1', 'a'), char('x#p2', 'char.alpha.hero', 'p2', 'b')] });
-    expect(dup.character('x#p1')).toBe('Héros Alpha (Joueur 1)');
-    expect(dup.character('x#p2')).toBe('Héros Alpha (Joueur 2)');
+    expect(dup.character('x#p1')).toBe('Eva Krämer (Joueur 1)');
+    expect(dup.character('x#p2')).toBe('Eva Krämer (Joueur 2)');
+  });
+
+  it('numérote plusieurs troupes du même type dans une équipe', () => {
+    const many = createLabeler({
+      players: state.players,
+      characters: [char('t#p1-1', 'char.alpha.troop', 'p1', 'a'), char('t#p1-2', 'char.alpha.troop', 'p1', 'a'), char('h', 'char.alpha.hero', 'p1', 'a')],
+    });
+    expect(many.character('t#p1-1')).toBe('Stosstruppen 1');
+    expect(many.character('t#p1-2')).toBe('Stosstruppen 2');
+    expect(many.character('h')).toBe('Eva Krämer');
   });
 });
 
@@ -65,9 +75,9 @@ describe('journal de combat', () => {
     expect(lines).toContain('Réserve : 4 (arme)');
     expect(lines).toContain('Difficulté : 10 − Combat 7 = 3');
     expect(lines).toContain('Dé 1 : 8');
-    expect(lines).toContain('Héros Alpha attaque Héros Bêta avec Pistolet.');
+    expect(lines).toContain('Eva Krämer attaque John MacNeal avec Pistolet.');
     expect(lines).toContain('Dégâts');
-    expect(combat[0]!.text).toContain('Héros Alpha attaque Héros Bêta (Pistolet)');
+    expect(combat[0]!.text).toContain('Eva Krämer attaque John MacNeal (Pistolet)');
   });
 
   it('ne duplique pas les événements de l\'échange en lignes séparées', () => {
@@ -87,7 +97,7 @@ describe('journal de combat', () => {
   it('un personnage mis hors de combat produit une ligne dédiée', () => {
     const { events } = attackEvents([8, 8, 8, 8, 1, 1, 1, 1]);
     const entries = buildLogEntries(events, labels);
-    expect(entries.some((e) => e.tone === 'kill' && e.text.includes('Héros Bêta'))).toBe(true);
+    expect(entries.some((e) => e.tone === 'kill' && e.text.includes('John MacNeal'))).toBe(true);
   });
 
   it('événements non-combat : une ligne chacun, bruit omis', () => {
@@ -97,9 +107,9 @@ describe('journal de combat', () => {
     );
     expect(forced?.text).toContain('force le passage');
     expect(forced?.lines.at(-1)).toBe('Succès restants : 1 (au moins 1 requis pour passer).');
-    expect(formatEvent({ type: 'CHARACTER_MOVED', characterId: 'char.alpha.hero', path: ['a', 'b'], cost: 1 }, labels)?.text).toBe('Héros Alpha se déplace (1 PM) vers b.');
+    expect(formatEvent({ type: 'CHARACTER_MOVED', characterId: 'char.alpha.hero', path: ['a', 'b'], cost: 1 }, labels)?.text).toBe('Eva Krämer se déplace (1 PM) vers b.');
     expect(formatEvent({ type: 'TURN_STARTED', turn: 3 }, labels)).toMatchObject({ kind: 'turn', text: 'Tour 3.' });
-    expect(formatEvent({ type: 'OVERWATCH_RESOLVED', overwatcherId: 'char.beta.hero', fired: false }, labels)?.text).toBe('Héros Bêta renonce à tirer.');
+    expect(formatEvent({ type: 'OVERWATCH_RESOLVED', overwatcherId: 'char.beta.hero', fired: false }, labels)?.text).toBe('John MacNeal renonce à tirer.');
     expect(formatEvent({ type: 'OVERWATCH_PASSED', playerId: 'p2' }, labels)?.text).toContain('passe');
     expect(formatEvent({ type: 'OVERWATCH_PHASE_ENDED' }, labels)?.text).toBe('Phase Overwatch terminée : les activations commencent.');
     expect(formatEvent({ type: 'COMMAND_POINTS_REFRESHED', playerId: 'p1', amount: 2 }, labels)).toBeNull();
@@ -109,9 +119,9 @@ describe('journal de combat', () => {
   it('événements de drapeau : une ligne lisible (propriétaire retrouvé dans l’état)', () => {
     const withFlags = createLabeler({ ...state, flags: [{ id: 'f2', ownerId: 'p2', location: { kind: 'NODE', nodeId: 'b' } }] });
     expect(formatEvent({ type: 'FLAG_PLACED', flagId: 'f2', ownerId: 'p2', nodeId: 'b' }, withFlags)?.text).toBe('Drapeau de Joueur 2 posé en b.');
-    expect(formatEvent({ type: 'FLAG_CAPTURED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'b' }, withFlags)?.text).toBe('Héros Alpha récupère le drapeau de Joueur 2 (b).');
-    expect(formatEvent({ type: 'FLAG_DROPPED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'a' }, withFlags)?.text).toBe('Héros Alpha laisse tomber le drapeau de Joueur 2 en a.');
-    expect(formatEvent({ type: 'FLAG_PLANTED', flagId: 'f2', characterId: 'char.alpha.hero', playerId: 'p1', nodeId: 'a' }, withFlags)?.text).toBe('Héros Alpha plante le drapeau de Joueur 2 dans le camp de Joueur 1 (a).');
+    expect(formatEvent({ type: 'FLAG_CAPTURED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'b' }, withFlags)?.text).toBe('Eva Krämer récupère le drapeau de Joueur 2 (b).');
+    expect(formatEvent({ type: 'FLAG_DROPPED', flagId: 'f2', characterId: 'char.alpha.hero', nodeId: 'a' }, withFlags)?.text).toBe('Eva Krämer laisse tomber le drapeau de Joueur 2 en a.');
+    expect(formatEvent({ type: 'FLAG_PLANTED', flagId: 'f2', characterId: 'char.alpha.hero', playerId: 'p1', nodeId: 'a' }, withFlags)?.text).toBe('Eva Krämer plante le drapeau de Joueur 2 dans le camp de Joueur 1 (a).');
     // Drapeau inconnu de l'état : on affiche son id plutôt que rien.
     expect(formatEvent({ type: 'FLAG_CAPTURED', flagId: 'zz', characterId: 'char.alpha.hero', nodeId: 'b' }, labels)?.text).toContain('zz');
   });

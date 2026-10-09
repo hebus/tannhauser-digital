@@ -11,8 +11,8 @@ const available = setupContentOf(content);
 describe('validateSetup', () => {
   const ok = defaultSetup(available, 42);
 
-  it('accepte la configuration par défaut (2 contre 2)', () => {
-    expect(ok.teams.map((t) => t.characterIds.length)).toEqual([2, 2]);
+  it('accepte la configuration par défaut (4 contre 4 : deux héros et deux troupes)', () => {
+    expect(ok.teams.map((t) => t.characterIds.length)).toEqual([4, 4]);
     expect(validateSetup(ok, available)).toEqual([]);
   });
 
@@ -22,8 +22,29 @@ describe('validateSetup', () => {
     expect(codes).toEqual(expect.arrayContaining(['TEAM_EMPTY', 'UNKNOWN_CHARACTER', 'DUPLICATE_CHARACTER']));
   });
 
+  it('autorise plusieurs troupes du même type mais refuse un héros en double', () => {
+    const troops = ['char.alpha.hero', 'char.alpha.troop', 'char.alpha.troop', 'char.alpha.troop', 'char.alpha.troop'];
+    expect(validateSetup({ ...ok, teams: [{ playerId: 'p1', characterIds: troops }, ok.teams[1]!] }, available)).toEqual([]);
+    const codes = validateSetup({ ...ok, teams: [{ playerId: 'p1', characterIds: ['char.alpha.hero', 'char.alpha.hero'] }, ok.teams[1]!] }, available).map((i) => i.code);
+    expect(codes).toContain('DUPLICATE_CHARACTER');
+  });
+
+  it('refuse le même héros dans les deux équipes : un héros n\'existe qu\'une fois dans la partie', () => {
+    const shared = { ...ok, teams: [{ playerId: 'p1', characterIds: ['char.alpha.hero'] }, { playerId: 'p2', characterIds: ['char.alpha.hero'] }] };
+    expect(validateSetup(shared, available).map((i) => i.code)).toEqual(['DUPLICATE_CHARACTER']);
+    // Une même troupe dans les deux équipes reste permise.
+    const troops = { ...ok, teams: [{ playerId: 'p1', characterIds: ['char.alpha.troop'] }, { playerId: 'p2', characterIds: ['char.alpha.troop'] }] };
+    expect(validateSetup(troops, available)).toEqual([]);
+  });
+
+  it('limite une équipe à 5 personnages, troupes comprises', () => {
+    const six = ['char.alpha.hero', 'char.alpha.troop', 'char.alpha.troop', 'char.alpha.troop', 'char.alpha.troop', 'char.alpha.troop'];
+    const codes = validateSetup({ ...ok, teams: [{ playerId: 'p1', characterIds: six }, ok.teams[1]!] }, available).map((i) => i.code);
+    expect(codes).toContain('TEAM_TOO_LARGE');
+  });
+
   it('refuse trop de personnages dans une équipe', () => {
-    const many = Array.from({ length: 5 }, (_, i) => `x${i}`);
+    const many = Array.from({ length: 6 }, (_, i) => `x${i}`);
     const codes = validateSetup({ ...ok, teams: [{ playerId: 'p1', characterIds: many }, ok.teams[1]!] }, available).map((i) => i.code);
     expect(codes).toContain('TEAM_TOO_LARGE');
   });
@@ -106,7 +127,7 @@ describe('createGameFromSetup', () => {
     const a = createGameFromSetup(config, content);
     const b = createGameFromSetup(config, content);
     expect(a.state.phase).toBe('OVERWATCH');
-    expect(a.state.characters).toHaveLength(4);
+    expect(a.state.characters).toHaveLength(8);
     expect(a.replaySeed).toBe(7);
     expect(a.state).toEqual(b.state);
   });
@@ -117,10 +138,24 @@ describe('createGameFromSetup', () => {
     expect(a.state.characters.map((c) => c.nodeId)).toEqual(b.state.characters.map((c) => c.nodeId));
   });
 
-  it('un personnage choisi par les deux équipes reçoit des ids uniques', () => {
-    const config: SetupConfig = { boardId: content.board.id, seed: 3, teams: [{ playerId: 'p1', characterIds: ['char.alpha.hero'] }, { playerId: 'p2', characterIds: ['char.alpha.hero'] }] };
+  it('une troupe choisie par les deux équipes reçoit des ids uniques', () => {
+    const config: SetupConfig = { boardId: content.board.id, seed: 3, teams: [{ playerId: 'p1', characterIds: ['char.alpha.troop'] }, { playerId: 'p2', characterIds: ['char.alpha.troop'] }] };
     const game = createGameFromSetup(config, content);
-    expect(game.state.characters.map((c) => c.id)).toEqual(['char.alpha.hero#p1', 'char.alpha.hero#p2']);
+    expect(game.state.characters.map((c) => c.id)).toEqual(['char.alpha.troop#p1', 'char.alpha.troop#p2']);
+  });
+
+  it('plusieurs troupes du même type dans une équipe reçoivent des ids uniques et numérotés', () => {
+    const config: SetupConfig = {
+      boardId: content.board.id,
+      seed: 3,
+      teams: [
+        { playerId: 'p1', characterIds: ['char.alpha.hero', 'char.alpha.troop', 'char.alpha.troop'] },
+        { playerId: 'p2', characterIds: ['char.beta.hero', 'char.alpha.troop'] },
+      ],
+    };
+    const ids = createGameFromSetup(config, content).state.characters.map((c) => c.id);
+    expect(ids).toEqual(['char.alpha.hero', 'char.alpha.troop#p1-1', 'char.alpha.troop#p1-2', 'char.beta.hero', 'char.alpha.troop#p2']);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('refuse une configuration invalide', () => {

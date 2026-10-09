@@ -20,7 +20,8 @@ export class InvalidSetupError extends Error {
 /**
  * Construit une partie démarrée depuis une configuration de mise en place :
  * même seed + même configuration = même partie (placement et jets inclus).
- * Un personnage choisi par les deux équipes reçoit l'id `<définition>#<joueur>` pour garder des ids uniques.
+ * Un personnage choisi par les deux équipes reçoit l'id `<définition>#<joueur>` ; plusieurs troupes du même type dans
+ * une équipe sont numérotées `<définition>#<joueur>-<n>` (ids toujours uniques).
  */
 export function createGameFromSetup(config: SetupConfig, content: DevContent = loadDevContent()): GameFacade {
   const issues = validateSetup(config, setupContentOf(content));
@@ -39,10 +40,17 @@ export function createGameFromSetup(config: SetupConfig, content: DevContent = l
   for (const team of config.teams) for (const id of team.characterIds) uses.set(id, (uses.get(id) ?? 0) + 1);
 
   const definition = (id: string) => content.characters.find((c) => c.id === id)!;
+  const instanceId = (team: SetupConfig['teams'][number], defId: string, index: number): string => {
+    if ((uses.get(defId) ?? 0) <= 1) return defId;
+    const sameTeam = team.characterIds.filter((c) => c === defId).length;
+    if (sameTeam <= 1) return `${defId}#${team.playerId}`;
+    const rank = team.characterIds.slice(0, index + 1).filter((c) => c === defId).length;
+    return `${defId}#${team.playerId}-${rank}`;
+  };
   const characters: CharacterState[] = config.teams.flatMap((team) =>
     team.characterIds.map((defId, i) =>
-      createCharacterState(definition(defId), content.weapons, {
-        id: (uses.get(defId) ?? 0) > 1 ? `${defId}#${team.playerId}` : defId,
+      createCharacterState(definition(defId), content.equipment, {
+        id: instanceId(team, defId, i),
         playerId: team.playerId,
         nodeId: placement[team.playerId]![i]!,
       }),

@@ -350,7 +350,7 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 ## OQ-COMBAT-009 — Le pool d'attaque dépend-il de Combat ? (RÉSOLUE)
 
 - **Résolution (product owner, règles v2) :** le pool d'attaque est donné par un TABLEAU selon l'arme : sans arme 2 dés, corps à corps 4, pistolet 4, arme mentale 4, arme automatique 5. La difficulté dépend de la valeur de Combat courante du personnage (10 − Combat). Combat n'ajoute pas de dés.
-- **Implémentation :** valeurs dans `packages/content/src/data/weapons.json` (`weapon.unarmed` 2, `weapon.melee` 4, `weapon.pistol` 4, `weapon.mental` 4, `weapon.automatic` 5) ; l'attaque à mains nues est ajoutée à tout personnage par `createCharacterState`.
+- **Implémentation :** valeurs dans `packages/content/src/data/equipment.json` (`weapon.unarmed` 2, `weapon.melee` 4, `weapon.pistol` 4, `weapon.mental` 4, `weapon.automatic` 5) ; l'attaque à mains nues est ajoutée à tout personnage par `createCharacterState`.
 - **Mains nues :** traitée comme du corps à corps (OQ-COMBAT-010, confirmé).
 - **Historique :**
 

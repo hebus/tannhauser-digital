@@ -12,7 +12,8 @@ Le moteur utilise des **identifiants canoniques** (anglais, `SCREAMING_SNAKE_CAS
 | `zone` | zone | Regroupement de nœuds de déplacement ; les murs/portes séparent les zones |
 | `objective` | objectif | Élément de scénario/mode à accomplir (un ou deux stades) |
 | `flag` | drapeau | Marqueur planté/capturé selon le mode |
-| `weapon` | arme | Équipement d'attaque avec type de jet et réserve de dés |
+| `weapon` | arme | Équipement portant le trait `weapon` et un trait de type (`pistol`, `mental`, `automatic`, `hand-to-hand`), avec une réserve de dés |
+| `trait` | trait | Étiquette d'un équipement (`weapon`, `medal`, `grenade`…) ; un équipement en a un ou plusieurs, certains ont un effet de règle |
 | `equipment` | équipement | Jeton d'inventaire, occupe un emplacement |
 | `activation` | activation | Tour de jeu d'un personnage : déplacements (selon ses PM) et au plus une action |
 | `action` | action | Acte majeur d'une activation, une seule par activation : attaquer, ouvrir/fermer une porte, etc. Ne coûte ni PC ni PM (l'Overwatch n'est plus une action) |

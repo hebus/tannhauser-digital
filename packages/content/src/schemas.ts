@@ -72,12 +72,26 @@ export const boardSchema = type({
   'layout?': layoutSchema,
 });
 
-export const weaponSchema = type({
+/** Trait qui fait d'un équipement une arme : sans lui, le porteur est considéré sans arme. */
+export const WEAPON_TRAIT = 'weapon';
+
+/** Traits de type d'arme (un seul par arme, en plus de `weapon`) et famille de combat correspondante. */
+export const WEAPON_TYPE_TRAITS = {
+  pistol: 'PISTOL',
+  mental: 'MENTAL',
+  automatic: 'AUTOMATIC',
+  'hand-to-hand': 'CAC',
+} as const;
+
+export const equipmentSchema = type({
   id: 'string > 0',
   nameKey: 'string > 0',
-  kind: "'CAC' | 'PISTOL' | 'MENTAL' | 'AUTOMATIC'",
-  /** Nombre de dés de base (CaC 2, Pistolet 4, Mental 4, Automatique 5) : donnée, jamais constante de code. */
-  dice: 'number.integer > 0',
+  /** Un ou plusieurs traits (ensemble ouvert : weapon, pistol, medal, grenade, rank…). */
+  traits: type('string > 0').array().atLeastLength(1),
+  /** Nombre de dés de base d'une arme (CaC 2, Pistolet 4, Mental 4, Automatique 5) : donnée, jamais constante de code. */
+  'dice?': 'number.integer > 0',
+  /** Clé i18n du texte d'effet. Les effets sont de la donnée descriptive tant que le moteur ne les implémente pas. */
+  'descriptionKey?': 'string > 0',
 });
 
 const statsRow = type({
@@ -94,7 +108,7 @@ export const characterSchema = type({
   kind: "'HERO' | 'TROOP' | 'MERCENARY'",
   /** De la pleine santé à la dernière blessure ; la longueur = niveaux de santé. */
   statRows: statsRow.array().atLeastLength(1),
-  weaponIds: 'string[]',
+  equipmentIds: 'string[]',
   competencies: "('ATHLETICS' | 'MECHANICS' | 'MEDIC' | 'MENTAL' | 'SPECIAL')[]",
 });
 
@@ -116,7 +130,7 @@ export const factionsFileSchema = type({
 
 export type BoardJson = typeof boardSchema.infer;
 export type BoardLayoutJson = typeof layoutSchema.infer;
-export type WeaponDefinition = typeof weaponSchema.infer;
+export type EquipmentDefinition = typeof equipmentSchema.infer;
 export type CharacterDefinition = typeof characterSchema.infer;
 export type FactionDefinition = typeof factionSchema.infer;
 export type FactionRelation = typeof factionRelationSchema.infer;

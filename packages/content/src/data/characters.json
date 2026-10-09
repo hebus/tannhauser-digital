@@ -24,9 +24,44 @@
         "movement": 3
       }
     ],
-    "weaponIds": [
-      "weapon.pistol",
-      "weapon.melee"
+    "equipmentIds": [
+      "weapon.mauser-c96",
+      "medal.iron-cross-1st-class",
+      "ability.critical-hit"
+    ],
+    "competencies": [
+      "ATHLETICS"
+    ]
+  },
+  {
+    "id": "char.alpha.hero2",
+    "factionId": "faction.alpha",
+    "nameKey": "char.alpha.hero2.name",
+    "kind": "HERO",
+    "statRows": [
+      {
+        "combat": 7,
+        "physical": 7,
+        "mental": 6,
+        "movement": 5
+      },
+      {
+        "combat": 6,
+        "physical": 6,
+        "mental": 5,
+        "movement": 4
+      },
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 3
+      }
+    ],
+    "equipmentIds": [
+      "grenade.stielhandgrenate",
+      "ability.supernatural-strength",
+      "ability.immunity-to-pain"
     ],
     "competencies": [
       "ATHLETICS"
@@ -45,7 +80,25 @@
         "movement": 4
       }
     ],
-    "weaponIds": [
+    "equipmentIds": [
+      "weapon.automatic"
+    ],
+    "competencies": []
+  },
+  {
+    "id": "char.alpha.troop2",
+    "factionId": "faction.alpha",
+    "nameKey": "char.alpha.troop2.name",
+    "kind": "TROOP",
+    "statRows": [
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 4
+      }
+    ],
+    "equipmentIds": [
       "weapon.automatic"
     ],
     "competencies": []
@@ -75,9 +128,44 @@
         "movement": 3
       }
     ],
-    "weaponIds": [
-      "weapon.pistol",
-      "weapon.melee"
+    "equipmentIds": [
+      "weapon.flash-gun-mk1",
+      "medal.combat-infantry-badge",
+      "medal.medal-of-honor"
+    ],
+    "competencies": [
+      "ATHLETICS"
+    ]
+  },
+  {
+    "id": "char.beta.hero2",
+    "factionId": "faction.beta",
+    "nameKey": "char.beta.hero2.name",
+    "kind": "HERO",
+    "statRows": [
+      {
+        "combat": 7,
+        "physical": 7,
+        "mental": 6,
+        "movement": 5
+      },
+      {
+        "combat": 6,
+        "physical": 6,
+        "mental": 5,
+        "movement": 4
+      },
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 3
+      }
+    ],
+    "equipmentIds": [
+      "weapon.knife",
+      "hardware.ba-27",
+      "grenade.mkii-a1"
     ],
     "competencies": [
       "ATHLETICS"
@@ -96,7 +184,25 @@
         "movement": 4
       }
     ],
-    "weaponIds": [
+    "equipmentIds": [
+      "weapon.automatic"
+    ],
+    "competencies": []
+  },
+  {
+    "id": "char.beta.troop2",
+    "factionId": "faction.beta",
+    "nameKey": "char.beta.troop2.name",
+    "kind": "TROOP",
+    "statRows": [
+      {
+        "combat": 5,
+        "physical": 5,
+        "mental": 4,
+        "movement": 4
+      }
+    ],
+    "equipmentIds": [
       "weapon.automatic"
     ],
     "competencies": []

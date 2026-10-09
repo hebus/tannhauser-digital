@@ -57,8 +57,10 @@ describe('GameFacade.targetable', () => {
     const targets = facade.targetable(hero);
     expect(targets.map((t) => t.targetId)).toEqual([enemyHero]);
     expect(targets[0]!.nodeId).toBe('n2');
-    // Adjacent + ligne de vue : pistolet et corps à corps.
-    expect([...targets[0]!.weaponIds].sort()).toEqual(['weapon.melee', 'weapon.pistol', 'weapon.unarmed']);
+    // Adjacent + ligne de vue : toutes les armes du héros (dont les mains nues) sont utilisables.
+    const owned = facade.state.characters.find((c) => c.id === hero)!.weapons!.map((w) => w.id);
+    expect([...targets[0]!.weaponIds].sort()).toEqual([...owned].sort());
+    expect(owned).toContain('weapon.unarmed');
   });
 
   it('exclut les ennemis hors ligne de vue et les alliés', () => {
@@ -70,7 +72,7 @@ describe('GameFacade.targetable', () => {
   it("devient vide quand l'action de l'activation est utilisée", () => {
     const { facade, player, hero, enemyHero } = setup();
     facade.dispatch({ type: 'SELECT_CHARACTER', playerId: player, characterId: hero });
-    const res = facade.dispatch({ type: 'ATTACK', playerId: player, attackerId: hero, targetId: enemyHero, weaponId: 'weapon.pistol' });
+    const res = facade.dispatch({ type: 'ATTACK', playerId: player, attackerId: hero, targetId: enemyHero, weaponId: 'weapon.unarmed' });
     expect(res.accepted).toBe(true);
     expect(facade.targetable(hero)).toEqual([]);
   });

@@ -46,7 +46,7 @@ export class GameFacade {
     const content = loadDevContent();
     const rng = new SeededRng(seed);
     const def = (id: string) => content.characters.find((c) => c.id === id)!;
-    const place = (id: string, playerId: string, nodeId: string) => createCharacterState(def(id), content.weapons, { playerId, nodeId });
+    const place = (id: string, playerId: string, nodeId: string) => createCharacterState(def(id), content.equipment, { playerId, nodeId });
     const initial = createInitialState({
       gameId: `dev-${seed}`,
       scenarioId: 'dev',
