@@ -732,8 +732,64 @@ kbd {
 .setup-errors li::before { content: '⚠ '; }
 .setup-errors .setup-errors-title { font-weight: 700; }
 
+/* Assistant en étapes : accueil (partie rapide) puis frise, une étape à la fois, navigation en pied */
+.setup-screen.is-home { justify-content: center; align-items: center; gap: 28px; }
+.setup-screen.is-home .setup-hero { flex-direction: column; align-items: center; gap: 10px; }
+.setup-screen.is-home .setup-logo { font-size: clamp(34px, 9vh, 64px); }
+.setup-home { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.setup-home-play { width: 340px; }
+.setup-home .setup-hint { margin: 0; max-width: 340px; }
+.setup-home-custom { justify-content: center; width: 340px; height: 48px; }
+
+.setup-wizard { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.setup-stage { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.setup-stage > .setup-terrain, .setup-stage > .setup-players, .setup-stage > .setup-teams, .setup-stage > .setup-summary-step { flex: none; }
+.setup-stage > .setup-teams { flex: 1 1 0; }
+.setup-step-title { margin: 0; font: 700 22px/1.2 Georgia, serif; color: #fff3cf; }
+.setup-stage > .setup-hint { margin: 0 0 4px; }
+.setup-hint { font-size: 13px; color: #8c93a1; }
+
+.setup-steps { flex: none; display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.setup-step-item { flex: 1 1 0; min-width: 0; }
+.setup-step { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ui-muted); background: transparent; border: 0; border-bottom: 3px solid var(--ui-border); cursor: pointer; text-align: left; }
+.setup-step:disabled { cursor: default; opacity: 0.5; }
+.setup-step-n { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid currentColor; font-size: 12px; font-weight: 800; }
+.setup-step-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setup-step.is-done { color: var(--ui-ok); border-bottom-color: var(--ui-ok); }
+.setup-step.is-current { color: var(--ui-accent); border-bottom-color: var(--ui-accent); }
+.setup-step:focus-visible, .setup-tab:focus-visible, .setup-link:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.setup-nav { flex: none; display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px solid #2c313c; }
+.setup-nav .setup-errors { flex: 1; max-height: 96px; overflow-y: auto; }
+.setup-nav .setup-play { width: 240px; height: 50px; font-size: 18px; margin-left: auto; }
+.setup-link { margin-left: 10px; padding: 0; font: inherit; font-weight: 700; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+
+.setup-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.setup-player-card { --team: var(--setup-p1); display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 20px; border: 1px solid var(--ui-border); border-top: 4px solid var(--team); border-radius: 12px; background: linear-gradient(180deg, rgba(34, 38, 47, 0.94), rgba(22, 25, 31, 0.94)); }
+.setup-player-card[data-player='p2'] { --team: var(--setup-p2); }
+.setup-player-card .setup-seg-body { padding: 9px 22px; font-size: 15px; }
+
+.setup-teams { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.setup-tabs { flex: none; display: flex; gap: 8px; }
+.setup-tab { display: flex; align-items: center; gap: 12px; padding: 8px 18px; font: inherit; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-muted); background: #171a20; border: 1px solid var(--ui-border); border-bottom: 3px solid transparent; border-radius: 8px; cursor: pointer; }
+.setup-tab.is-active { color: var(--team); border-color: var(--team); background: color-mix(in srgb, var(--team) 14%, #171a20); }
+.setup-tab .setup-count { margin-left: 0; }
+.setup-teams > .setup-team { flex: 1 1 0; }
+.setup-teams > .setup-team[hidden] { display: none; }
+.setup-team[data-player='p1'] { --team: var(--setup-p1); }
+
+.setup-terrain .setup-seed { width: auto; max-width: 420px; padding-top: 10px; border-top: 1px solid #2c313c; }
+.setup-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 18px; margin: 0; padding: 14px 18px; border: 1px solid var(--ui-border); border-radius: 12px; background: #171a20; }
+.setup-summary dt { font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ui-accent); align-self: center; }
+.setup-summary dd { margin: 0; font-size: 14px; color: #dfe3ea; overflow-wrap: anywhere; }
+
 @media (max-width: 960px) {
   .setup-screen { height: auto; padding: 14px 16px; }
+  .setup-players { grid-template-columns: 1fr; }
+  .setup-step-label { display: none; }
+  .setup-step.is-current .setup-step-label { display: inline; }
+  .setup-nav { flex-wrap: wrap; }
+  .setup-nav .setup-play { width: auto; flex: 1; }
   .setup-terrain-row, .setup-rules { grid-template-columns: 1fr; gap: 14px; }
   .setup-rule-list { grid-template-columns: 1fr; }
   .setup-versus { grid-template-columns: 1fr; gap: 10px; }

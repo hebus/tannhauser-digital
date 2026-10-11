@@ -2,6 +2,7 @@ import { h } from '../ui/dom';
 import { t } from '../ui/i18n';
 import { modeRules } from '../ui/mode-rules';
 import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
+import { SETUP_STEPS, issueStep, stepIssues, type SetupStep } from './setup-steps';
 
 export interface SetupScreenContent extends SetupContent {
   readonly boards: readonly { readonly id: string; readonly nameKey: string; readonly board: SetupContent['boards'][number]['board'] }[];
@@ -34,8 +35,10 @@ const ICON_DICE = ['M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3
 const ICON_PLAY = ['M7 4.5v15l12-7.5z'];
 
 /**
- * Affiche l'écran de mise en place (style « menu de jeu ») et résout avec la configuration validée quand le joueur
- * clique sur « Jouer ». La validation est celle de `validateSetup` (pure) ; l'écran ne fait que présenter les erreurs.
+ * Affiche l'écran de mise en place (style « menu de jeu ») et résout avec la configuration validée.
+ * Accueil : « Jouer » lance tout de suite avec la configuration proposée, « Personnaliser » ouvre l'assistant en 4 étapes
+ * (terrain, joueurs, équipes, récapitulatif). La validation est celle de `validateSetup` (pure, voir `setup-steps.ts`) ;
+ * l'écran ne fait que présenter les erreurs.
  * Tous les choix sont de vrais champs (liste déroulante, radio, case à cocher) habillés par le CSS : clavier et lecteurs d'écran restent fonctionnels.
  */
 export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, initial: SetupConfig): Promise<SetupConfig> {
@@ -110,14 +113,18 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       }
     };
 
-    const teamPanel = (playerId: string) => {
-      const counter = h('span', { class: 'setup-count' });
-      const updateCount = (): void => {
+    // Compteurs d'équipe des onglets de l'étape Équipes : rafraîchis à chaque changement de composition.
+    const tabCounters = new Map<string, HTMLElement>();
+    const refreshTabCounters = (): void => {
+      for (const [playerId, el] of tabCounters) {
         const n = teamSize(playerId);
-        counter.textContent = t('setup.countOf', { n, max: MAX_TEAM_SIZE });
-        counter.classList.toggle('is-bad', n === 0 || n > MAX_TEAM_SIZE);
-      };
-      updateCount();
+        el.textContent = t('setup.countOf', { n, max: MAX_TEAM_SIZE });
+        el.classList.toggle('is-bad', n === 0 || n > MAX_TEAM_SIZE);
+      }
+    };
+
+    /** Choix Humain / IA d'un joueur. */
+    const controlGroup = (playerId: string) => {
       const control = (human: boolean) =>
         h(
           'label',
@@ -129,6 +136,11 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
           }),
           h('span', { class: 'setup-seg-body' }, icon(human ? ICON_HUMAN : ICON_AI), human ? t('setup.human') : t('setup.aiShort')),
         );
+      return h('div', { class: 'setup-segs', attrs: { role: 'radiogroup', 'aria-label': `${t(`player.${playerId}`)} — ${t('setup.ai')}` } }, control(true), control(false));
+    };
+
+    /** Héros et troupes d'un camp. */
+    const rosterPanel = (playerId: string) => {
       const cards = content.characters.map((c) => {
         const counts = selected.get(playerId)!;
         const box = h('input', {
@@ -139,7 +151,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
               if ((e.target as HTMLInputElement).checked) counts.set(c.id, Math.max(1, counts.get(c.id) ?? 0));
               else counts.delete(c.id);
               if (qty) qty.value = String(counts.get(c.id) ?? 0);
-              updateCount();
+              refreshTabCounters();
               refreshHeroLocks();
             },
           },
@@ -157,7 +169,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
                   if (n > 0) counts.set(c.id, n);
                   else counts.delete(c.id);
                   box.checked = n > 0;
-                  updateCount();
+                  refreshTabCounters();
                 },
               },
             });
@@ -180,19 +192,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
         'fieldset',
         { class: 'setup-team', attrs: { 'data-player': playerId } },
         h('legend', { class: 'setup-visually-hidden', text: t('setup.team', { player: t(`player.${playerId}`) }) }),
-        h(
-          'div',
-          { class: 'setup-team-head' },
-          h('h2', { class: 'setup-team-name', text: t(`player.${playerId}`) }),
-          h('div', { class: 'setup-segs', attrs: { role: 'radiogroup', 'aria-label': t('setup.ai') } }, control(true), control(false)),
-          counter,
-        ),
-        h(
-          'div',
-          { class: 'setup-roster' },
-          column(true, t('setup.heroes')),
-          column(false, t('setup.troops')),
-        ),
+        h('div', { class: 'setup-roster' }, column(true, t('setup.heroes')), column(false, t('setup.troops'))),
       );
     };
 
@@ -210,56 +210,198 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       };
     }
 
-    function submit(): void {
+    const field = (title: string, labelFor: string | null, ...children: HTMLElement[]) =>
+      h('div', { class: 'setup-field' }, labelFor ? h('label', { class: 'setup-section-title', text: title, attrs: { for: labelFor } }) : h('h2', { class: 'setup-section-title', text: title }), ...children);
+
+    // ---- Contenu des étapes (construit une fois : l'état des champs se conserve quand on navigue) ----
+    const terrainStep = h(
+      'section',
+      { class: 'setup-terrain', attrs: { 'aria-label': t('setup.terrain') } },
+      h('div', { class: 'setup-terrain-row' }, field(t('setup.board'), 'setup-board', boardField), field(t('setup.mode'), null, modeList)),
+      modeHelp,
+      h(
+        'div',
+        { class: 'setup-seed' },
+        h('label', { class: 'setup-section-title', text: t('setup.seed'), attrs: { for: 'setup-seed' } }),
+        h('div', { class: 'setup-seed-row' }, seedInput, h('button', { class: 'setup-btn', attrs: { type: 'button' }, on: { click: () => { seedInput.value = String(randomSeed()); } } }, icon(ICON_DICE, 16), t('setup.seed.random'))),
+        h('p', { class: 'setup-hint setup-seed-hint', text: t('setup.seed.hint'), attrs: { id: 'setup-seed-hint' } }),
+      ),
+    );
+
+    const playersStep = h(
+      'div',
+      { class: 'setup-players' },
+      ...PLAYER_IDS.map((playerId) =>
+        h('section', { class: 'setup-player-card', attrs: { 'data-player': playerId } }, h('h2', { class: 'setup-team-name', text: t(`player.${playerId}`) }), controlGroup(playerId)),
+      ),
+    );
+
+    const panels = new Map<string, HTMLElement>(PLAYER_IDS.map((id) => [id, rosterPanel(id)]));
+    const tabs = h('div', { class: 'setup-tabs', attrs: { role: 'tablist' } });
+    const showTeam = (playerId: string): void => {
+      for (const [id, panel] of panels) panel.hidden = id !== playerId;
+      for (const tab of tabs.querySelectorAll<HTMLElement>('[data-player]')) {
+        const on = tab.dataset.player === playerId;
+        tab.classList.toggle('is-active', on);
+        tab.setAttribute('aria-selected', String(on));
+      }
+    };
+    for (const playerId of PLAYER_IDS) {
+      const counter = h('span', { class: 'setup-count' });
+      tabCounters.set(playerId, counter);
+      tabs.append(
+        h(
+          'button',
+          { class: 'setup-tab', attrs: { type: 'button', role: 'tab', 'data-player': playerId, style: `--team: var(--setup-${playerId})` }, on: { click: () => showTeam(playerId) } },
+          h('span', { text: t(`player.${playerId}`) }),
+          counter,
+        ),
+      );
+    }
+    refreshTabCounters();
+    const teamsStep = h('div', { class: 'setup-teams' }, tabs, ...panels.values());
+    showTeam(PLAYER_IDS[0]);
+
+    const summaryList = h('dl', { class: 'setup-summary' });
+    const summaryStep = h(
+      'div',
+      { class: 'setup-summary-step' },
+      summaryList,
+    );
+    const renderSummary = (): void => {
+      const board = content.boards.find((b) => b.id === boardId);
+      const row = (label: string, value: string) => [h('dt', { text: label }), h('dd', { text: value })];
+      const names = (playerId: string): string =>
+        content.characters
+          .flatMap((c) => {
+            const n = selected.get(playerId)?.get(c.id) ?? 0;
+            return n > 0 ? [`${n > 1 ? `${n}× ` : ''}${t(c.nameKey)}`] : [];
+          })
+          .join(', ');
+      summaryList.textContent = '';
+      summaryList.append(
+        ...row(t('setup.board'), board ? `${t(board.nameKey)} · ${t('setup.boardSize', { n: Object.keys(board.board.nodes).length })}` : boardId),
+        ...row(t('setup.mode'), t(`modeCard.${mode}.title`)),
+        ...row(t('setup.seedShort'), seedInput.value.trim() || '—'),
+        ...PLAYER_IDS.flatMap((id) => row(`${t(`player.${id}`)} · ${aiPlayers.has(id) ? t('setup.aiShort') : t('setup.human')}`, names(id) || '—')),
+      );
+    };
+
+    // ---- Navigation ----
+    const stepViews: Record<SetupStep, HTMLElement> = { terrain: terrainStep, players: playersStep, teams: teamsStep, summary: summaryStep };
+    const stage = h('div', { class: 'setup-stage' });
+    const stepper = h('ol', { class: 'setup-steps' });
+    const backBtn = h('button', { class: 'setup-btn', attrs: { type: 'button' }, on: { click: () => (index === 0 ? showHome() : goTo(index - 1)) } });
+    const nextBtn = h('button', { class: 'setup-play', attrs: { type: 'submit' } });
+    const nav = h('div', { class: 'setup-nav' }, backBtn, errors, nextBtn);
+    let index = 0;
+    let reached = 0;
+
+    /** Affiche les problèmes de l'étape (au récapitulatif : tous, chacun avec un lien vers l'étape qui le corrige). */
+    const showIssues = (step: SetupStep, all: boolean): boolean => {
       const config = read();
-      const issues = validateSetup(config, content);
+      const issues = all ? validateSetup(config, content) : stepIssues(step, config, content);
       errors.textContent = '';
-      if (issues.length > 0) {
-        errors.append(h('li', { class: 'setup-errors-title', text: t('setup.errors') }), ...issues.map((i) => h('li', { text: issueText(i) })));
-        errors.hidden = false;
+      errors.hidden = issues.length === 0;
+      if (issues.length === 0) return false;
+      errors.append(
+        h('li', { class: 'setup-errors-title', text: t('setup.errors') }),
+        ...issues.map((i) => {
+          const target = issueStep(i);
+          return h('li', {}, issueText(i), target !== step ? h('button', { class: 'setup-link', attrs: { type: 'button' }, on: { click: () => goTo(SETUP_STEPS.indexOf(target)) } }, t('setup.fix')) : null);
+        }),
+      );
+      return true;
+    };
+
+    const renderStepper = (): void => {
+      stepper.textContent = '';
+      SETUP_STEPS.forEach((step, i) => {
+        stepper.append(
+          h(
+            'li',
+            { class: 'setup-step-item' },
+            h(
+              'button',
+              {
+                class: `setup-step${i === index ? ' is-current' : ''}${i < index ? ' is-done' : ''}`,
+                attrs: { type: 'button', disabled: i > reached, ...(i === index ? { 'aria-current': 'step' } : {}) },
+                on: { click: () => goTo(i) },
+              },
+              h('span', { class: 'setup-step-n', text: String(i + 1), attrs: { 'aria-hidden': 'true' } }),
+              h('span', { class: 'setup-step-label', text: t(`setup.step.${step}`) }),
+            ),
+          ),
+        );
+      });
+    };
+
+    function goTo(i: number): void {
+      index = Math.max(0, Math.min(SETUP_STEPS.length - 1, i));
+      reached = Math.max(reached, index);
+      const step = SETUP_STEPS[index]!;
+      if (step === 'summary') renderSummary();
+      stage.textContent = '';
+      stage.append(h('h2', { class: 'setup-step-title', text: t(`setup.step.${step}.title`) }), h('p', { class: 'setup-hint', text: t(`setup.step.${step}.hint`, { max: MAX_TEAM_SIZE }) }), stepViews[step]);
+      backBtn.textContent = index === 0 ? t('setup.home') : t('setup.back');
+      nextBtn.textContent = '';
+      nextBtn.append(...(step === 'summary' ? [icon(ICON_PLAY, 18), t('setup.play')] : [t('setup.next')]));
+      errors.hidden = true;
+      errors.textContent = '';
+      renderStepper();
+      if (step === 'summary') showIssues(step, true);
+    }
+
+    function advance(): void {
+      const step = SETUP_STEPS[index]!;
+      if (step === 'summary') {
+        if (!showIssues(step, true)) finish(read());
         return;
       }
-      errors.hidden = true;
+      if (!showIssues(step, false)) goTo(index + 1);
+    }
+
+    function finish(config: SetupConfig): void {
       overlay.remove();
       resolve(config);
     }
 
-    const field = (title: string, labelFor: string | null, ...children: HTMLElement[]) =>
-      h('div', { class: 'setup-field' }, labelFor ? h('label', { class: 'setup-section-title', text: title, attrs: { for: labelFor } }) : h('h2', { class: 'setup-section-title', text: title }), ...children);
-
-    const form = h(
-      'form',
-      { class: 'setup-screen', attrs: { novalidate: true, 'aria-labelledby': 'setup-title' }, on: { submit: (e) => { e.preventDefault(); submit(); } } },
-      h(
-        'header',
-        { class: 'setup-hero' },
-        h('h1', { class: 'setup-logo', text: 'Tannhäuser', attrs: { id: 'setup-title' } }),
-        h('p', { class: 'setup-tagline', text: t('setup.title') }),
-      ),
-      h(
-        'section',
-        { class: 'setup-terrain', attrs: { 'aria-label': t('setup.terrain') } },
-        h('div', { class: 'setup-terrain-row' }, field(t('setup.board'), 'setup-board', boardField), field(t('setup.mode'), null, modeList)),
-        modeHelp,
-      ),
-      h('div', { class: 'setup-versus' }, teamPanel('p1'), h('div', { class: 'setup-vs', text: t('setup.versus'), attrs: { 'aria-hidden': 'true' } }), teamPanel('p2')),
-      h(
-        'footer',
-        { class: 'setup-footer' },
-        h(
-          'div',
-          { class: 'setup-seed' },
-          h('label', { class: 'setup-section-title', text: t('setup.seed'), attrs: { for: 'setup-seed' } }),
-          h('div', { class: 'setup-seed-row' }, seedInput, h('button', { class: 'setup-btn', attrs: { type: 'button' }, on: { click: () => { seedInput.value = String(randomSeed()); } } }, icon(ICON_DICE, 16), t('setup.seed.random'))),
-        ),
-        h('p', { class: 'setup-hint setup-seed-hint', text: t('setup.seed.hint'), attrs: { id: 'setup-seed-hint' } }),
-        errors,
-        h('button', { class: 'setup-play', attrs: { type: 'submit' } }, icon(ICON_PLAY, 18), t('setup.play')),
-      ),
+    // ---- Accueil : partie rapide ou assistant ----
+    const form = h('form', { class: 'setup-screen', attrs: { novalidate: true, 'aria-labelledby': 'setup-title' }, on: { submit: (e) => { e.preventDefault(); advance(); } } });
+    const hero = h('header', { class: 'setup-hero' }, h('h1', { class: 'setup-logo', text: 'Tannhäuser', attrs: { id: 'setup-title' } }), h('p', { class: 'setup-tagline', text: t('setup.title') }));
+    const quickPlay = (): void => {
+      // La configuration proposée (dernière partie ou défaut, graine neuve) est normalement valide ; sinon on ouvre l'assistant au récapitulatif.
+      const config = read();
+      if (validateSetup(config, content).length === 0) finish(config);
+      else showWizard(SETUP_STEPS.length - 1);
+    };
+    const home = h(
+      'div',
+      { class: 'setup-home' },
+      h('button', { class: 'setup-play setup-home-play', attrs: { type: 'button' }, on: { click: quickPlay } }, icon(ICON_PLAY, 20), t('setup.quick')),
+      h('p', { class: 'setup-hint', text: t('setup.quick.hint') }),
+      h('button', { class: 'setup-btn setup-home-custom', attrs: { type: 'button' }, on: { click: () => showWizard(0) } }, t('setup.customize')),
     );
+    const wizard = h('div', { class: 'setup-wizard' }, stepper, stage, nav);
+
+    function showHome(): void {
+      form.textContent = '';
+      form.classList.add('is-home');
+      form.append(hero, home);
+      home.querySelector<HTMLElement>('.setup-home-play')?.focus();
+    }
+    function showWizard(step: number): void {
+      form.textContent = '';
+      form.classList.remove('is-home');
+      form.append(hero, wizard);
+      reached = Math.max(reached, step);
+      goTo(step);
+      nextBtn.focus();
+    }
+
     refreshHeroLocks();
     const overlay = h('div', { class: 'ui-overlay ui-overlay-setup setup-backdrop' }, form);
     host.append(overlay);
-    form.querySelector<HTMLElement>('.setup-play')?.focus();
+    showHome();
   });
 }
