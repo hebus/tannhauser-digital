@@ -8,7 +8,7 @@ import { easeInOutQuad, easeOutCubic, lerp } from './easing';
 import { pointAlong, type Point } from './path-geometry';
 import { BANNER_DURATIONS, bannerPose, type BannerPlan, type BannerText } from './banner';
 import { createBannerView, type BannerView } from './banner-view';
-import { planPresentation, type PresentationStep } from './plan';
+import { planPresentation, type CalloutTone, type PresentationStep } from './plan';
 import type { ReducedMotion } from './reduced-motion';
 
 /** Durées en ms (volontairement courtes : le jeu ne attend jamais les animations pour accepter une commande). */
@@ -17,6 +17,8 @@ export const TIMING = {
   moveMax: 900,
   flash: 220,
   floater: 900,
+  /** Message d'issue (raté, passage forcé, bloqué) : un peu plus long qu'un chiffre de dégâts pour être lu. */
+  callout: 1300,
   shake: 260,
   defeat: 650,
   ring: 550,
@@ -36,6 +38,8 @@ export interface PresentationOptions {
   readonly screenSize: () => { width: number; height: number };
   /** Titre et sous-titre (localisés par le client) d'une bannière : le renderer ne contient aucun texte de jeu. */
   readonly bannerText: (plan: BannerPlan) => BannerText;
+  /** Texte (localisé par le client) du message flottant d'une issue : « Raté ! », « Passage forcé ! », « Bloqué ! ». */
+  readonly calloutText: (tone: CalloutTone) => string;
   /** Débogage : la bannière reste affichée (figée) jusqu'à la suivante au lieu de disparaître. */
   readonly holdBanners?: boolean;
 }
@@ -58,6 +62,7 @@ export class Presentation {
   private readonly reducedMotion: ReducedMotion;
   private readonly screenSize: () => { width: number; height: number };
   private readonly bannerText: (plan: BannerPlan) => BannerText;
+  private readonly calloutText: (tone: CalloutTone) => string;
   private readonly holdBanners: boolean;
   private readonly unsubscribe: () => void;
   private textScale = 1;
@@ -73,6 +78,7 @@ export class Presentation {
     this.reducedMotion = options.reducedMotion;
     this.screenSize = options.screenSize;
     this.bannerText = options.bannerText;
+    this.calloutText = options.calloutText;
     this.holdBanners = options.holdBanners ?? false;
     this.worldLayer.label = 'PresentationWorld';
     this.screenLayer.label = 'PresentationScreen';
@@ -164,6 +170,11 @@ export class Presentation {
       case 'damage':
         this.queue.enqueue(action(() => this.damageEffects(step.targetId, step.wounds)));
         break;
+      case 'callout': {
+        const n = step.nodeId !== undefined ? next.board.nodes[step.nodeId] : undefined;
+        this.queue.enqueue(action(() => this.calloutEffects(step, n ? { x: n.x, y: n.y } : null)));
+        break;
+      }
       case 'defeat':
         this.queue.enqueue(action(() => this.defeatEffects(step.characterId)));
         break;
@@ -287,6 +298,41 @@ export class Presentation {
         duration: TIMING.shake,
         onUpdate: (p) => this.characters.setDisplay(targetId, { dx: Math.sin(p * Math.PI * 6) * 4 * (1 - p) }),
         onFinish: () => this.characters.setDisplay(targetId, { dx: 0 }),
+      }),
+    );
+  }
+
+  // ---- Issue sans dégât : message flottant (+ anneau et secousse pour le passage en force) ---------------
+
+  private calloutEffects(step: Extract<PresentationStep, { kind: 'callout' }>, node: Point | null): void {
+    const at = (step.characterId !== undefined ? this.characters.tokenPosition(step.characterId) : null) ?? node;
+    if (!at) return;
+    const color = step.tone === 'forced' ? 0x8ce99a : step.tone === 'blocked' ? 0xff8787 : 0xdee2e6;
+    const k = this.textScale;
+    const text = new Text({
+      text: this.calloutText(step.tone),
+      style: { fill: color, fontSize: 26, fontWeight: '900', stroke: { color: 0x000000, width: 6 } },
+    });
+    text.anchor.set(0.5, 1);
+    text.scale.set(k);
+    text.position.set(at.x, at.y - NODE_RADIUS * 0.8);
+    this.worldLayer.addChild(text);
+    if (step.tone !== 'miss') this.flagBurst(at, color);
+    if (this.reduced) {
+      this.runner.add({ duration: TIMING.staticHold, finish: () => text.destroy() });
+      return;
+    }
+    this.runner.add(
+      tween({
+        duration: TIMING.callout,
+        ease: easeOutCubic,
+        onUpdate: (p) => {
+          if (text.destroyed) return;
+          text.position.y = at.y - NODE_RADIUS * 0.8 - 30 * k * p;
+          text.scale.set(k * (p < 0.15 ? lerp(0.6, 1.15, p / 0.15) : lerp(1.15, 1, Math.min(1, (p - 0.15) * 4))));
+          text.alpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+        },
+        onFinish: () => text.destroy(),
       }),
     );
   }

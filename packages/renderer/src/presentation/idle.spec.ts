@@ -9,6 +9,7 @@ function make() {
     characters: characters as never,
     reducedMotion: new ReducedMotion(),
     screenSize: () => ({ width: 800, height: 600 }),
+    calloutText: (tone) => tone,
     bannerText: () => ({ title: '', subtitle: '' }),
   });
   // Une animation en cours, sans passer par le rendu Pixi.

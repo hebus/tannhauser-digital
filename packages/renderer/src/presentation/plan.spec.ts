@@ -131,6 +131,21 @@ describe('planPresentation', () => {
     });
   });
 
+  it('signale un combat sans blessure et l issue d un passage en force', () => {
+    const next = state(1, 'p1', { h: 'n1' });
+    const duel = { characterId: 'h', enemyId: 'e', nodeId: 'n2', dice: [], difficulty: 5, successes: 0, defenderDice: [], defenderDifficulty: 5, defenderSuccesses: 0 } as const;
+    const events: GameEvent[] = [
+      { type: 'ATTACK_MISSED', attackerId: 'h', targetId: 'e' },
+      { type: 'FORCE_PASSAGE_RESOLVED', ...duel, success: true },
+      { type: 'FORCE_PASSAGE_RESOLVED', ...duel, success: false },
+    ];
+    expect(planPresentation(events, next, next)).toEqual([
+      { kind: 'callout', tone: 'miss', characterId: 'e' },
+      { kind: 'callout', tone: 'forced', nodeId: 'n2' },
+      { kind: 'callout', tone: 'blocked', nodeId: 'n2' },
+    ]);
+  });
+
   it('ignore les événements sans présentation et ne mute pas l état', () => {
     const next = state(1, 'p1', { h: 'n1' });
     const snapshot = JSON.stringify(next);

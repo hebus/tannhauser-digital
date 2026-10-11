@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   const world = new Container();
   app.stage.addChild(world);
 
-  let showIds = true;
+  let showIds = false;
   let boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
   const doorSignature = (board: GameState['board']): string =>
     Object.values(board.doors).map((d) => `${d.id}:${d.state}`).join('|');
@@ -95,6 +95,7 @@ async function main(): Promise<void> {
     reducedMotion,
     screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
     bannerText: (plan) => bannerText(plan, createLabeler(game.state)),
+    calloutText: (tone) => t(`callout.${tone}`),
     holdBanners: debugBanner !== null,
   });
   // Les styles du HUD (frise des phases) respectent aussi la bascule « mouvement réduit » (touche R).

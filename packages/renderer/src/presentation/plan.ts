@@ -8,6 +8,8 @@ export type PresentationStep =
   | { readonly kind: 'defeat'; readonly characterId: string }
   | { readonly kind: 'overwatchPlaced'; readonly characterId: string }
   | { readonly kind: 'overwatchTriggered'; readonly overwatcherId: string; readonly targetId: string; readonly nodeId: string }
+  /** Message flottant sur un pion (`characterId`) ou une case (`nodeId`) : combat sans blessure, passage en force réussi ou bloqué. */
+  | { readonly kind: 'callout'; readonly tone: CalloutTone; readonly characterId?: string; readonly nodeId?: string }
   /** Capture du drapeau : `ownerIndex` = index (dans `players`) du propriétaire du drapeau, pour sa couleur et son emblème. */
   | { readonly kind: 'flagPlaced'; readonly flagId: string; readonly ownerIndex: number; readonly nodeId: string }
   | { readonly kind: 'flagCaptured'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
@@ -15,6 +17,9 @@ export type PresentationStep =
   | { readonly kind: 'flagPlanted'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
   /** Bannière de grande transition (début de tour, phase, changement de main, réaction, victoire) : au plus une par lot. */
   | { readonly kind: 'banner'; readonly banner: BannerPlan };
+
+/** Issue à signaler sur le plateau (le texte est fourni par le client, voir `calloutText`). */
+export type CalloutTone = 'miss' | 'forced' | 'blocked';
 
 interface Candidate {
   readonly plan: BannerPlan;
@@ -52,6 +57,12 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
       }
       case 'DAMAGE_APPLIED':
         if (e.wounds > 0) steps.push({ kind: 'damage', targetId: e.targetId, wounds: e.wounds });
+        break;
+      case 'ATTACK_MISSED':
+        steps.push({ kind: 'callout', tone: 'miss', characterId: e.targetId });
+        break;
+      case 'FORCE_PASSAGE_RESOLVED':
+        steps.push({ kind: 'callout', tone: e.success ? 'forced' : 'blocked', nodeId: e.nodeId });
         break;
       case 'CHARACTER_DEFEATED':
         steps.push({ kind: 'defeat', characterId: e.characterId });
