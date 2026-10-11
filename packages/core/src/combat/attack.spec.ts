@@ -499,15 +499,46 @@ describe('ATTACK : ligne de vue et portée', () => {
     expect(applyCommand(makeState({ board: mk('OPEN'), characters: chars }), attack(), new ScriptedRng(ok)).accepted).toBe(true);
   });
 
-  it('la fumée coupe la ligne de vue (nœud intermédiaire ou cible)', () => {
-    const base = makeState();
-    const smoked = (origin: string): GameState => ({
-      ...base,
+  describe('fumée (RULE-COMBAT-013)', () => {
+    const smoked = (state: GameState, origin: string): GameState => ({
+      ...state,
       effects: [{ id: 'fx', type: 'SMOKE', origin, remainingTurns: 2 }],
     });
-    expect(applyCommand(smoked('b'), attack(), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
-    expect(applyCommand(smoked('c'), attack(), new ScriptedRng([9])).errors[0]?.code).toBe('NO_LINE_OF_SIGHT');
-    expect(applyCommand(smoked('d'), attack(), new ScriptedRng(ok)).accepted).toBe(true);
+    const rolled = (events: readonly { type: string }[]) => {
+      const ev = events.find((e) => e.type === 'COMBAT_ROLLED') as { log?: { poolSize: number; penaltyDice: number } } | undefined;
+      if (!ev?.log) throw new Error('journal manquant');
+      return ev.log;
+    };
+
+    it('ne coupe pas la ligne de vue : on peut tirer sur une cible dans la fumée, avec -2 dés', () => {
+      const res = applyCommand(smoked(makeState(), 'c'), attack(), new ScriptedRng([1, 1]));
+      expect(res.accepted).toBe(true);
+      expect(rolled(res.events)).toMatchObject({ poolSize: 2, penaltyDice: 2 });
+    });
+
+    it('sans fumée : aucun malus', () => {
+      const res = applyCommand(makeState(), attack(), new ScriptedRng(MISS4));
+      expect(rolled(res.events)).toMatchObject({ poolSize: 4, penaltyDice: 0 });
+    });
+
+    it('la fumée gagne les cases qui partagent une couleur avec la case lancée', () => {
+      // Toutes les cases de `line()` sont rouges : une fumée en d enfume aussi c, où se trouve la cible.
+      const res = applyCommand(smoked(makeState(), 'd'), attack(), new ScriptedRng([1, 1]));
+      expect(rolled(res.events)).toMatchObject({ poolSize: 2, penaltyDice: 2 });
+    });
+
+    it('une case sans couleur commune avec la fumée n\'est pas pénalisée', () => {
+      const board = new BoardBuilder().node('a', ['red']).node('b', ['red']).node('c', ['red']).node('d', ['blue']).edge('a', 'b').edge('b', 'c').edge('c', 'd').build();
+      const res = applyCommand(smoked(makeState({ board }), 'd'), attack(), new ScriptedRng(MISS4));
+      expect(rolled(res.events)).toMatchObject({ poolSize: 4, penaltyDice: 0 });
+    });
+
+    it('le corps à corps n\'est pas pénalisé', () => {
+      const state = makeState({ characters: [char('h1', 'p1', 'a'), char('e1', 'p2', 'b')] });
+      const res = applyCommand(smoked(state, 'b'), attack('knife'), new ScriptedRng([1, 1]));
+      expect(res.accepted).toBe(true);
+      expect(rolled(res.events)).toMatchObject({ poolSize: 2, penaltyDice: 0 });
+    });
   });
 
   it('portée maximale de l\'arme (en pas)', () => {

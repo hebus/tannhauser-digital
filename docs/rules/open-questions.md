@@ -11,8 +11,8 @@ Format : Rule / Source / Interpretation / Reason / Impact / Test required.
 ## OQ-LOS-002 — Fumée sur la case cible
 
 - **Rule:** RULE-LOS-002 (la fumée coupe la ligne de vue)
-- **Interpretation (actuelle):** un nœud sous fumée n'est pas visible et bloque la propagation.
-- **Impact:** viser un personnage dans la fumée est impossible. À confirmer.
+- **Résolution (product owner) :** la fumée ne coupe plus la ligne de vue ; viser une cible dans la fumée est possible mais, hors corps à corps, l'attaquant subit −2 dés (RULE-COMBAT-013).
+- **Impact:** la fumée gagne toutes les cases qui partagent une couleur avec la case lancée.
 - **Test required:** `board.spec.ts` (fumée).
 
 ## OQ-LOS-003 — Équipement anti-fumée

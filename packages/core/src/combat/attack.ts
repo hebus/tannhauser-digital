@@ -33,10 +33,6 @@ export function stepDistance(board: BoardState, from: NodeId, to: NodeId): numbe
   return null;
 }
 
-export function smokeNodes(state: GameState): ReadonlySet<NodeId> {
-  return new Set(state.effects.filter((e) => e.type === 'SMOKE').map((e) => e.origin));
-}
-
 /** Ciblage : corps à corps = arête entre les nœuds (OQ-COMBAT-001, confirmé) ; sinon ligne de vue + portée. */
 export function checkTargeting(
   state: GameState,
@@ -50,7 +46,8 @@ export function checkTargeting(
     }
     return null;
   }
-  if (!canSee(state.board, attacker.nodeId, target.nodeId, { smokeNodes: smokeNodes(state) })) {
+  // La fumée ne coupe pas la ligne de vue : elle pénalise le jet (RULE-COMBAT-013, `smokeAttackPenalty`).
+  if (!canSee(state.board, attacker.nodeId, target.nodeId)) {
     return reject('NO_LINE_OF_SIGHT', 'Aucune ligne de vue sur la cible.');
   }
   if (weapon.maxRange !== undefined) {

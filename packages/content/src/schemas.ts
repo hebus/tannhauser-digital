@@ -90,7 +90,9 @@ export const effectSchema = type({ type: "'CRITICAL_HIT'" })
   .or({ type: "'REROLL_LOWEST'", count: 'number.integer > 0' })
   .or({ type: "'EXTRA_DICE_WITH_WEAPON'", weaponId: 'string > 0', dice: 'number.integer > 0' })
   .or({ type: "'GAIN_COMMAND_POINTS'", amount: 'number.integer > 0' })
-  .or({ type: "'FREE_OVERWATCH'" });
+  .or({ type: "'FREE_OVERWATCH'" })
+  .or({ type: "'GRENADE'", successes: 'number.integer > 0', range: 'number.integer > 0' })
+  .or({ type: "'SMOKE_GRENADE'", range: 'number.integer > 0' });
 
 export const equipmentSchema = type({
   id: 'string > 0',

@@ -2,6 +2,7 @@ import { checkAttacker, checkTargeting, validateAttack } from '../combat/attack'
 import { capturableFlags, checkCaptureFlag, checkPlantFlag, plantableFlags } from '../flags/rules';
 import { flagsOf, isCaptureTheFlag } from '../flags/state';
 import { checkCommandGate } from '../engine/apply-command';
+import { checkThrowGrenadeBase, throwableGrenades } from '../equipment/grenade';
 import { usableTokens } from '../equipment/handlers';
 import type { RuleError } from '../events/events';
 import { checkActor, checkDoorToggle, doorsAdjacentTo } from '../movement/handlers';
@@ -15,7 +16,7 @@ import type { GameCommand, GameCommandType } from '../commands/commands';
  * Actions qu'un personnage peut tenter. `SELECT` (début d'activation) s'ajoute aux actions de jeu
  * pour que l'interface explique aussi pourquoi un personnage ne peut pas être activé.
  */
-export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'OVERWATCH' | 'USE_EQUIPMENT' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
+export type ActionId = 'SELECT' | 'MOVE' | 'ATTACK' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'OVERWATCH' | 'USE_EQUIPMENT' | 'THROW_GRENADE' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'END_ACTIVATION' | 'PASS' | 'PASS_OVERWATCH';
 
 export interface AttackOption {
   readonly targetId: string;
@@ -40,6 +41,8 @@ export interface ActionDetails {
   readonly flagIds?: readonly string[];
   /** USE_EQUIPMENT : jetons que le personnage peut défausser maintenant. */
   readonly equipmentIds?: readonly string[];
+  /** THROW_GRENADE : grenades lançables, avec les cases visables (vues et à portée) ; la zone touchée est la case + ses voisines. */
+  readonly grenades?: readonly { readonly equipmentId: string; readonly nodeIds: readonly string[] }[];
 }
 
 export interface LegalAction {
@@ -60,6 +63,7 @@ const GAME_COMMAND_OF: Record<ActionId, GameCommandType> = {
   PLANT_FLAG: 'PLANT_FLAG',
   OVERWATCH: 'OVERWATCH',
   USE_EQUIPMENT: 'USE_EQUIPMENT',
+  THROW_GRENADE: 'THROW_GRENADE',
   OPEN_DOOR: 'OPEN_DOOR',
   CLOSE_DOOR: 'CLOSE_DOOR',
   END_ACTIVATION: 'END_TURN',
@@ -171,6 +175,15 @@ export function getLegalActions(state: GameState, characterId: string): LegalAct
       case 'USE_EQUIPMENT': {
         const tokens = usableTokens(state, character).map((i) => i.id);
         return tokens.length > 0 ? ok(id, { equipmentIds: tokens }) : refuseWith(id, 'NO_USABLE_EQUIPMENT', 'Impossible : aucun jeton utilisable maintenant.');
+      }
+      case 'THROW_GRENADE': {
+        const grenades = throwableGrenades(state, character);
+        if (grenades.length > 0) return ok(id, { grenades });
+        // Aucune grenade lançable : on explique le refus de la première grenade possédée (ou l'absence de grenade).
+        const owned = (character.equipment ?? []).find((i) => i.effects?.some((e) => e.type === 'GRENADE' || e.type === 'SMOKE_GRENADE'));
+        if (!owned) return refuseWith(id, 'NO_GRENADE', 'Impossible : aucune grenade.');
+        const c = checkThrowGrenadeBase(state, character.playerId, character.id, owned.id);
+        return c.ok ? refuseWith(id, 'NO_TARGET_IN_RANGE', 'Impossible : aucune case à portée et en vue.') : refuse(id, c.error);
       }
       case 'PASS_OVERWATCH': {
         const c = checkPassOverwatch(state, character.playerId);

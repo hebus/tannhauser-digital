@@ -9,6 +9,7 @@ import { DEATHMATCH_REASON, deathmatchWinner } from '../victory/deathmatch';
 import { buildPoolLog, type AppliedEffect, type CombatLog, type DefenseRollLog } from './log';
 import { combineModifiers, resolveCharacteristicTest, type TestRules } from './test';
 import type { DieResult } from './test';
+import { smokeAttackPenalty } from './smoke';
 import type { WeaponDefinition } from './weapons';
 
 const sumOf = (effects: readonly EquipmentEffect[], pick: (e: EquipmentEffect) => number): number => effects.reduce((n, e) => n + pick(e), 0);
@@ -23,7 +24,7 @@ function attackRules(effects: readonly EquipmentEffect[]): TestRules {
 }
 
 /** Défense : seul le Coup critique s'applique (les relances et dés bonus sont propres à l'attaque). */
-function defenseRules(effects: readonly EquipmentEffect[]): TestRules {
+export function defenseRules(effects: readonly EquipmentEffect[]): TestRules {
   return { naturalTenSuccesses: effects.some((e) => e.type === 'CRITICAL_HIT') ? 2 : 1 };
 }
 
@@ -76,7 +77,7 @@ export function resolveAttackExchange(
   // Matériel lié à une arme (ex. BA-27 avec le Flash machine gun) : dés supplémentaires quand on attaque avec elle.
   const hardwareDice = sumOf(effects, (e) => (e.type === 'EXTRA_DICE_WITH_WEAPON' && e.weaponId === weapon.id ? e.dice : 0));
   const attackMods = combineModifiers(
-    { extraDice: (weapon.extraDice ?? 0) + hardwareDice, resultModifier: weapon.resultModifier, autoSuccesses: weapon.autoSuccesses },
+    { extraDice: (weapon.extraDice ?? 0) + hardwareDice - smokeAttackPenalty(state, target, weapon), resultModifier: weapon.resultModifier, autoSuccesses: weapon.autoSuccesses },
     ...nodeMods(attacker.nodeId, 'OCCUPANT', 'ATTACKER').map((m) => ({ extraDice: m.extraDice, resultModifier: m.resultModifier })),
   );
   const attack = resolveCharacteristicTest(stats.combat, weapon.dice, attackMods, rng, attackRules(effects));

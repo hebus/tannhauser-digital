@@ -26,7 +26,8 @@
 | RULE-COMBAT-007 | Perdre le dernier niveau de santé élimine le personnage (`CHARACTER_DEFEATED`). |
 | RULE-COMBAT-008 | La contre-attaque (PC) et l'attaque d'opportunité d'Overwatch (optionnelle, RULE-OVERWATCH-005) sont des attaques normales soumises aux mêmes vérifications et au même échange attaque/défense. |
 | RULE-COMBAT-009 | Le journal de combat présente : dés de base, bonus, malus, jet final, succès, défense, blessures. |
-| RULE-COMBAT-010 | Les cibles sur un nœud sous fumée ne sont pas visibles (RULE-LOS-002) ; viser sans ligne de vue est refusé sauf règle explicite. |
+| RULE-COMBAT-010 | Viser sans ligne de vue est refusé sauf règle explicite ; la fumée ne coupe pas la ligne de vue (RULE-LOS-002). |
+| RULE-COMBAT-013 | Une cible dans la **fumée** (case lancée, ou case partageant une couleur avec elle) ne s'attaque sans pénalité qu'au corps à corps ; toute autre arme subit **−2 dés** sur le jet d'attaque (`smokeAttackPenalty`). La fumée perd 1 tour à chaque refresh (RULE-EQUIP-013) ; le malus ne dépend pas de son épaisseur. |
 | RULE-COMBAT-011 | Corps à corps : la seule exigence est une arête entre les deux nœuds (sens et porte ignorés, ligne de vue non requise). |
 | RULE-COMBAT-012 | Jet de défense : réserve `config.defensePoolSize` (défaut 4), difficulté = `10 - Physique` du défenseur ; événement `DEFENSE_ROLLED`. Taille : OQ-COMBAT-008. |
 | RULE-COMBAT-013 | Une attaque ne coûte ni PC ni PM. C'est l'unique action de l'activation du personnage actif (RULE-TURN-008). Si l'attaquant est dans la ligne de vue d'un Overwatch adverse, une attaque d'opportunité peut s'intercaler AVANT elle (RULE-OVERWATCH-010) ; l'attaque annoncée est exécutée ensuite si l'attaquant survit. |

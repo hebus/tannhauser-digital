@@ -5,3 +5,5 @@ export * from './path-geometry';
 export * from './plan';
 export * from './banner';
 export * from './presentation';
+export * from './explosion-model';
+export * from './explosion-effect';

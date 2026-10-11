@@ -8,6 +8,9 @@ import { easeInOutQuad, easeOutCubic, lerp } from './easing';
 import { pointAlong, type Point } from './path-geometry';
 import { BANNER_DURATIONS, bannerPose, type BannerPlan, type BannerText } from './banner';
 import { createBannerView, type BannerView } from './banner-view';
+import { playExplosion } from './explosion-effect';
+import { shakeOffset } from './explosion-model';
+import { explosionZone } from '@tannhauser/core';
 import { planPresentation, type CalloutTone, type PresentationStep } from './plan';
 import type { ReducedMotion } from './reduced-motion';
 
@@ -20,6 +23,8 @@ export const TIMING = {
   /** Message d'issue (raté, passage forcé, bloqué) : un peu plus long qu'un chiffre de dégâts pour être lu. */
   callout: 1300,
   shake: 260,
+  /** Secousse des cases touchées par une explosion. */
+  blastShake: 650,
   defeat: 650,
   ring: 550,
   bolt: 650,
@@ -40,6 +45,11 @@ export interface PresentationOptions {
   readonly bannerText: (plan: BannerPlan) => BannerText;
   /** Texte (localisé par le client) du message flottant d'une issue : « Raté ! », « Passage forcé ! », « Bloqué ! ». */
   readonly calloutText: (tone: CalloutTone) => string;
+  /**
+   * Décale le dessin d'une case du plateau (secousse d'explosion) ; `(0, 0)` la remet en place. Le renderer ne détient pas le
+   * `BoardView` (reconstruit quand une porte change) : le client le fournit.
+   */
+  readonly shakeNode?: (nodeId: string, dx: number, dy: number) => void;
   /** Débogage : la bannière reste affichée (figée) jusqu'à la suivante au lieu de disparaître. */
   readonly holdBanners?: boolean;
 }
@@ -64,6 +74,7 @@ export class Presentation {
   private readonly bannerText: (plan: BannerPlan) => BannerText;
   private readonly calloutText: (tone: CalloutTone) => string;
   private readonly holdBanners: boolean;
+  private readonly shakeNode: ((nodeId: string, dx: number, dy: number) => void) | undefined;
   private readonly unsubscribe: () => void;
   private textScale = 1;
   private bannerToken = 0;
@@ -71,6 +82,7 @@ export class Presentation {
   private noticeToken = 0;
   private noticeView: Container | null = null;
   private destroyed = false;
+  private explosions = 0;
   private idleCallbacks: Array<() => void> = [];
 
   constructor(options: PresentationOptions) {
@@ -80,6 +92,7 @@ export class Presentation {
     this.bannerText = options.bannerText;
     this.calloutText = options.calloutText;
     this.holdBanners = options.holdBanners ?? false;
+    this.shakeNode = options.shakeNode;
     this.worldLayer.label = 'PresentationWorld';
     this.screenLayer.label = 'PresentationScreen';
     this.queue = new AnimationQueue({ reduced: this.reducedMotion.value });
@@ -142,6 +155,12 @@ export class Presentation {
     this.showBanner(plan, index >= 0 ? index : null);
   }
 
+  /** Joue tout de suite une explosion sur une case (débogage : `?debugExplosion=1`) ; en jeu, elle vient de l'événement GRENADE_EXPLODED. */
+  explode(nodeId: string, state: GameState): void {
+    if (this.destroyed) return;
+    this.schedule({ kind: 'explosion', nodeId, zone: explosionZone(state.board, nodeId) }, state);
+  }
+
   /** Message court non bloquant au centre haut de l'écran (ex. changement d'option). */
   notify(text: string): void {
     this.showNotice(text);
@@ -173,6 +192,18 @@ export class Presentation {
       case 'callout': {
         const n = step.nodeId !== undefined ? next.board.nodes[step.nodeId] : undefined;
         this.queue.enqueue(action(() => this.calloutEffects(step, n ? { x: n.x, y: n.y } : null)));
+        break;
+      }
+      case 'explosion': {
+        const n = next.board.nodes[step.nodeId];
+        if (n) {
+          this.queue.enqueue(
+            action(() => {
+              playExplosion(this.runner, this.worldLayer, { x: n.x, y: n.y }, NODE_RADIUS, `boom:${step.nodeId}:${(this.explosions += 1)}`, this.reduced);
+              this.zoneShake(step.nodeId, step.zone, next);
+            }),
+          );
+        }
         break;
       }
       case 'defeat':
@@ -335,6 +366,40 @@ export class Presentation {
         onFinish: () => text.destroy(),
       }),
     );
+  }
+
+  // ---- Secousse : la case visée vibre, les cases adjacentes sont ébranlées dans le sens de l'onde de choc ------
+
+  private zoneShake(centerId: string, zone: readonly string[], state: GameState): void {
+    if (this.reduced) return;
+    const center = state.board.nodes[centerId];
+    if (!center) return;
+    for (const id of zone) {
+      const node = state.board.nodes[id];
+      if (!node) continue;
+      const isCenter = id === centerId;
+      // Direction : radiale pour les cases voisines (l'onde les pousse), verticale pour la case visée.
+      const angle = isCenter ? -Math.PI / 2 : Math.atan2(node.y - center.y, node.x - center.x);
+      const amp = isCenter ? 7 : 5;
+      // Les voisines sont touchées juste après la case visée : la secousse se propage.
+      const delay = isCenter ? 0 : 0.12;
+      const riders = state.characters.filter((c) => c.nodeId === id).map((c) => c.id);
+      const apply = (dx: number, dy: number): void => {
+        this.shakeNode?.(id, dx, dy);
+        for (const characterId of riders) this.characters.setDisplay(characterId, { dx, dy });
+      };
+      this.runner.add(
+        tween({
+          duration: TIMING.blastShake,
+          onUpdate: (p) => {
+            const q = Math.max(0, (p - delay) / (1 - delay));
+            const o = shakeOffset(q, amp, angle);
+            apply(o.dx, o.dy);
+          },
+          onFinish: () => apply(0, 0),
+        }),
+      );
+    }
   }
 
   // ---- Défaite : fondu + croix -----------------------------------------------------------------------

@@ -17,13 +17,21 @@ describe('createCharacterState', () => {
 
   it('copie les effets : armes dans `weapons`, le reste dans `equipment`', () => {
     const alpha = createCharacterState(characters.find((c) => c.id === 'char.alpha.hero')!, equipment, { playerId: 'p1', nodeId: 'n1' });
-    expect(alpha.equipment?.map((i) => i.id)).toEqual(['medal.iron-cross-1st-class', 'ability.critical-hit']);
+    expect(alpha.equipment?.map((i) => i.id)).toEqual(['medal.iron-cross-1st-class', 'ability.critical-hit', 'grenade.stielhandgrenate']);
     expect(alpha.equipment?.[0]?.effects).toEqual([{ type: 'GAIN_COMMAND_POINTS', amount: 2 }]);
     const beta = createCharacterState(characters.find((c) => c.id === 'char.beta.hero')!, equipment, { playerId: 'p2', nodeId: 'n16' });
     expect(beta.weapons?.find((w) => w.id === 'weapon.flash-gun-mk1')?.effects).toEqual([{ type: 'EXTRA_DICE_ON_NATURAL_10', dice: 2 }]);
-    expect(beta.equipment?.map((i) => i.id)).toEqual(['medal.combat-infantry-badge', 'medal.medal-of-honor']);
-    // Une troupe sans équipement non-arme n'a pas de liste `equipment`.
-    expect(createCharacterState(characters.find((c) => c.id === 'char.alpha.troop')!, equipment, { playerId: 'p1', nodeId: 'n5' }).equipment).toBeUndefined();
+    expect(beta.equipment?.map((i) => i.id)).toEqual(['medal.combat-infantry-badge', 'medal.medal-of-honor', 'grenade.mkii-a1']);
+    expect(alpha.equipment?.[2]?.effects).toEqual([{ type: 'GRENADE', successes: 4, range: 5 }]);
+  });
+
+  it('chaque héros porte une grenade explosive et chaque troupe un fumigène', () => {
+    for (const definition of characters) {
+      const state = createCharacterState(definition, equipment, { playerId: 'p1', nodeId: 'n1' });
+      const effects = (state.equipment ?? []).flatMap((i) => i.effects ?? []);
+      if (definition.kind === 'HERO') expect(effects, definition.id).toContainEqual({ type: 'GRENADE', successes: 4, range: 5 });
+      else expect(effects, definition.id).toContainEqual({ type: 'SMOKE_GRENADE', range: 8 });
+    }
   });
 
   it('est sérialisable et refuse un équipement inconnu', () => {

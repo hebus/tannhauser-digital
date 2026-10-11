@@ -27,7 +27,8 @@
     "equipmentIds": [
       "weapon.mauser-c96",
       "medal.iron-cross-1st-class",
-      "ability.critical-hit"
+      "ability.critical-hit",
+      "grenade.stielhandgrenate"
     ],
     "competencies": [
       "ATHLETICS"
@@ -81,7 +82,8 @@
       }
     ],
     "equipmentIds": [
-      "weapon.automatic"
+      "weapon.automatic",
+      "grenade.smoke"
     ],
     "competencies": []
   },
@@ -99,7 +101,8 @@
       }
     ],
     "equipmentIds": [
-      "weapon.automatic"
+      "weapon.automatic",
+      "grenade.smoke"
     ],
     "competencies": []
   },
@@ -131,7 +134,8 @@
     "equipmentIds": [
       "weapon.flash-gun-mk1",
       "medal.combat-infantry-badge",
-      "medal.medal-of-honor"
+      "medal.medal-of-honor",
+      "grenade.mkii-a1"
     ],
     "competencies": [
       "ATHLETICS"
@@ -185,7 +189,8 @@
       }
     ],
     "equipmentIds": [
-      "weapon.automatic"
+      "weapon.automatic",
+      "grenade.smoke"
     ],
     "competencies": []
   },
@@ -203,7 +208,8 @@
       }
     ],
     "equipmentIds": [
-      "weapon.automatic"
+      "weapon.automatic",
+      "grenade.smoke"
     ],
     "competencies": []
   }

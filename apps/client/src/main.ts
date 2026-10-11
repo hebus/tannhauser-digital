@@ -8,6 +8,7 @@ import {
   LAYOUT_NODE_RADIUS,
   NODE_RADIUS,
   OverlayLayer,
+  SmokeLayer,
   Presentation,
   ReducedMotion,
   type BannerKind,
@@ -15,7 +16,7 @@ import {
   buildPathPreview,
   textScaleForZoom,
 } from '@tannhauser/renderer';
-import { getLegalActions, type GameState } from '@tannhauser/core';
+import { explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
 import { startAiDriver } from './ai-driver';
@@ -26,6 +27,7 @@ import { startFromSetup } from './ui/boot';
 import { detectLocale, hasKey, setLocale, t } from './ui/i18n';
 import { enforceLandscape } from './ui/landscape';
 import { mountUi } from './ui/mount';
+import { cancelTargeting, getTargeting, isTargetable, subscribeTargeting } from './ui/targeting';
 
 function showError(message: string): void {
   const el = document.getElementById('error');
@@ -62,6 +64,12 @@ async function main(): Promise<void> {
       game.dispatch({ type: 'PASS_OVERWATCH', playerId: game.state.turn.activePlayerId });
     }
   }
+  // Débogage de la fumée : `?debugSmoke=1` pose deux fumées (2 tours restants, puis 1) sur des cases praticables (effets SMOKE de l'état), pour les voir sans jouer.
+  if (new URLSearchParams(location.search).get('debugSmoke') !== null) {
+    const nodes = Object.values(game.state.board.nodes).filter((n) => n.properties.passable);
+    const picks = [nodes[Math.floor(nodes.length / 3)], nodes[Math.floor(nodes.length / 2)]].flatMap((n) => (n ? [n] : []));
+    game.replaceState({ ...game.state, effects: [...game.state.effects, ...picks.map((n, i) => ({ id: `debug-smoke-${i}`, type: 'SMOKE' as const, origin: n.id, remainingTurns: 2 - i }))] });
+  }
   let presentationRef: Presentation | null = null;
   const ui = mountUi(game, {
     whenIdle: (callback) => (presentationRef ? presentationRef.onIdle(callback) : callback()),
@@ -88,6 +96,7 @@ async function main(): Promise<void> {
   const overlays = new OverlayLayer(game.state.board);
   const characters = new CharacterLayer();
   const flags = new FlagLayer(game.layout ? LAYOUT_NODE_RADIUS : NODE_RADIUS);
+  const smoke = new SmokeLayer(game.layout ? LAYOUT_NODE_RADIUS : NODE_RADIUS);
   const reducedMotion = new ReducedMotion();
   // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
   // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
@@ -97,6 +106,7 @@ async function main(): Promise<void> {
     reducedMotion,
     screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
     bannerText: (plan) => bannerText(plan, createLabeler(game.state)),
+    shakeNode: (nodeId, dx, dy) => boardView.setNodeOffset(nodeId, dx, dy),
     calloutText: (tone) => t(`callout.${tone}`),
     holdBanners: debugBanner !== null,
   });
@@ -107,7 +117,7 @@ async function main(): Promise<void> {
   syncReducedMotionAttr(reducedMotion.value);
   const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
   presentationRef = presentation;
-  world.addChild(boardView, highlight, overlays, flags, characters, presentation.worldLayer);
+  world.addChild(boardView, highlight, overlays, flags, characters, smoke, presentation.worldLayer);
   // Bannières et avis : dessinés sur un second canevas transparent posé AU-DESSUS du HUD (qui est en DOM) ; il laisse passer les clics.
   const overlayApp = new Application();
   await overlayApp.init({ resizeTo: window, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
@@ -118,7 +128,10 @@ async function main(): Promise<void> {
   // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
   const lifetime = new AbortController();
   const { signal } = lifetime;
-  const tickAnimations = (ticker: { deltaMS: number }): void => presentation.tick(ticker.deltaMS, performance.now());
+  const tickAnimations = (ticker: { deltaMS: number }): void => {
+    presentation.tick(ticker.deltaMS, performance.now());
+    smoke.tick(ticker.deltaMS, reducedMotion.value);
+  };
   app.ticker.add(tickAnimations);
 
   const camera = new Camera(world, { width: app.screen.width, height: app.screen.height });
@@ -194,6 +207,15 @@ async function main(): Promise<void> {
   let hoverNode: string | null = null;
   let reachableNow: ReturnType<GameFacade['reachable']> = [];
 
+  const THROW_COLOR = 0xffb454;
+  /** Aperçu de la zone touchée par la case survolée : case + voisines pour une grenade, la case seule pour un fumigène. */
+  function previewBlast(): void {
+    const throwing = getTargeting();
+    if (!throwing) return;
+    const over = hoverNode !== null && isTargetable(hoverNode) ? hoverNode : null;
+    overlays.showTargets(over ? (throwing.smoke ? [over] : explosionZone(game.state.board, over)) : []);
+  }
+
   /** Aperçu de chemin : uniquement vers un nœud atteignable (liste du moteur) ; sinon aucun tracé. */
   function updatePath(): void {
     const active = activeCharacter();
@@ -214,11 +236,22 @@ async function main(): Promise<void> {
     const s = game.state;
     characters.update(s);
     flags.update(s);
+    smoke.update(s);
     const active = activeCharacter();
-    const reachable = active && !s.turn.reaction ? game.reachable(active.id) : [];
+    // Ciblage d'une grenade : seul le lanceur actif peut encore viser ; sinon on quitte le mode (changement de tour, action utilisée…).
+    const aiming = getTargeting();
+    if (aiming && (!active || active.id !== aiming.characterId || s.turn.actionUsed || s.turn.reaction || s.phase === 'FINISHED')) cancelTargeting();
+    const throwing = getTargeting();
+    const reachable = active && !s.turn.reaction && !throwing ? game.reachable(active.id) : [];
     reachableNow = reachable;
-    highlight.show(reachable.map((r) => r.nodeId));
-    overlays.showTargets(active ? game.targetable(active.id).map((t) => t.nodeId) : []);
+    if (throwing) {
+      // Cases visables (orange) ; la zone touchée par la case survolée s'affiche en cibles (voir `previewBlast`).
+      highlight.show(throwing.nodeIds, THROW_COLOR);
+      previewBlast();
+    } else {
+      highlight.show(reachable.map((r) => r.nodeId));
+      overlays.showTargets(active ? game.targetable(active.id).map((t) => t.nodeId) : []);
+    }
     overlays.showLineOfSight(active && showLos ? active.nodeId : null, active && showLos ? game.visibleFrom(active.id) : null);
     updatePath();
     const cp = s.players.map((p) => `${p.id}: ${p.commandPoints} PC`).join(' · ');
@@ -261,6 +294,7 @@ async function main(): Promise<void> {
     }
     refresh();
   });
+  const unsubscribeTargeting = subscribeTargeting(() => refresh());
   const send = (command: Parameters<GameFacade['dispatch']>[0]) => {
     const res = game.dispatch(command);
     if (!res.accepted) log(`✖ ${res.errors.map((e) => e.message).join(' ')}`);
@@ -320,6 +354,15 @@ async function main(): Promise<void> {
     if (editor) return onEditorClick(nodeId);
     const s = game.state;
     const player = activePlayer();
+    // Choix de la case d'une grenade au clic : une case visable lance, toute autre case est signalée sans rien lancer.
+    const aiming = getTargeting();
+    if (aiming && player) {
+      if (isTargetable(nodeId)) {
+        cancelTargeting();
+        send({ type: 'THROW_GRENADE', playerId: player, characterId: aiming.characterId, equipmentId: aiming.equipmentId, nodeId });
+      } else presentation.notify(t('actions.grenade.invalid'));
+      return;
+    }
     if (!player || s.phase === 'FINISHED' || s.turn.reaction) return;
     const here = s.characters.filter((c) => c.alive && c.nodeId === nodeId);
     const active = activeCharacter();
@@ -412,6 +455,7 @@ async function main(): Promise<void> {
       if (next !== hoverNode) {
         hoverNode = next;
         updatePath();
+        previewBlast();
       }
     },
     { signal },
@@ -452,6 +496,12 @@ async function main(): Promise<void> {
     }
     if (editor && onEditorKey(key)) {
       e.preventDefault();
+      return;
+    }
+    // Débogage de l'explosion : avec `?debugExplosion=1`, K fait exploser la case survolée (à défaut, celle du personnage actif).
+    if (key === 'k' && new URLSearchParams(location.search).get('debugExplosion') !== null) {
+      const nodeId = hoverNode ?? activeCharacter()?.nodeId ?? Object.keys(game.state.board.nodes)[0];
+      if (nodeId) presentation.explode(nodeId, game.state);
       return;
     }
     if (key === 'l') {
@@ -500,6 +550,8 @@ async function main(): Promise<void> {
     stopAi();
     lifetime.abort();
     unsubscribeGame();
+    unsubscribeTargeting();
+    cancelTargeting();
     app.ticker.remove(tickAnimations);
     presentation.destroy();
     unsubscribeReducedAttr();

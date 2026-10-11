@@ -10,6 +10,8 @@ export type PresentationStep =
   | { readonly kind: 'overwatchTriggered'; readonly overwatcherId: string; readonly targetId: string; readonly nodeId: string }
   /** Message flottant sur un pion (`characterId`) ou une case (`nodeId`) : combat sans blessure, passage en force réussi ou bloqué. */
   | { readonly kind: 'callout'; readonly tone: CalloutTone; readonly characterId?: string; readonly nodeId?: string }
+  /** Explosion (grenade, etc.) centrée sur une case ; produite par GRENADE_EXPLODED ; `zone` = case visée et cases adjacentes, qui tremblent. */
+  | { readonly kind: 'explosion'; readonly nodeId: string; readonly zone: readonly string[] }
   /** Capture du drapeau : `ownerIndex` = index (dans `players`) du propriétaire du drapeau, pour sa couleur et son emblème. */
   | { readonly kind: 'flagPlaced'; readonly flagId: string; readonly ownerIndex: number; readonly nodeId: string }
   | { readonly kind: 'flagCaptured'; readonly flagId: string; readonly ownerIndex: number; readonly characterId: string; readonly nodeId: string }
@@ -63,6 +65,9 @@ export function planPresentation(events: readonly GameEvent[], prev: GameState |
         break;
       case 'FORCE_PASSAGE_RESOLVED':
         steps.push({ kind: 'callout', tone: e.success ? 'forced' : 'blocked', nodeId: e.nodeId });
+        break;
+      case 'GRENADE_EXPLODED':
+        steps.push({ kind: 'explosion', nodeId: e.nodeId, zone: e.zone });
         break;
       case 'CHARACTER_DEFEATED':
         steps.push({ kind: 'defeat', characterId: e.characterId });

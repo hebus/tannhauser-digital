@@ -5,7 +5,7 @@ Règles confirmées par le product owner. La ligne de vue (LdM) est calculée su
 | ID | Règle testable |
 |---|---|
 | RULE-LOS-001 | B est visible depuis A s'il existe un chemin A→B dont **tous** les nœuds (extrémités incluses) partagent au moins une couleur commune. La couleur commune doit être la même sur tout le chemin ; deux segments de couleurs différentes ne se combinent pas. |
-| RULE-LOS-002 | Une **fumée** sur un nœud coupe la ligne de vue : ce nœud n'est ni visible ni traversable par un rayon de vue (voir OQ-LOS-002 pour la case cible). |
+| RULE-LOS-002 | La **fumée ne coupe pas** la ligne de vue : elle pénalise les jets d'attaque (RULE-COMBAT-013). *(Remplace l'ancienne règle « la fumée coupe la ligne de vue », décision du product owner.)* |
 | RULE-LOS-003 | Un **équipement porté** peut ignorer la fumée pour le calcul de vue de son porteur (`ignoresSmoke`). L'asymétrie qui en résulte est possible (voir OQ-LOS-003). |
 | RULE-LOS-004 | Une **porte fermée** coupe la ligne de vue ; ouverte, elle n'a aucun effet. |
 | RULE-LOS-005 | Les arêtes à **sens unique** n'influencent **pas** la ligne de vue : elles sont traitées comme des arêtes bidirectionnelles pour la visibilité, mais restent orientées pour le déplacement. |

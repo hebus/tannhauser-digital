@@ -36,6 +36,8 @@ export class BoardView extends Container {
   private readonly labelLayer = new Container();
 
   private readonly colorMap: Map<string, number>;
+  /** Éléments dessinés de chaque case (disque, pastille, identifiant) : déplacés ensemble par `setNodeOffset`. */
+  private readonly nodeParts = new Map<string, Container[]>();
 
   constructor(
     private readonly board: BoardState,
@@ -58,6 +60,14 @@ export class BoardView extends Container {
     const nodesBox = { x: minX, y: minY, width: Math.max(...xs) + NODE_RADIUS * 2 - minX, height: Math.max(...ys) + NODE_RADIUS * 2 - minY };
     const lb = this.options.layout ? layoutBounds(this.options.layout) : null;
     return lb ? unionBox(nodesBox, padBox(lb, 16)) : nodesBox;
+  }
+
+  /**
+   * Décale temporairement le dessin d'une case (secousse d'une explosion) : (0, 0) la remet en place. Purement visuel,
+   * les coordonnées du plateau ne changent pas.
+   */
+  setNodeOffset(nodeId: string, dx: number, dy: number): void {
+    for (const part of this.nodeParts.get(nodeId) ?? []) part.position.set(dx, dy);
   }
 
   private get nodeRadius(): number {
@@ -257,6 +267,8 @@ export class BoardView extends Container {
       g.circle(node.x, node.y, R + 6).stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
     }
     this.nodeLayer.addChild(g);
+    const parts: Container[] = [g];
+    this.nodeParts.set(node.id, parts);
 
     if (node.properties.movementCostModifier > 0) {
       const badge = new Text({
@@ -266,12 +278,14 @@ export class BoardView extends Container {
       badge.anchor.set(0.5);
       badge.position.set(node.x + R * 0.75, node.y - R * 0.75);
       this.labelLayer.addChild(badge);
+      parts.push(badge);
     }
     if (this.options.showNodeIds) {
       const label = new Text({ text: node.id, style: { fill: 0xffffff, fontSize: 12, stroke: { color: 0x000000, width: 3 } } });
       label.anchor.set(0.5, 0);
       label.position.set(node.x, node.y + R + 4);
       this.labelLayer.addChild(label);
+      parts.push(label);
     }
   }
 }

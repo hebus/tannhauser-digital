@@ -21,6 +21,12 @@ export function describeEvent(e: GameEvent): string | null {
       return `${e.characterId} termine son activation.`;
     case 'ATTACK_DECLARED':
       return `${e.attackerId} attaque ${e.targetId} (${e.weaponId}).`;
+    case 'GRENADE_EXPLODED':
+      return `${e.characterId} lance une grenade en ${e.nodeId} : ${e.zone.length} case(s), ${e.successes} succès automatiques.`;
+    case 'SMOKE_EXPIRED':
+      return `La fumée en ${e.origin} se dissipe.`;
+    case 'SMOKE_STARTED':
+      return `${e.characterId} lance un fumigène en ${e.nodeId} : fumée pendant ${e.turns} tours.`;
     case 'COMBAT_ROLLED':
       return `Attaque : dés [${e.dice.join(', ')}] → ${e.successes} blessure(s).`;
     case 'DEFENSE_ROLLED':

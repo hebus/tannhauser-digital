@@ -86,7 +86,14 @@
     "traits": [
       "grenade"
     ],
-    "descriptionKey": "grenade.stielhandgrenate.description"
+    "descriptionKey": "grenade.stielhandgrenate.description",
+    "effects": [
+      {
+        "type": "GRENADE",
+        "successes": 4,
+        "range": 5
+      }
+    ]
   },
   {
     "id": "ability.supernatural-strength",
@@ -189,6 +196,28 @@
     "traits": [
       "grenade"
     ],
-    "descriptionKey": "grenade.mkii-a1.description"
+    "descriptionKey": "grenade.mkii-a1.description",
+    "effects": [
+      {
+        "type": "GRENADE",
+        "successes": 4,
+        "range": 5
+      }
+    ]
+  },
+  {
+    "id": "grenade.smoke",
+    "nameKey": "grenade.smoke.name",
+    "traits": [
+      "grenade",
+      "smoke"
+    ],
+    "descriptionKey": "grenade.smoke.description",
+    "effects": [
+      {
+        "type": "SMOKE_GRENADE",
+        "range": 8
+      }
+    ]
   }
 ]

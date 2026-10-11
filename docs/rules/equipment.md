@@ -59,8 +59,11 @@ Données dans `packages/content/src/data/equipment.json` et `characters.json`. C
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-EQUIP-010 | Lancer une grenade est une action d'équipement : cible = nœud dans la portée de l'équipement ; elle peut traverser des nœuds occupés. | |
-| RULE-EQUIP-011 | La grenade affecte les personnages de la zone touchée ; la résolution diffère de l'attaque normale. Les valeurs (dégâts, succès automatiques pour les adjacents) sont des données. | |
-| RULE-EQUIP-012 | Une grenade fumigène crée un effet `SMOKE` sur le nœud cible et sa zone d'effet, portée de 8 (donnée). | `SMOKE_STARTED` |
+| RULE-EQUIP-011 | La grenade affecte les personnages de la zone touchée ; la résolution diffère de l'attaque normale (voir RULE-EQUIP-014). Les valeurs (succès automatiques, portée) sont des données (`effects: GRENADE`). | |
+| RULE-EQUIP-012 | Une grenade fumigène crée un effet `SMOKE` sur le nœud cible et sa zone d'effet. Portée de **8** cases, dont les **7** premières doivent être dans la ligne de vue (RULE-EQUIP-015). Se lance avec `THROW_GRENADE` (effet `SMOKE_GRENADE`) : consomme l'action, défausse le fumigène, peut viser sa propre case ; la fumée dure 2 tours (`SMOKE_DURATION_TURNS`). | `SMOKE_STARTED` |
 | RULE-EQUIP-013 | La fumée persiste le tour courant et les suivants selon `remainingTurns` ; le refresh la retire (RULE-TURN-003, OQ-TURN-002). | `SMOKE_EXPIRED` |
+
+| RULE-EQUIP-014 | **Grenade explosive** (`THROW_GRENADE`) : c'est un jet d'attaque à **4 succès automatiques** (`successes`), subi par la case visée et par **toutes les cases adjacentes**. Tous les personnages vivants de la zone, **amis comme ennemis, lanceur compris**, font un jet de défense normal (`defensePoolSize` dés, difficulté `10 − Physique`) : chaque succès annule une blessure, le reste est infligé en dégâts. Lancer une grenade consomme l'action de l'activation (comme une attaque, et peut annoncer une réaction d'Overwatch) et défausse la grenade. On ne peut pas viser sa propre case. | `EQUIPMENT_USED`, `GRENADE_EXPLODED`, `DEFENSE_ROLLED`, `DAMAGE_APPLIED`, `CHARACTER_DEFEATED` |
+| RULE-EQUIP-015 | **Portée et ligne de vue d'un objet lancé** : la portée est de `range` cases (grenade : **5**), mais seules les `range − 1` premières (grenade : **4**) doivent être dans la ligne de vue ; la dernière case, à exactement `range` pas, peut être hors de vue, à condition que la case qui la précède sur le trajet soit vue. Particularité des grenades et des fumigènes (fumigène : portée 8, vue sur 7). | |
 
 Exemples de contenu à définir : trousse de soins, munitions supplémentaires, grenades, fumigènes, armes, équipements spéciaux et propres à un personnage.

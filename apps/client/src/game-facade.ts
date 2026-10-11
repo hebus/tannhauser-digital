@@ -4,7 +4,6 @@ import {
   checkTargeting,
   createInitialState,
   reachableNodes,
-  smokeNodes,
   visibleNodes,
   type CommandResult,
   type GameCommand,
@@ -103,11 +102,11 @@ export class GameFacade {
     return result;
   }
 
-  /** Nœuds visibles depuis le personnage (ligne de vue du moteur, fumée comprise). */
+  /** Nœuds visibles depuis le personnage (ligne de vue du moteur ; la fumée ne la coupe pas). */
   visibleFrom(characterId: string): Set<string> {
     const c = this.current.characters.find((x) => x.id === characterId);
     if (!c) return new Set();
-    return visibleNodes(this.current.board, c.nodeId, { smokeNodes: smokeNodes(this.current) });
+    return visibleNodes(this.current.board, c.nodeId, {});
   }
 
   isAi(playerId: string): boolean {

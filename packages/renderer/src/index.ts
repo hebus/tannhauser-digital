@@ -7,5 +7,7 @@ export * from './highlight-layer';
 export * from './overlay-layer';
 export * from './flag-model';
 export * from './flag-layer';
+export * from './smoke-model';
+export * from './smoke-layer';
 export * from './presentation';
 export * from './board-layout';

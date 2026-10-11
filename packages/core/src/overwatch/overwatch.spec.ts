@@ -432,7 +432,7 @@ describe('Déclencheur a : entrée dans la ligne de vue pendant un déplacement'
     expect(hp(opened.state, 'h1').nodeId).toBe('b');
   });
 
-  it('la fumée coupe la ligne de vue : pas de déclenchement', () => {
+  it('la fumée ne coupe pas la ligne de vue : le déclenchement a lieu', () => {
     const open = new BoardBuilder()
       .node('a', ['r']).node('b', ['g']).node('c', ['g']).node('d', ['g'])
       .edge('a', 'b').edge('b', 'c').edge('c', 'd')
@@ -440,8 +440,7 @@ describe('Déclencheur a : entrée dans la ligne de vue pendant un déplacement'
     const chars = [char('h1', 'p1', 'a', { activated: true }), watcher('e1', 'p2', 'd')];
     const smoke = [{ id: 'fx', type: 'SMOKE', origin: 'c', remainingTurns: 2 }] as const;
     const smoked = run(makeState({ board: open, characters: chars, effects: smoke }), move(['b', 'c']));
-    expect(types(smoked.events)).toEqual(['CHARACTER_MOVED']);
-    expect(hp(smoked.state, 'h1').nodeId).toBe('c');
+    expect(types(smoked.events)).toContain('OVERWATCH_TRIGGERED');
     const clear = run(makeState({ board: open, characters: chars }), move(['b', 'c']));
     expect(types(clear.events)).toContain('OVERWATCH_TRIGGERED');
   });
@@ -548,9 +547,9 @@ describe('Déclencheur b : adversaire déjà dans la ligne de vue qui tente de s
     expect(types(run(hidden, move(['a'])).events)).toEqual(['CHARACTER_MOVED']);
   });
 
-  it('une ligne de vue coupée par la fumée sur la case du mover : pas de réaction', () => {
+  it('la fumée sur la case du mover ne coupe pas la ligne de vue : réaction', () => {
     const smoke = [{ id: 'fx', type: 'SMOKE', origin: 'c', remainingTurns: 2 }] as const;
-    expect(types(run(inSight({ effects: smoke }), move(['b'])).events)).toEqual(['CHARACTER_MOVED']);
+    expect(types(run(inSight({ effects: smoke }), move(['b'])).events)).toContain('OVERWATCH_TRIGGERED');
   });
 
   it('une ligne de vue coupée par une porte fermée : pas de réaction', () => {

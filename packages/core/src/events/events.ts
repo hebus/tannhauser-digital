@@ -9,6 +9,10 @@ export type GameEvent =
   | { readonly type: 'COMMAND_POINTS_GAINED'; readonly playerId: string; readonly amount: number; readonly total: number }
   /** Jeton défaussé : son effet (`effect`) est appliqué par la suite d'événements. */
   | { readonly type: 'EQUIPMENT_USED'; readonly characterId: string; readonly equipmentId: string; readonly effect: EquipmentEffect['type'] }
+  /** Explosion d'une grenade : `zone` = case visée + cases adjacentes (tous les personnages vivants s'y défendent). */
+  | { readonly type: 'GRENADE_EXPLODED'; readonly characterId: string; readonly equipmentId: string; readonly nodeId: string; readonly zone: readonly string[]; readonly successes: number }
+  /** Fumigène lancé : une fumée (`effectId`) apparaît sur `nodeId` pour `turns` tours. */
+  | { readonly type: 'SMOKE_STARTED'; readonly characterId: string; readonly equipmentId: string; readonly nodeId: string; readonly effectId: string; readonly turns: number }
   | { readonly type: 'COMMAND_POINTS_SPENT'; readonly playerId: string; readonly amount: number; readonly purpose: string; readonly remaining: number }
   | { readonly type: 'SMOKE_EXPIRED'; readonly effectId: string; readonly origin: string }
   | { readonly type: 'INITIATIVE_CHANGED'; readonly previousWinnerId: string; readonly winnerId: string }

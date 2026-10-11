@@ -146,6 +146,12 @@ describe('planPresentation', () => {
     ]);
   });
 
+  it("GRENADE_EXPLODED devient une étape d'explosion portant la zone qui tremble", () => {
+    const next = state(1, 'p1', { h: 'n1' });
+    const events: GameEvent[] = [{ type: 'GRENADE_EXPLODED', characterId: 'h', equipmentId: 'g', nodeId: 'n2', zone: ['n1', 'n2', 'n3'], successes: 4 }];
+    expect(planPresentation(events, next, next)).toEqual([{ kind: 'explosion', nodeId: 'n2', zone: ['n1', 'n2', 'n3'] }]);
+  });
+
   it('ignore les événements sans présentation et ne mute pas l état', () => {
     const next = state(1, 'p1', { h: 'n1' });
     const snapshot = JSON.stringify(next);

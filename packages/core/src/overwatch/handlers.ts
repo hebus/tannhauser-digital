@@ -100,7 +100,7 @@ registerHandler('PASS_OVERWATCH', (state, command, rng) => {
 // --- Attaque d'opportunité ---------------------------------------------------------------------------------------
 
 /** Commandes dont la tentative, dans la ligne de vue d'un Overwatch adverse, ouvre une réaction avant exécution. */
-const ANNOUNCEABLE = new Set<GameCommand['type']>(['MOVE_CHARACTER', 'ATTACK', 'OPEN_DOOR', 'CLOSE_DOOR']);
+const ANNOUNCEABLE = new Set<GameCommand['type']>(['MOVE_CHARACTER', 'ATTACK', 'THROW_GRENADE', 'OPEN_DOOR', 'CLOSE_DOOR']);
 
 function actorOf(command: GameCommand): string | null {
   switch (command.type) {

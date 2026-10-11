@@ -10,6 +10,8 @@ export const EFFECT_ICONS: Record<EquipmentEffect['type'], string> = {
   EXTRA_DICE_WITH_WEAPON: '⚙',
   GAIN_COMMAND_POINTS: '✪',
   FREE_OVERWATCH: '◎',
+  GRENADE: '✹',
+  SMOKE_GRENADE: '☁',
 };
 
 export interface EffectBadge {

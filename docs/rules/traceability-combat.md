@@ -25,5 +25,5 @@ Tests dans `packages/core/src/combat/` : `test.spec.ts` (T), `attack.spec.ts` (A
 | RULE-COMBAT-012 | Jet de défense : `config.defensePoolSize` (défaut 4), difficulté 10 − Physique, chaque succès annule 1 blessure (OQ-COMBAT-002, OQ-COMBAT-008) | `combat/exchange.ts`, `DEFENSE_ROLLED` | A « défense » |
 | RULE-COMBAT-013 | Une attaque ne coûte ni PC ni PM ; elle consomme l'unique action (`turn.actionUsed`, `ACTION_ALREADY_USED`) (OQ-COMBAT-007) | `combat/attack.ts` | A « une seule action par activation » |
 | RULE-LOS-001 | LdM par couleur commune, portes fermées (§70) | `board/line-of-sight.ts` (existant) via handler | A « sans couleur commune », « porte fermée » |
-| RULE-LOS-002 | La fumée coupe la LdM (§73.2) | handler (`state.effects` SMOKE vers `smokeNodes`) | A « la fumée coupe » (OQ-COMBAT-005) |
+| RULE-LOS-002 | La fumée ne coupe pas la LdM : elle pénalise l'attaque (RULE-COMBAT-013) | `combat/smoke.ts` (`smokeAttackPenalty`) appelé par `combat/exchange.ts` | `attack.spec.ts` « fumée (RULE-COMBAT-013) » |
 | RULE-VICTORY-001 | Deathmatch : plus aucun personnage vivant d'un camp = VICTORY, `victory`, `phase = FINISHED` | `victory/deathmatch.ts`, handler | A « élimination du dernier personnage » |

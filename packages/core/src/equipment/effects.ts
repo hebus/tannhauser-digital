@@ -19,7 +19,11 @@ export type EquipmentEffect =
   /** Jeton à défausser (hors action) : ajoute `amount` PC à la réserve de son joueur. */
   | { readonly type: 'GAIN_COMMAND_POINTS'; readonly amount: number }
   /** Jeton à défausser, comme ACTION : place le personnage en Overwatch sans dépenser de PC. */
-  | { readonly type: 'FREE_OVERWATCH' };
+  | { readonly type: 'FREE_OVERWATCH' }
+  /** Grenade explosive (commande THROW_GRENADE) : `successes` succès automatiques sur la case visée et ses voisines, lancer à `range` pas au plus. */
+  | { readonly type: 'GRENADE'; readonly successes: number; readonly range: number }
+  /** Fumigène (commande THROW_GRENADE) : crée une fumée sur la case visée (voir `SMOKE_DURATION_TURNS`), portée `range`. */
+  | { readonly type: 'SMOKE_GRENADE'; readonly range: number };
 
 /** Équipement non-arme porté par un personnage (les armes sont dans `CharacterState.weapons`). */
 export interface EquipmentItem {

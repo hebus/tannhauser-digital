@@ -1,4 +1,4 @@
-import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
+import { explosionZone, getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';
@@ -7,6 +7,7 @@ import { reasonText, t } from './i18n';
 import { modeRules } from './mode-rules';
 import { createLabeler, type Labeler } from './labels';
 import { createModeRulesDialog } from './dialogs';
+import { cancelTargeting, getTargeting, startTargeting, subscribeTargeting } from './targeting';
 import { createPhaseTracker, playerMarkStyle } from './phase-tracker';
 import { phaseModel } from './phase-model';
 
@@ -25,7 +26,7 @@ export interface Hud {
   handleKey(event: KeyboardEvent): boolean;
 }
 
-type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'USE_EQUIPMENT';
+type MenuKind = 'MOVE' | 'ATTACK' | 'OPEN_DOOR' | 'CLOSE_DOOR' | 'CAPTURE_FLAG' | 'PLANT_FLAG' | 'USE_EQUIPMENT' | 'THROW_GRENADE';
 
 const TOAST_MS = 7000;
 
@@ -57,6 +58,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   }
 
   function dispatch(command: Parameters<GameFacade['dispatch']>[0]): void {
+    cancelTargeting();
     menu = null;
     game.dispatch(command); // les refus sont expliqués par l'intercepteur (refusals.ts) ; les succès arrivent par subscribe
   }
@@ -200,6 +202,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
         const text = flag?.location.kind === 'NODE' ? t('actions.flag.optionAt', { owner, node: flag.location.nodeId }) : t('actions.flag.option', { owner });
         return option(`flag-${flagId}`, text, () => dispatch({ type, playerId: state.turn.activePlayerId!, characterId, flagId }));
       });
+    } else if (menu === 'THROW_GRENADE') {
+      const picking = getTargeting();
+      titleKey = picking ? (picking.smoke ? 'actions.smoke.pick' : 'actions.grenade.pick') : 'actions.grenade.title';
+      // Une fois l'objet choisi, la case se choisit au clic sur le plateau : le menu ne garde que « Annuler ».
+      options = picking
+        ? []
+        : (legal?.details?.grenades ?? []).map((g) => option(`grenade-${g.equipmentId}`, labels.equipment(g.equipmentId), () => beginTargeting(characterId, g.equipmentId, g.nodeIds)));
     } else if (menu === 'USE_EQUIPMENT') {
       titleKey = 'actions.equipment.title';
       options = (legal?.details?.equipmentIds ?? []).map((equipmentId) =>
@@ -223,7 +232,16 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     return effect ? EFFECT_ICONS[effect.type] : '';
   }
 
+  /** Passe en mode « clic sur une case » pour la grenade choisie ; le plateau met les cases visables en évidence. */
+  function beginTargeting(characterId: string, equipmentId: string, nodeIds: readonly string[]): void {
+    const smoke = game.state.characters.find((c) => c.id === characterId)?.equipment?.find((i) => i.id === equipmentId)?.effects?.some((e) => e.type === 'SMOKE_GRENADE') ?? false;
+    menu = 'THROW_GRENADE';
+    startTargeting({ characterId, equipmentId, nodeIds, smoke });
+    toast(t(smoke ? 'actions.smoke.pick' : 'actions.grenade.pick'));
+  }
+
   function openMenu(kind: MenuKind): void {
+    if (kind !== 'THROW_GRENADE') cancelTargeting();
     menu = kind;
     render();
     const first = actionsPanel.querySelector<HTMLElement>('.hud-menu-options button') ?? actionsPanel.querySelector<HTMLElement>('[data-fid="menu-cancel"]');
@@ -233,6 +251,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   function closeMenu(): boolean {
     if (!menu) return false;
     const kind = menu;
+    cancelTargeting();
     menu = null;
     render();
     actionsPanel.querySelector<HTMLElement>(`[data-fid="action-${kind}"]`)?.focus();
@@ -258,6 +277,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       case 'ATTACK':
         openMenu(id);
         break;
+      case 'THROW_GRENADE': {
+        // Un seul objet lançable : on passe directement au choix de la case au clic ; plusieurs : menu pour choisir l'objet.
+        const grenades = action.details?.grenades ?? [];
+        if (grenades.length === 1) beginTargeting(characterId, grenades[0]!.equipmentId, grenades[0]!.nodeIds);
+        else openMenu(id);
+        break;
+      }
       case 'OPEN_DOOR':
       case 'CLOSE_DOOR': {
         const doors = action.details?.doorIds ?? [];
@@ -513,6 +539,14 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     }
     return false;
   }
+
+  // Le ciblage peut se terminer ailleurs (clic sur le plateau, changement d'état) : le menu des grenades se referme alors.
+  let wasTargeting = false;
+  subscribeTargeting((current) => {
+    if (current === null && wasTargeting && menu === 'THROW_GRENADE') menu = null;
+    wasTargeting = current !== null;
+    render();
+  });
 
   return {
     render,

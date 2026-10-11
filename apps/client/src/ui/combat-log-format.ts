@@ -39,6 +39,32 @@ function exchangeEntry(log: CombatLog, labels: Labeler): LogEntry {
   };
 }
 
+/** Événements d'une explosion qui suivent GRENADE_EXPLODED : repliés dans son entrée de journal (une ligne par victime). */
+const BLAST_PARTS: ReadonlySet<GameEvent['type']> = new Set(['DEFENSE_ROLLED', 'DAMAGE_APPLIED', 'CHARACTER_DEFEATED']);
+
+function blastEntry(e: Extract<GameEvent, { type: 'GRENADE_EXPLODED' }>, parts: readonly GameEvent[], labels: Labeler): LogEntry {
+  const lines: string[] = [];
+  let defeated = false;
+  let wounded = false;
+  for (const part of parts) {
+    if (part.type === 'DEFENSE_ROLLED') lines.push(t('log.grenade.defense', { defender: labels.character(part.defenderId), dice: part.dice.join(', '), parried: part.successes }));
+    else if (part.type === 'DAMAGE_APPLIED') {
+      wounded = true;
+      lines.push(t('log.grenade.damage', { target: labels.character(part.targetId), wounds: part.wounds, health: part.healthLeft }));
+    } else if (part.type === 'CHARACTER_DEFEATED') {
+      defeated = true;
+      lines.push(t('log.grenade.defeated', { character: labels.character(part.characterId) }));
+    }
+  }
+  return {
+    kind: 'combat',
+    tone: defeated ? 'kill' : wounded ? 'hit' : 'miss',
+    text: t('log.event.GRENADE_EXPLODED', { character: labels.character(e.characterId), equipment: labels.equipment(e.equipmentId), node: e.nodeId, count: e.zone.length, successes: e.successes }),
+    lines,
+    effects: [effectBadge('GRENADE')],
+  };
+}
+
 /** Un événement non-combat en une ligne ; `null` si l'événement n'a rien à montrer au joueur. */
 export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
   const info = (key: string, params?: Record<string, string | number>): LogEntry => ({ kind: 'event', tone: 'info', text: t(key, params), lines: [] });
@@ -64,6 +90,10 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
       return info('log.event.CHARACTER_ACTIVATION_ENDED', { character: labels.character(e.characterId) });
     case 'EQUIPMENT_USED':
       return { kind: 'event', tone: 'info', text: t('log.event.EQUIPMENT_USED', { character: labels.character(e.characterId), equipment: labels.equipment(e.equipmentId) }), lines: [], effects: [effectBadge(e.effect)] };
+    case 'SMOKE_STARTED':
+      return { kind: 'event', tone: 'info', text: t('log.event.SMOKE_STARTED', { character: labels.character(e.characterId), equipment: labels.equipment(e.equipmentId), node: e.nodeId, turns: e.turns }), lines: [], effects: [effectBadge('SMOKE_GRENADE')] };
+    case 'SMOKE_EXPIRED':
+      return info('log.event.SMOKE_EXPIRED', { node: e.origin });
     case 'COMMAND_POINTS_GAINED':
       return info('log.event.COMMAND_POINTS_GAINED', { player: labels.player(e.playerId), amount: e.amount, total: e.total });
     case 'OVERWATCH_PLACED':
@@ -147,6 +177,13 @@ export function buildLogEntries(events: readonly GameEvent[], labels: Labeler): 
           lines: [],
         });
       }
+      i = j - 1;
+      continue;
+    }
+    if (e.type === 'GRENADE_EXPLODED') {
+      let j = i + 1;
+      while (j < events.length && BLAST_PARTS.has(events[j]!.type)) j += 1;
+      entries.push(blastEntry(e, events.slice(i + 1, j), labels));
       i = j - 1;
       continue;
     }
