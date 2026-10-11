@@ -1,4 +1,4 @@
-import { explosionZone, getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
+import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';

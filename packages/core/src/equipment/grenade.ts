@@ -1,6 +1,5 @@
 import { visibleNodes } from '../board/line-of-sight';
 import type { BoardState, NodeId } from '../board/types';
-import { stepDistance } from '../combat/attack';
 import { defenseRules } from '../combat/exchange';
 import { combineModifiers, resolveCharacteristicTest } from '../combat/test';
 import { registerHandler, reject } from '../engine/apply-command';
