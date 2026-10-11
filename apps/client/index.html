@@ -11,6 +11,9 @@
       #status { font-weight: 700; color: #fff; margin-bottom: 4px; }
       #help { opacity: .75; font-size: 12px; margin-bottom: 6px; }
       #log { margin: 0; padding-left: 18px; font-size: 12px; opacity: .9; list-style: none; }
+      #rotate { position: fixed; inset: 0; z-index: 2000; display: none; place-items: center; text-align: center; padding: 24px; color: #fff; font: 18px/1.5 system-ui, sans-serif; background: #14161a; }
+      #rotate b { display: block; font-size: 48px; margin-bottom: 8px; }
+      @media (pointer: coarse) and (orientation: portrait) { #rotate { display: grid; } }
       #error { position: fixed; inset: 0; display: none; place-items: center; color: #fff; font: 16px system-ui, sans-serif; background: #14161a; padding: 24px; text-align: center; }
     </style>
   </head>
@@ -21,6 +24,7 @@
       <div id="help">Clic : sélectionner / déplacer / attaquer · E : fin d'activation · O : Overwatch (phase Overwatch : un personnage par décision) · P : passer (dans la phase Overwatch, passer sans placer) · T : tir en réaction · D : refuser · Glisser/molette : caméra · C : cadrer · I : ids</div>
       <ol id="log"></ol>
     </div>
+    <div id="rotate" role="alert"><div><b aria-hidden="true">⟳</b>Tournez votre appareil en mode paysage.<br /><small>Rotate your device to landscape.</small></div></div>
     <div id="error"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

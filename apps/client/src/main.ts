@@ -24,6 +24,7 @@ import { bannerText } from './ui/banner-text';
 import { createLabeler } from './ui/labels';
 import { startFromSetup } from './ui/boot';
 import { detectLocale, hasKey, setLocale, t } from './ui/i18n';
+import { enforceLandscape } from './ui/landscape';
 import { mountUi } from './ui/mount';
 
 function showError(message: string): void {
@@ -35,6 +36,7 @@ function showError(message: string): void {
 }
 
 async function main(): Promise<void> {
+  enforceLandscape();
   const host = document.getElementById('app');
   if (!host) throw new Error('Conteneur #app introuvable');
 
