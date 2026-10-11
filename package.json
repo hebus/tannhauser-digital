@@ -17,6 +17,13 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:changed": "vitest run --changed",
+    "test:quick": "vitest run --exclude **/ai-game.spec.ts",
+    "test:core": "vitest run packages/core",
+    "test:content": "vitest run packages/content",
+    "test:renderer": "vitest run packages/renderer",
+    "test:client": "vitest run apps/client --exclude **/ai-game.spec.ts",
+    "test:ai": "vitest run apps/client/src/ai-game.spec.ts apps/client/src/ai-driver.spec.ts",
     "generate:boards": "vite-node tools/board-generator/generate.ts"
   },
   "devDependencies": {

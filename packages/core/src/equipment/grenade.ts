@@ -1,4 +1,4 @@
-import { canSee, visibleNodes } from '../board/line-of-sight';
+import { visibleNodes } from '../board/line-of-sight';
 import type { BoardState, NodeId } from '../board/types';
 import { stepDistance } from '../combat/attack';
 import { defenseRules } from '../combat/exchange';
@@ -36,17 +36,28 @@ export function explosionZone(board: BoardState, nodeId: NodeId): NodeId[] {
 }
 
 /**
- * Cible d'un objet lancé (grenade, fumigène) : à `range` pas au plus. Seules les `range − 1` premières cases doivent être
- * dans la ligne de vue ; la dernière (à exactement `range` pas) peut être hors de vue, à condition que la case qui la précède
- * sur le trajet soit vue (RULE-EQUIP-015). Grenade : portée 5, vue sur 4 ; fumigène : portée 8, vue sur 7.
+ * Cases visables d'un objet lancé de portée `range` (RULE-EQUIP-015) : celles de la ligne de vue du lanceur, à `range` pas au
+ * plus, et la **dernière case** du lancer, qui peut sortir de la ligne de vue : toute case voisine (arête, porte ignorée) d'une
+ * case vue atteinte en `range − 1` pas au plus. La case du lanceur est toujours « vue » : ses voisines sont donc toujours
+ * visables, même sans couleur commune. Grenade : portée 5 ; fumigène : portée 8.
  */
+function throwTargets(board: BoardState, from: NodeId, range: number, allowSelf: boolean): Set<NodeId> {
+  const dist = stepDistances(board, from, range);
+  const visible = visibleNodes(board, from);
+  visible.add(from);
+  const out = new Set<NodeId>();
+  for (const [id, d] of dist) {
+    if (!visible.has(id)) continue;
+    out.add(id);
+    if (d <= range - 1) for (const n of explosionZone(board, id)) out.add(n);
+  }
+  if (!allowSelf) out.delete(from);
+  return out;
+}
+
+/** La case est-elle une cible valide pour un objet lancé de portée `range` ? (voir `throwTargets`). */
 export function isThrowTarget(board: BoardState, from: NodeId, to: NodeId, range: number, allowSelf = false): boolean {
-  const distance = stepDistance(board, from, to);
-  if (distance === null || distance > range) return false;
-  if (distance === 0) return allowSelf;
-  if (canSee(board, from, to)) return true;
-  if (distance < range) return false;
-  return explosionZone(board, to).some((n) => n !== to && stepDistance(board, from, n) === range - 1 && canSee(board, from, n));
+  return throwTargets(board, from, range, allowSelf).has(to);
 }
 
 /** Distances en pas depuis `from` (arêtes non bloquées par une porte fermée), jusqu'à `maxDepth` : un seul parcours pour tout le plateau. */
@@ -73,26 +84,13 @@ function stepDistances(board: BoardState, from: NodeId, maxDepth: number): Map<N
   return dist;
 }
 
-/** Toutes les cases visables d'un objet lancé de portée `range` (même règle que `isThrowTarget`, calculée en un parcours). */
-function throwTargets(board: BoardState, from: NodeId, range: number, allowSelf: boolean): NodeId[] {
-  const dist = stepDistances(board, from, range);
-  const visible = visibleNodes(board, from);
-  return [...dist]
-    .filter(([id, d]) => {
-      if (d === 0) return allowSelf;
-      if (visible.has(id)) return true;
-      return d === range && explosionZone(board, id).some((n) => n !== id && dist.get(n) === range - 1 && visible.has(n));
-    })
-    .map(([id]) => id);
-}
-
 export type ThrowGrenadeCheck =
   | { readonly ok: true; readonly character: CharacterState; readonly item: EquipmentItem; readonly grenade: GrenadeEffect }
   | { readonly ok: false; readonly error: RuleError };
 
 /**
  * Conditions du lancer (partagées avec `getLegalActions`) : comme une attaque, c'est l'action unique de l'activation,
- * par le personnage actif ; la case visée est à `range` pas au plus (vue sur les `range − 1` premiers, voir `isThrowTarget`) et n'est pas celle du lanceur.
+ * par le personnage actif ; la case visée est à `range` pas au plus, seule la dernière case pouvant être hors de la ligne de vue (voir `throwTargets`), et n'est pas celle du lanceur.
  */
 export function checkThrowGrenade(state: GameState, playerId: string, characterId: string, equipmentId: string, nodeId: NodeId): ThrowGrenadeCheck {
   const no = (code: string, message: string): ThrowGrenadeCheck => ({ ok: false, error: { code, message } });
@@ -103,10 +101,13 @@ export function checkThrowGrenade(state: GameState, playerId: string, characterI
   // Une grenade explosive ne vise pas la case de son lanceur ; un fumigène le peut (se couvrir).
   const smoke = grenade.type === 'SMOKE_GRENADE';
   if (nodeId === character.nodeId && !smoke) return no('GRENADE_OWN_NODE', 'Impossible : vous ne pouvez pas viser votre propre case.');
-  const distance = stepDistance(state.board, character.nodeId, nodeId);
-  if (distance === null || distance > grenade.range) return no('OUT_OF_RANGE', `Case hors de portée (${grenade.range} pas maximum).`);
   if (!isThrowTarget(state.board, character.nodeId, nodeId, grenade.range, smoke)) {
-    return no('NO_LINE_OF_SIGHT', `Aucune ligne de vue : seules les ${grenade.range - 1} premières cases du lancer doivent être vues.`);
+    // Hors de portée si même la dernière case (voisine d'une case atteinte en `range − 1` pas) ne l'atteint pas ; sinon c'est la vue.
+    const reach = stepDistances(state.board, character.nodeId, grenade.range);
+    const near = [...reach].some(([id, d]) => d <= grenade.range - 1 && explosionZone(state.board, id).includes(nodeId)) || reach.has(nodeId);
+    return near
+      ? no('NO_LINE_OF_SIGHT', 'Aucune ligne de vue : seule la dernière case du lancer peut être hors de vue.')
+      : no('OUT_OF_RANGE', `Case hors de portée (${grenade.range} pas maximum).`);
   }
   return base;
 }
@@ -129,13 +130,13 @@ export function checkThrowGrenadeBase(state: GameState, playerId: string, charac
   return { ok: true, character, item, grenade };
 }
 
-/** Grenades lançables maintenant par un personnage, avec les cases qu'il peut viser (voir `isThrowTarget`). */
+/** Grenades lançables maintenant par un personnage, avec les cases qu'il peut viser (voir `throwTargets`). */
 export function throwableGrenades(state: GameState, character: CharacterState): { equipmentId: string; nodeIds: NodeId[] }[] {
   const out: { equipmentId: string; nodeIds: NodeId[] }[] = [];
   for (const item of character.equipment ?? []) {
     if (!checkThrowGrenadeBase(state, character.playerId, character.id, item.id).ok) continue;
     const grenade = grenadeOf(item)!;
-    const nodeIds = throwTargets(state.board, character.nodeId, grenade.range, grenade.type === 'SMOKE_GRENADE')
+    const nodeIds = [...throwTargets(state.board, character.nodeId, grenade.range, grenade.type === 'SMOKE_GRENADE')]
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     if (nodeIds.length > 0) out.push({ equipmentId: item.id, nodeIds });
   }

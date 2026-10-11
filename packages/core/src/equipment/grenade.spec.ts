@@ -124,7 +124,7 @@ describe('THROW_GRENADE : refus', () => {
   });
 });
 
-describe('portée et ligne de vue (RULE-EQUIP-015) : portée 5, vue sur les 4 premières cases', () => {
+describe('portée et ligne de vue (RULE-EQUIP-015) : portée 5, seule la dernière case peut sortir de la vue', () => {
   /** a — b — c — d — e — f — g ; f est bleue seule, g à 6 pas. */
   const longBoard = (): BoardState =>
     new BoardBuilder()
@@ -139,16 +139,22 @@ describe('portée et ligne de vue (RULE-EQUIP-015) : portée 5, vue sur les 4 pr
     expect(isThrowTarget(board, 'a', 'g', 5)).toBe(false); // 6 pas : hors de portée
   });
 
-  it('les 4 premières cases doivent être vues', () => {
-    // d (à 3 pas) est bleue : ni elle, ni e (4 pas), ni f (5 pas) ne sont acceptables.
+  it('la dernière case peut sortir de la vue à n\'importe quelle distance, mais pas la suivante', () => {
+    // d (à 3 pas) est bleue : hors de vue, mais voisine de c (vue) -> dernière case valide. e (4 pas) vient après d : refusée.
     const board = new BoardBuilder()
       .node('a', ['red']).node('b', ['red']).node('c', ['red']).node('d', ['blue']).node('e', ['red']).node('f', ['red'])
       .edge('a', 'b').edge('b', 'c').edge('c', 'd').edge('d', 'e').edge('e', 'f')
       .build();
     expect(isThrowTarget(board, 'a', 'c', 5)).toBe(true);
-    expect(isThrowTarget(board, 'a', 'd', 5)).toBe(false);
+    expect(isThrowTarget(board, 'a', 'd', 5)).toBe(true);
     expect(isThrowTarget(board, 'a', 'e', 5)).toBe(false);
     expect(isThrowTarget(board, 'a', 'f', 5)).toBe(false);
+  });
+
+  it('toute case adjacente au lanceur est visable, même sans couleur commune', () => {
+    const board = new BoardBuilder().node('a', ['red']).node('b', ['blue']).node('c', ['green']).edge('a', 'b').edge('b', 'c').build();
+    expect(isThrowTarget(board, 'a', 'b', 5)).toBe(true);
+    expect(isThrowTarget(board, 'a', 'c', 5)).toBe(false); // b n'est pas vue : c ne peut pas être la dernière case
   });
 
   it('la commande applique la même règle et le moteur explique le refus', () => {
