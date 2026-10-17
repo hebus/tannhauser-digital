@@ -13,6 +13,8 @@ export function describeEvent(e: GameEvent): string | null {
         .join(', ')}).`;
     case 'CHARACTER_ACTIVATION_STARTED':
       return `${e.characterId} est activé.`;
+    case 'CHARACTER_ACTIVATION_CANCELLED':
+      return `${e.characterId} n'est plus activé.`;
     case 'CHARACTER_MOVED':
       return `${e.characterId} se déplace (${e.cost} PM) → ${e.path[e.path.length - 1]}.`;
     case 'FORCE_PASSAGE_RESOLVED':

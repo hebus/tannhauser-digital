@@ -118,6 +118,8 @@ export const characterSchema = type({
   id: 'string > 0',
   factionId: 'string > 0',
   nameKey: 'string > 0',
+  /** Nom affiché par langue (enregistré sous `nameKey` côté client) ; `en` absent = repli sur le français. */
+  names: { fr: 'string > 0', 'en?': 'string > 0' },
   kind: "'HERO' | 'TROOP' | 'MERCENARY'",
   /** De la pleine santé à la dernière blessure ; la longueur = niveaux de santé. */
   statRows: statsRow.array().atLeastLength(1),

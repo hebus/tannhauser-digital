@@ -70,7 +70,7 @@ describe('validation des erreurs de contenu', () => {
   it('refuse un personnage avec faction ou équipement inconnu', () => {
     const factions = loadFactions({ factions: [{ id: 'f', nameKey: 'k' }], relations: [] });
     const equipment = loadEquipment([{ id: 'w', nameKey: 'k', traits: ['weapon', 'pistol'], dice: 4 }]);
-    const base = { id: 'c', factionId: 'f', nameKey: 'k', kind: 'HERO', statRows: [{ combat: 1, physical: 1, mental: 1, movement: 1 }], equipmentIds: ['w'], competencies: [] };
+    const base = { id: 'c', factionId: 'f', nameKey: 'k', names: { fr: 'K' }, kind: 'HERO', statRows: [{ combat: 1, physical: 1, mental: 1, movement: 1 }], equipmentIds: ['w'], competencies: [] };
     expect(() => loadCharacters([{ ...base, factionId: 'zzz' }], factions, equipment)).toThrow(/faction inconnue/);
     expect(() => loadCharacters([{ ...base, equipmentIds: ['nope'] }], factions, equipment)).toThrow(/équipement inconnu/);
     expect(loadCharacters([base], factions, equipment)).toHaveLength(1);

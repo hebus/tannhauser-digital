@@ -222,10 +222,41 @@ describe('refus de commandes', () => {
     expect(codeOf(done, select('p2', 'b1'))).toBe('ALREADY_ACTIVATED');
   });
 
-  it('refuse une seconde sélection, END_TURN/PASS hors contexte et avant démarrage', () => {
+  it('permet de changer de personnage tant que l\'actif n\'a ni agi ni bougé : l\'ancien reste activable', () => {
+    const rng = new SeededRng(1);
+    const active = run(started(), rng, select('p2', 'b1')).state;
+    const res = run(active, rng, select('p2', 'b2'));
+    expect(res.events).toEqual([
+      { type: 'CHARACTER_ACTIVATION_CANCELLED', characterId: 'b1' },
+      { type: 'CHARACTER_ACTIVATION_STARTED', characterId: 'b2' },
+    ]);
+    expect(res.state.turn.activeCharacterId).toBe('b2');
+    expect(res.state.characters.find((c) => c.id === 'b1')?.activated).toBe(false);
+    expect(res.state.characters.find((c) => c.id === 'b2')?.activated).toBe(true);
+    // On peut revenir au premier, et il peut ensuite finir normalement son activation.
+    const back = run(res.state, rng, select('p2', 'b1'), end('p2'));
+    expect(back.state.characters.find((c) => c.id === 'b1')?.activated).toBe(true);
+    expect(back.state.characters.find((c) => c.id === 'b2')?.activated).toBe(false);
+  });
+
+  it('refuse de changer de personnage après un déplacement ou une action', () => {
+    const rng = new SeededRng(1);
+    const active = run(started(), rng, select('p2', 'b1')).state;
+    const moved = run({ ...active, characters: active.characters.map((c) => (c.id === 'b1' ? { ...c, movementLeft: 3 } : c)) }, rng, {
+      type: 'MOVE_CHARACTER',
+      playerId: 'p2',
+      characterId: 'b1',
+      path: ['b'],
+    }).state;
+    expect(codeOf(moved, select('p2', 'b2'))).toBe('ACTIVATION_IN_PROGRESS');
+    expect(codeOf({ ...active, turn: { ...active.turn, actionUsed: true } }, select('p2', 'b2'))).toBe('ACTIVATION_IN_PROGRESS');
+    expect(codeOf({ ...active, turn: { ...active.turn, forcePassageUsed: true } }, select('p2', 'b2'))).toBe('ACTIVATION_IN_PROGRESS');
+  });
+
+  it('refuse de re-sélectionner le personnage déjà actif, un personnage déjà activé, END_TURN/PASS hors contexte et avant démarrage', () => {
     const state = started();
     const active = run(state, new SeededRng(1), select('p2', 'b1')).state;
-    expect(codeOf(active, select('p2', 'b2'))).toBe('ACTIVATION_IN_PROGRESS');
+    expect(codeOf(active, select('p2', 'b1'))).toBe('ACTIVATION_IN_PROGRESS');
     expect(codeOf(active, { type: 'PASS', playerId: 'p2' })).toBe('ACTIVATION_IN_PROGRESS');
     expect(codeOf(state, end('p2'))).toBe('NO_ACTIVE_CHARACTER');
     expect(codeOf(active, end('p1'))).toBe('NOT_YOUR_TURN');

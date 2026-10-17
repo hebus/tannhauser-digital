@@ -14,7 +14,7 @@ export * from './turn/command-points';
 export * from './turn/initiative';
 export * from './turn/refresh';
 export * from './turn/start-turn';
-export { REROLL_INITIATIVE_COST } from './turn/handlers';
+export { REROLL_INITIATIVE_COST, activationHasActed } from './turn/handlers';
 import './turn/handlers';
 export * from './combat/test';
 export * from './combat/duel';

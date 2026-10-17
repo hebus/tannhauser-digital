@@ -18,6 +18,8 @@ export type GameEvent =
   | { readonly type: 'INITIATIVE_CHANGED'; readonly previousWinnerId: string; readonly winnerId: string }
   | { readonly type: 'INITIATIVE_ROLLED'; readonly rolls: Readonly<Record<string, number>>; readonly winnerId: string }
   | { readonly type: 'CHARACTER_ACTIVATION_STARTED'; readonly characterId: string }
+  /** Changement de personnage avant d'avoir agi : l'activation de `characterId` est annulée. */
+  | { readonly type: 'CHARACTER_ACTIVATION_CANCELLED'; readonly characterId: string }
   | { readonly type: 'CHARACTER_MOVED'; readonly characterId: string; readonly path: readonly string[]; readonly cost: number }
   /** Passage en force : duel de Physique entre le déplaçant et l'ennemi occupant `nodeId`. */
   | {

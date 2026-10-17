@@ -1,20 +1,38 @@
 /* HUD, journal, mise en place et dialogues. Thème sombre ; ne dépend d'aucun style d'index.html. */
 :root {
-  --ui-bg: rgba(20, 22, 26, 0.92);
-  --ui-bg-solid: #1b1e24;
-  --ui-border: #3a404c;
-  --ui-text: #e6e8ec;
-  --ui-muted: #aab0bc;
-  --ui-accent: #e0b040;
-  --ui-accent-text: #1a1400;
-  --ui-ok: #7fd18b;
-  --ui-bad: #ff8a80;
-  --ui-focus: #8ab4ff;
-  --ui-radius: 8px;
+  /* Jetons « Occult Military Command » : métal noirci, laiton patiné, ivoire. Valeurs de départ à ajuster sur le jeu réel.
+     Ils ne recolorent jamais les factions, unités ou marqueurs du plateau (palette du renderer). */
+  --ui-bg-solid: #15171b;
+  --ui-bg: rgba(21, 23, 27, 0.94);
+  --ui-panel: #202329;
+  --ui-panel-raised: #292c32;
+  --ui-panel-sunken: #101215;
+  --ui-border: #474b53;
+  --ui-border-soft: #2e3238;
+  --ui-brass: #b99a60;
+  --ui-brass-hi: #d3b97f;
+  --ui-ivory: #d9d5c9;
+  --ui-muted: #a5a9b2;
+  --ui-danger: #a63f42;
+  --ui-info: #4d91b8;
+  --ui-success: #66b98b;
+  /* Alias historiques, conservés pour les composants existants. */
+  --ui-text: var(--ui-ivory);
+  --ui-accent: var(--ui-brass);
+  --ui-accent-text: #17120a;
+  --ui-ok: var(--ui-success);
+  --ui-bad: #e3797c; /* texte d'erreur : plus clair que --ui-danger pour le contraste sur fond sombre */
+  --ui-focus: #8cc4e6;
+  --ui-radius: 4px;
+  --ui-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  --ui-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ui-font-label: 'Bahnschrift', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
   --hud-left-w: 292px;
   --hud-right-w: 340px;
   /* Hauteur réservée au bandeau des phases (mesurée) : le dialogue de réaction se place dessous. */
   --hud-phase-h: 84px;
+  /* Haut des colonnes latérales : sous la barre supérieure (10 px de marge + bandeau + 8 px). */
+  --hud-top-h: 102px;
   font-size: 16px;
 }
 
@@ -23,7 +41,7 @@
   inset: 0;
   pointer-events: none; /* le plateau reste manipulable sous le HUD */
   color: var(--ui-text);
-  font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font: 14px/1.4 var(--ui-font);
   z-index: 10;
 }
 .ui-root button,
@@ -40,7 +58,7 @@
 .hud-left {
   position: absolute;
   left: 10px;
-  top: 10px;
+  top: var(--hud-top-h);
   bottom: 10px;
   width: 292px;
   display: flex;
@@ -51,9 +69,9 @@
 .hud-right {
   position: absolute;
   right: 10px;
-  top: 10px;
+  top: var(--hud-top-h);
   bottom: 10px;
-  width: 340px;
+  width: var(--hud-right-w);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -65,16 +83,33 @@
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
   padding: 10px 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px var(--ui-border-soft), var(--ui-shadow);
 }
 .hud-status { flex: 0 0 auto; }
 .hud-actions { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
 .hud-log { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .hud-log.is-collapsed { flex: 0 0 auto; }
-.hud-topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
-.hud-brand { font-weight: 700; letter-spacing: 0.02em; text-shadow: 0 1px 3px #000; }
+/* Journal replié (par défaut) : la colonne de droite disparaît, le plateau gagne la place ; il s'ouvre depuis le bouton « Journal » de la barre supérieure. */
+.ui-root.log-collapsed { --hud-right-w: 0px; }
+/* Barre supérieure unique : titre à gauche, bandeau des phases centré (≤ 600 px), Menu à droite. */
+.hud-top {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 600px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.hud-brand { justify-self: start; min-width: 0; display: flex; flex-direction: column; padding: 0 4px; text-shadow: 0 1px 4px #000, 0 0 10px rgba(0, 0, 0, 0.8); line-height: 1.1; }
+.hud-brand-name { font: 700 20px/1.1 var(--ui-font-label); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ui-ivory); overflow: hidden; text-overflow: ellipsis; }
+.hud-brand-sub { font: 600 11px/1.2 var(--ui-font-label); letter-spacing: 0.4em; text-transform: uppercase; color: var(--ui-brass); }
+.hud-top-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.hud-log[hidden] { display: none; }
 
-.hud-title { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
+.hud-title { margin: 0 0 6px; font: 700 14px/1.2 var(--ui-font-label); letter-spacing: 0.08em; text-transform: uppercase; }
 .hud-subtitle { margin: 4px 0; font-size: 14px; color: var(--ui-muted); font-weight: 600; }
 .hud-note { margin: 4px 0; color: var(--ui-muted); font-size: 13px; }
 .hud-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -87,7 +122,7 @@
 
 .hud-pcs { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
 .hud-pc { display: flex; justify-content: space-between; padding: 2px 6px; border-radius: 4px; }
-.hud-pc.is-active { background: rgba(224, 176, 64, 0.14); font-weight: 600; }
+.hud-pc.is-active { background: rgba(185, 154, 96, 0.14); font-weight: 600; }
 
 .hud-char { border-top: 1px solid var(--ui-border); padding-top: 8px; display: grid; gap: 4px; }
 .hud-char-none { color: var(--ui-muted); }
@@ -96,11 +131,14 @@
 .hud-stats { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
 .hud-stats li { display: flex; gap: 4px; align-items: baseline; border: 1px solid var(--ui-border); border-radius: 4px; padding: 1px 8px; }
 .hud-stats abbr { text-decoration: none; color: var(--ui-muted); }
+.hud-stats .stat-icon { font-size: 15px; line-height: 1; cursor: help; }
 .hud-stats b { font-size: 15px; }
 .hud-badge { display: inline-block; justify-self: start; padding: 1px 8px; border-radius: 4px; border: 1px solid var(--ui-border); font-weight: 600; }
 .hud-badge.is-free { color: var(--ui-ok); border-color: var(--ui-ok); }
 .hud-badge.is-used { color: var(--ui-bad); border-color: var(--ui-bad); }
 .hud-badge.is-ow { color: var(--ui-accent); border-color: var(--ui-accent); }
+.hud-meta { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.hud-meta-item { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding-left: 6px; border-left: 4px solid var(--pc, var(--ui-border)); }
 .hud-seed { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--ui-border); font-size: 13px; color: var(--ui-muted); }
 
 /* Boutons : cibles de 40 px minimum, focus bien visible. */
@@ -115,22 +153,22 @@
   font: inherit;
   font-weight: 600;
   color: var(--ui-text);
-  background: #2a2f39;
+  background: var(--ui-panel-raised);
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   cursor: pointer;
 }
-.hud-btn:hover { background: #343b47; }
+.hud-btn:hover { background: #343841; border-color: var(--ui-brass); }
 .hud-btn:focus-visible,
 .hud-link:focus-visible,
 .setup-input:focus-visible,
 .log-list:focus-visible,
 .ui-root summary:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 2px; }
 .hud-btn-primary { background: var(--ui-accent); color: var(--ui-accent-text); border-color: var(--ui-accent); }
-.hud-btn-primary:hover { background: #f0c250; }
+.hud-btn-primary:hover { background: var(--ui-brass-hi); }
 .hud-btn-small { display: inline-block; width: auto; min-height: 36px; margin: 0 6px 6px 0; }
 .hud-btn-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.hud-btn.is-unavailable { background: #1f232a; color: var(--ui-muted); border-style: dashed; cursor: not-allowed; }
+.hud-btn.is-unavailable { background: var(--ui-panel); color: var(--ui-muted); border-style: dashed; cursor: not-allowed; }
 .hud-btn { position: relative; }
 .hud-btn-reason {
   display: none;
@@ -150,6 +188,8 @@
   color: var(--ui-bad);
   pointer-events: none;
 }
+/* Raison toujours visible (et non au survol seul) pour les choix de la phase Overwatch. */
+.hud-btn.is-explained .hud-btn-reason { display: block; position: static; margin-top: 4px; padding: 0; border: 0; background: none; box-shadow: none; }
 .hud-btn.is-unavailable:hover .hud-btn-reason,
 .hud-btn.is-unavailable:focus-visible .hud-btn-reason { display: block; }
 kbd {
@@ -192,6 +232,12 @@ kbd {
 .hud-reaction-context { font-weight: 600; }
 
 .hud-btn.is-placed { border-color: var(--ui-accent); }
+.hud-btn-meta { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.hud-cost { font: 700 12px/1.4 var(--ui-font-label); letter-spacing: 0.05em; padding: 0 7px; border: 1px solid var(--ui-brass); border-radius: 999px; color: var(--ui-brass-hi); white-space: nowrap; }
+.hud-btn-primary .hud-cost { color: var(--ui-accent-text); border-color: var(--ui-accent-text); }
+.hud-decision { margin: 0 0 8px; padding: 6px 0 8px 10px; border-left: 3px solid var(--ui-brass); }
+.hud-decision-title { font: 700 14px/1.25 var(--ui-font-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-ivory); }
+.hud-decision-who { margin-top: 2px; font-size: 13px; color: var(--ui-muted); }
 
 .sr-only {
   position: absolute;
@@ -213,22 +259,17 @@ kbd {
    La phase courante se distingue par la taille, le halo, le libellé gras et la sous-ligne, jamais par la seule couleur.
    Hauteur visée ≈ 80 px (cadrage de la caméra : `insets().top` ; dialogue de réaction : `--hud-phase-h`). */
 .hud-phase {
-  --ph-bg: #181b21;
-  --ph-edge: #2c313b;
-  --ph-line: #3a404c;
-  --ph-text: #e8eaf0;
-  --ph-muted: #9aa1ae;
-  --ph-amber: #e0b040;
-  --ph-green: #7fd18b;
+  --ph-bg: var(--ui-bg-solid);
+  --ph-edge: var(--ui-border-soft);
+  --ph-line: var(--ui-border);
+  --ph-text: var(--ui-ivory);
+  --ph-muted: var(--ui-muted);
+  --ph-amber: var(--ui-brass);
+  --ph-green: var(--ui-success);
   --ph-node: 26px;
   --ph-node-current: 34px;
-  position: absolute;
-  top: 10px;
-  /* Entre les panneaux gauche et droit ; marge auto : centré et plafonné en largeur sur les grands écrans. */
-  left: calc(var(--hud-left-w) + 20px);
-  right: calc(var(--hud-right-w) + 20px);
-  max-width: 600px;
-  margin-inline: auto;
+  /* Colonne centrale de `.hud-top` (largeur plafonnée à 600 px par la grille). */
+  position: relative;
   box-sizing: border-box;
   background: var(--ph-bg);
   border: 1px solid var(--ph-edge);
@@ -255,7 +296,7 @@ kbd {
   white-space: nowrap;
 }
 .phase-turn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ph-muted); }
-.phase-turn-n { font-size: 18px; line-height: 1.1; font-weight: 800; }
+.phase-turn-n { font-family: var(--ui-font-label); font-size: 20px; line-height: 1.1; font-weight: 800; }
 
 .phase-steps { flex: 0 1 auto; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
 .phase-step {
@@ -287,7 +328,7 @@ kbd {
   display: grid;
   place-items: center;
   background: var(--ph-bg);
-  border: 2px dashed #6b7384;
+  border: 2px dashed var(--ui-muted);
   color: var(--ph-muted);
   font-weight: 700;
   font-size: 12px;
@@ -310,9 +351,9 @@ kbd {
   width: var(--ph-node-current);
   height: var(--ph-node-current);
   background: var(--ph-amber);
-  border: 2px solid #fff3c4;
+  border: 2px solid var(--ui-brass-hi);
   color: #1a1400;
-  box-shadow: 0 0 0 3px rgba(224, 176, 64, 0.22), 0 0 12px rgba(224, 176, 64, 0.5);
+  box-shadow: 0 0 0 3px rgba(185, 154, 96, 0.22), 0 0 8px rgba(185, 154, 96, 0.35);
 }
 .phase-step.is-current .phase-glyph { display: block; width: 54%; height: 54%; }
 .phase-step.is-current .phase-label { font-size: 13.5px; font-weight: 800; }
@@ -328,10 +369,10 @@ kbd {
   padding: 3px 10px 3px 7px;
   border: 1px solid var(--ph-amber);
   border-radius: 999px;
-  background: rgba(224, 176, 64, 0.1);
+  background: rgba(185, 154, 96, 0.1);
   white-space: nowrap;
 }
-.phase-initiative.is-pending { border: 1px dashed #6b7384; background: transparent; color: var(--ph-muted); }
+.phase-initiative.is-pending { border: 1px dashed var(--ui-muted); background: transparent; color: var(--ph-muted); }
 .phase-init-flag { flex: 0 0 auto; width: 16px; height: 16px; color: var(--ph-amber); }
 .phase-initiative.is-pending .phase-init-flag { color: var(--ph-muted); }
 .phase-init-text { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -412,8 +453,8 @@ kbd {
 .hud-pc { border-left: 4px solid transparent; }
 .hud-pc-name { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hud-pc.is-active { border-left-color: var(--pc, var(--ui-accent)); }
-.hud-pc-initiative { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(224, 176, 64, 0.2); border: 1px solid var(--ui-accent); color: var(--ui-text); white-space: nowrap; }
-.hud-pc-flags { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid #f0c040; color: var(--ui-text); white-space: nowrap; }
+.hud-pc-initiative { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(185, 154, 96, 0.2); border: 1px solid var(--ui-accent); color: var(--ui-text); white-space: nowrap; }
+.hud-pc-flags { font-size: 12px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid var(--ui-brass-hi); color: var(--ui-text); white-space: nowrap; }
 .hud-pc-ai { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid var(--ui-muted, #9aa1ae); color: var(--ui-muted, #9aa1ae); letter-spacing: 0.04em; }
 .hud-pc-playing { font-size: 12px; font-weight: 700; padding: 0 6px; border: 1px solid var(--pc, var(--ui-accent)); border-radius: 999px; }
 
@@ -440,7 +481,9 @@ kbd {
 /* Journal */
 .log-head { margin-bottom: 4px; flex-wrap: nowrap; }
 .log-head .hud-title { margin: 0; }
-.log-toggle { margin: 0; }
+.log-toggle { margin: 0; display: inline-flex; align-items: center; gap: 6px; }
+.log-badge { min-width: 1.5em; padding: 0 0.4em; border-radius: 999px; background: var(--ui-brass); color: var(--ui-accent-text); font: 700 12px/1.6 var(--ui-font-label); text-align: center; }
+.log-badge[hidden] { display: none; }
 .log-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .log-body[hidden] { display: none; }
 .log-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1 1 auto; font-size: 13px; }
@@ -491,10 +534,12 @@ kbd {
 @media (max-width: 1100px) {
   :root { --hud-left-w: 260px; --hud-right-w: 290px; }
   .hud-left { width: 260px; }
-  .hud-right { width: 290px; }
   .hud-reaction, .hud-toast { max-width: min(420px, calc(100vw - 600px)); }
 }
 @media (max-width: 760px) {
+}
+@media (max-width: 1100px) {
+  .ui-root.log-collapsed { --hud-right-w: 0px; }
 }
 /* Variante compacte : le bandeau est déjà compact ; les requêtes de conteneur du bandeau adaptent le détail à la place disponible. */
 @media (prefers-reduced-motion: no-preference) {
@@ -537,7 +582,7 @@ kbd {
   padding: 0;
   overflow-y: auto;
   background:
-    radial-gradient(ellipse at 50% -20%, rgba(224, 176, 64, 0.18), transparent 55%),
+    radial-gradient(ellipse at 50% -20%, rgba(185, 154, 96, 0.18), transparent 55%),
     radial-gradient(ellipse at 8% 105%, rgba(74, 163, 255, 0.14), transparent 50%),
     radial-gradient(ellipse at 92% 105%, rgba(255, 107, 94, 0.14), transparent 50%),
     #0d0f13;
@@ -612,7 +657,7 @@ kbd {
 .setup-card-body { display: flex; flex-direction: column; gap: 2px; }
 .setup-card-title { font-weight: 700; font-size: 14px; }
 .setup-card-sub { font-size: 12px; color: var(--ui-muted); }
-.setup-card:has(input:checked) { border-color: var(--ui-accent); background: linear-gradient(135deg, rgba(224, 176, 64, 0.24), rgba(224, 176, 64, 0.05)); }
+.setup-card:has(input:checked) { border-color: var(--ui-accent); background: linear-gradient(135deg, rgba(185, 154, 96, 0.24), rgba(185, 154, 96, 0.05)); }
 .setup-card:has(input:checked) .setup-card-sub { color: #c8ccd6; }
 .setup-card:has(input:focus-visible), .setup-unit:has(input:focus-visible), .setup-seg:has(input:focus-visible) { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
@@ -627,7 +672,7 @@ kbd {
 
 /* Face-à-face des deux équipes */
 .setup-versus { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr); align-items: stretch; }
-.setup-vs { align-self: center; text-align: center; font: 800 28px/1 Georgia, serif; letter-spacing: 0.08em; color: var(--ui-accent); text-shadow: 0 0 18px rgba(224, 176, 64, 0.55); }
+.setup-vs { align-self: center; text-align: center; font: 800 28px/1 Georgia, serif; letter-spacing: 0.08em; color: var(--ui-accent); text-shadow: 0 0 18px rgba(185, 154, 96, 0.55); }
 .setup-team {
   --team: var(--setup-p1);
   margin: 0;
@@ -720,7 +765,7 @@ kbd {
   border: 1px solid #ffe7a5;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 0 28px rgba(224, 176, 64, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 28px rgba(185, 154, 96, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: transform 0.12s, filter 0.12s;
 }
 .setup-play:hover { transform: translateY(-2px); filter: brightness(1.08); }

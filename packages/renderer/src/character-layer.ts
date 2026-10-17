@@ -1,11 +1,16 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { currentStats, type CharacterState, type GameState } from '@tannhauser/core';
+import type { CharacterState, GameState } from '@tannhauser/core';
 import { NODE_RADIUS } from './board-view';
 import { carriedOwnerIndexes } from './flag-model';
 import { PLAYER_COLORS } from './palette';
 import type { Point } from './presentation/path-geometry';
 
 const TOKEN_RADIUS = NODE_RADIUS * 0.62;
+/** Au-delà, le nom affiché au-dessus du pion est tronqué (le nom complet reste dans le journal et le HUD). */
+const MAX_NAME_CHARS = 22;
+
+/** Nom d'un personnage par défaut quand aucun résolveur n'est fourni : la fin de son identifiant de définition. */
+const defaultName = (c: CharacterState): string => c.definitionId.split('.').pop() ?? c.id;
 
 /** Surcharge d'affichage purement visuelle d'un pion (animations) : jamais écrite dans `GameState`. */
 export interface TokenDisplay {
@@ -73,13 +78,19 @@ export class CharacterLayer extends Container {
   private readonly rings = new Map<string, Graphics>();
   private readonly dead = new Set<string>();
   private textScale = 1;
+  private nameOf: (id: string) => string | undefined = () => undefined;
 
   constructor() {
     super();
     this.label = 'CharacterLayer';
   }
 
-  update(state: GameState): void {
+  /**
+   * `nameOf` donne le nom lisible d'un personnage (localisé, numéroté) : le renderer ne connaît ni i18n ni libellés.
+   * Le nom s'affiche au-dessus du pion.
+   */
+  update(state: GameState, nameOf: (id: string) => string | undefined = () => undefined): void {
+    this.nameOf = nameOf;
     const playerIndex = new Map(state.players.map((p, i) => [p.id, i]));
     const seen = new Set<string>();
     // Plusieurs personnages sur un même nœud : décalage horizontal pour rester lisibles.
@@ -223,10 +234,10 @@ export class CharacterLayer extends Container {
         else pips.rect(x + 0.5, r + 3.5, 5, 4).stroke({ width: 1, color: 0xadb5bd });
       }
       root.addChild(pips);
-      const stats = currentStats(c);
+      const full = this.nameOf(c.id) ?? defaultName(c);
       const label = new Text({
-        text: `C${stats.combat} P${stats.physical} M${c.movementLeft}`,
-        style: { fill: 0xffffff, fontSize: 11, stroke: { color: 0x000000, width: 3 } },
+        text: full.length > MAX_NAME_CHARS ? `${full.slice(0, MAX_NAME_CHARS - 1)}…` : full,
+        style: { fill: 0xffffff, fontSize: 12, fontWeight: '700', stroke: { color: 0x000000, width: 3 } },
       });
       label.anchor.set(0.5, 1);
       label.position.set(0, -r - (active ? 20 : 8));

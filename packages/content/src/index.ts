@@ -25,4 +25,11 @@ export function loadDevContent() {
   const boards: LoadedBoard[] = [board, castle, manoir];
   return { factions, equipment, characters, board, boards };
 }
+
+/** Noms des personnages par clé i18n (`nameKey`) pour une langue : source unique = `data/characters.json`. */
+export function characterNameMessages(locale: 'fr' | 'en'): Record<string, string> {
+  const messages: Record<string, string> = {};
+  for (const c of charactersJson) messages[c.nameKey] = locale === 'en' ? (c.names.en ?? c.names.fr) : c.names.fr;
+  return messages;
+}
 export * from './runtime';

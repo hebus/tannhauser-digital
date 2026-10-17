@@ -44,11 +44,25 @@ function checkActivationPhase(state: GameState, playerId: PlayerId): { ok: false
   return null;
 }
 
+/**
+ * Le personnage en cours d'activation a-t-il déjà agi ? Vrai dès qu'un événement suit son `CHARACTER_ACTIVATION_STARTED`
+ * (déplacement, attaque, porte, équipement, drapeau, réaction…), ou si l'action / le passage en force sont consommés.
+ * Sans activation repérable dans l'historique, on suppose qu'il a agi (jamais de changement par erreur).
+ */
+export function activationHasActed(state: GameState): boolean {
+  const { turn, history } = state;
+  if (turn.actionUsed || turn.forcePassageUsed || turn.reaction) return true;
+  const last = history[history.length - 1];
+  return !(last && last.type === 'CHARACTER_ACTIVATION_STARTED' && last.characterId === turn.activeCharacterId);
+}
+
 /** Conditions de SELECT_CHARACTER (partagées avec `getLegalActions`). */
 export function checkSelectCharacter(state: GameState, playerId: PlayerId, characterId: string): TurnCheck<{ character: CharacterState }> {
   const refused = checkActivationPhase(state, playerId);
   if (refused) return refused;
-  if (state.turn.activeCharacterId !== undefined) {
+  const activeId = state.turn.activeCharacterId;
+  // Changer de personnage reste permis tant que l'activation en cours n'a rien produit (ni déplacement, ni action, ni porte).
+  if (activeId !== undefined && (activeId === characterId || activationHasActed(state))) {
     return no('ACTIVATION_IN_PROGRESS', 'Une activation est déjà en cours.');
   }
   const character = state.characters.find((c) => c.id === characterId);
@@ -71,12 +85,17 @@ registerHandler('SELECT_CHARACTER', (state, command) => {
   const checked = checkSelectCharacter(state, command.playerId, command.characterId);
   if (!checked.ok) return { ok: false, errors: [checked.error] };
   const { character } = checked;
+  // Changement de personnage avant d'avoir agi : l'activation précédente est annulée, ce personnage redevient activable.
+  const previousId = state.turn.activeCharacterId;
+  const events: GameEvent[] = [];
+  if (previousId !== undefined) events.push({ type: 'CHARACTER_ACTIVATION_CANCELLED', characterId: previousId });
+  events.push({ type: 'CHARACTER_ACTIVATION_STARTED', characterId: character.id });
   return {
     ok: true,
-    events: [{ type: 'CHARACTER_ACTIVATION_STARTED', characterId: character.id }],
+    events,
     state: {
       ...state,
-      characters: state.characters.map((c) => (c.id === character.id ? { ...c, activated: true } : c)),
+      characters: state.characters.map((c) => (c.id === character.id ? { ...c, activated: true } : c.id === previousId ? { ...c, activated: false } : c)),
       turn: { ...turnWithoutActivation(state.turn, state.turn.activePlayerId), activeCharacterId: character.id },
     },
   };

@@ -16,7 +16,7 @@ import {
   buildPathPreview,
   textScaleForZoom,
 } from '@tannhauser/renderer';
-import { explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
+import { activationHasActed, explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
 import { startAiDriver } from './ai-driver';
@@ -153,6 +153,7 @@ async function main(): Promise<void> {
   };
 
   let fitZoom = camera.zoom;
+  ui.onLayoutChange(fit);
   let cameraTween: ((ticker: { deltaMS: number }) => void) | null = null;
   const cancelCameraTween = (): void => {
     if (cameraTween) app.ticker.remove(cameraTween);
@@ -234,7 +235,7 @@ async function main(): Promise<void> {
   };
   const refresh = () => {
     const s = game.state;
-    characters.update(s);
+    characters.update(s, createLabeler(s).character);
     flags.update(s);
     smoke.update(s);
     const active = activeCharacter();
@@ -374,6 +375,11 @@ async function main(): Promise<void> {
     }
     if (!active) {
       if (own) send({ type: 'SELECT_CHARACTER', playerId: player, characterId: own.id });
+      return;
+    }
+    // Avant d'avoir agi ni bougé, cliquer un autre de ses personnages change l'activation (le moteur annule la précédente).
+    if (own && own.id !== active.id && !activationHasActed(s)) {
+      send({ type: 'SELECT_CHARACTER', playerId: player, characterId: own.id });
       return;
     }
     const enemy = here.find((c) => c.playerId !== player);

@@ -84,6 +84,8 @@ export function formatEvent(e: GameEvent, labels: Labeler): LogEntry | null {
       return info('log.event.INITIATIVE_CHANGED', { winner: labels.player(e.winnerId) });
     case 'CHARACTER_ACTIVATION_STARTED':
       return info('log.event.CHARACTER_ACTIVATION_STARTED', { character: labels.character(e.characterId) });
+    case 'CHARACTER_ACTIVATION_CANCELLED':
+      return info('log.event.CHARACTER_ACTIVATION_CANCELLED', { character: labels.character(e.characterId) });
     case 'CHARACTER_MOVED':
       return info('log.event.CHARACTER_MOVED', { character: labels.character(e.characterId), cost: e.cost, node: e.path[e.path.length - 1] ?? '?' });
     case 'CHARACTER_ACTIVATION_ENDED':

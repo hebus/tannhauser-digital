@@ -1,9 +1,10 @@
-import { getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
+import { activationHasActed, getLegalActions, getReactionOptions, type ActionId, type GameEvent, type GameState } from '@tannhauser/core';
 import type { GameFacade } from '../game-facade';
 import { h, isTypingTarget, withFocusKept } from './dom';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow, type RosterRow } from './hud-model';
 import { EFFECT_ICONS } from './effect-icons';
 import { reasonText, t } from './i18n';
+import { STAT_ICONS } from './stat-icons';
 import { modeRules } from './mode-rules';
 import { createLabeler, type Labeler } from './labels';
 import { createModeRulesDialog } from './dialogs';
@@ -14,6 +15,8 @@ import { phaseModel } from './phase-model';
 export type ToastTone = 'info' | 'error';
 
 export interface Hud {
+  /** Bandeau des phases : le montage le place dans la barre supérieure. */
+  readonly phaseElement: HTMLElement;
   /** Redessine d'après l'état courant ; `events` = dernier lot d'événements (mise en valeur brève des phases). */
   render(events?: readonly GameEvent[]): void;
   /** Autorise l'affichage des dialogues (réaction d'Overwatch) : false tant que des animations sont en cours. */
@@ -37,7 +40,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   const toastEl = h('div', { class: 'hud-toast', attrs: { role: 'status', 'aria-live': 'polite', hidden: true } });
   const phase = createPhaseTracker();
   const left = h('div', { class: 'hud-left' }, statusPanel, actionsPanel);
-  root.append(left, phase.element, reactionPanel, toastEl);
+  root.append(left, reactionPanel, toastEl);
   const mode = game.state.mode ?? 'DEATHMATCH';
   const rulesDialog = createModeRulesDialog(root, mode, () => root.querySelector<HTMLElement>('[data-fid="mode-rules"]')?.focus());
 
@@ -73,39 +76,32 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   function renderStatus(state: GameState, labels: Labeler): void {
     const m = statusModel(state, labels);
     statusPanel.textContent = '';
-    const head = h(
-      'div',
-      { class: 'hud-row hud-head' },
-      h('strong', { class: 'hud-turn', text: t('status.turn', { n: m.turnNumber }) }),
-      m.finished
-        ? h('span', { class: 'hud-pill hud-pill-end', text: `■ ${t('status.finished')}` })
-        : h('span', { class: 'hud-pill hud-pill-active', text: `▶ ${t('status.activePlayer', { player: m.activePlayerName })}` }),
-    );
-    const pcs = h(
-      'ul',
-      { class: 'hud-pcs', attrs: { 'aria-label': t('status.commandPoints') } },
-      ...m.players.map((p, i) => {
-        const mark = playerMarkStyle(i);
-        const li = h(
-          'li',
-          { class: `hud-pc${p.active ? ' is-active' : ''}`, attrs: { 'aria-current': p.active ? 'true' : undefined } },
-          h('span', { class: 'hud-pc-name' }, h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }), h('span', { text: p.name }), p.active ? h('span', { class: 'hud-pc-playing', text: `▶ ${t('status.playing')}` }) : null, p.initiative ? h('span', { class: 'hud-pc-initiative', text: `⚑ ${t('status.initiative')}` }) : null, p.flags ? h('span', { class: 'hud-pc-flags', text: flagsText(p.flags) }) : null, game.isAi(p.id) ? h('span', { class: 'hud-pc-ai', text: t('status.ai') }) : null),
-          h('b', { text: t('status.pc', { n: p.commandPoints }) }),
-        );
-        li.style.setProperty('--pc', mark.color);
-        return li;
-      }),
-    );
+    // Tour, joueur actif et PC sont dans le bandeau des phases : ici seulement l'objectif et, s'il y en a, drapeaux et IA.
+    const meta = m.players.flatMap((p, i) => {
+      const ai = game.isAi(p.id);
+      if (!p.flags && !ai) return [];
+      const mark = playerMarkStyle(i);
+      const li = h(
+        'li',
+        { class: 'hud-meta-item' },
+        h('span', { class: 'player-mark', text: mark.glyph, attrs: { 'aria-hidden': 'true' } }),
+        h('span', { text: p.name }),
+        p.flags ? h('span', { class: 'hud-pc-flags', text: flagsText(p.flags) }) : null,
+        ai ? h('span', { class: 'hud-pc-ai', text: t('status.ai') }) : null,
+      );
+      li.style.setProperty('--pc', mark.color);
+      return [li];
+    });
+    if (m.finished) statusPanel.append(h('div', { class: 'hud-row hud-head' }, h('span', { class: 'hud-pill hud-pill-end', text: `■ ${t('status.finished')}` })));
     statusPanel.append(
-      head,
       h(
         'div',
         { class: 'hud-row hud-goal' },
         h('span', { text: `🎯 ${modeRules(mode).goal}` }),
         h('button', { class: 'hud-link', text: `${t('modeHelp.button')} (V)`, attrs: { type: 'button', 'data-fid': 'mode-rules' }, on: { click: () => rulesDialog.toggle() } }),
       ),
-      pcs,
     );
+    if (meta.length > 0) statusPanel.append(h('ul', { class: 'hud-meta', attrs: { 'aria-label': t('phase.players') } }, ...meta));
 
     if (m.character) {
       const c = m.character;
@@ -120,10 +116,10 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
             'ul',
             { class: 'hud-stats', attrs: { 'aria-label': t('status.stats') } },
             ...(['combat', 'physical', 'mental'] as const).map((k) =>
-              h('li', { attrs: { title: t(`status.stat.${k}`) } }, h('abbr', { text: t(`status.stat.${k}.short`), attrs: { title: t(`status.stat.${k}`) } }), h('b', { text: String(c[k]) })),
+              h('li', { attrs: { title: t(`status.stat.${k}`) } }, h('abbr', { class: 'stat-icon', text: STAT_ICONS[k], attrs: { title: t(`status.stat.${k}`), 'aria-label': t(`status.stat.${k}`) } }), h('b', { text: String(c[k]) })),
             ),
           ),
-          h('div', { text: t('status.movementLeft', { n: `${c.movementLeft}/${c.movementMax}` }) }),
+          h('div', { text: `${STAT_ICONS.movement} ${t('status.movementLeft', { n: `${c.movementLeft}/${c.movementMax}` })}` }),
           h('div', { class: `hud-badge ${m.actionUsed ? 'is-used' : 'is-free'}`, text: `${m.actionUsed ? '✖' : '✔'} ${t(m.actionUsed ? 'status.action.used' : 'status.action.available')}` }),
           c.overwatch ? h('div', { class: 'hud-badge is-ow', text: `◉ ${t('status.overwatch')}` }) : null,
         ),
@@ -338,26 +334,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       const rows = rosterRows(state, labels);
       actionsPanel.append(h('h3', { class: 'hud-subtitle', text: t('actions.roster') }));
       if (rows.length === 0) actionsPanel.append(h('p', { class: 'hud-note', text: t('actions.rosterEmpty') }));
-      for (const r of rows) {
-        const unavailable = !r.available;
-        actionsPanel.append(
-          h(
-            'button',
-            {
-              class: `hud-btn${unavailable ? ' is-unavailable' : ''}`,
-              attrs: { type: 'button', 'data-fid': `select-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : r.name },
-              on: {
-                click: () => {
-                  if (unavailable) toast(r.reason ?? '', 'error');
-                  else dispatch({ type: 'SELECT_CHARACTER', playerId: state.turn.activePlayerId!, characterId: r.characterId });
-                },
-              },
-            },
-            h('span', { class: 'hud-btn-label' }, h('span', { text: `${t('action.SELECT')} · ${r.name}` }), h('kbd', { text: r.key })),
-            unavailable ? h('span', { class: 'hud-btn-reason', text: r.reason }) : null,
-          ),
-        );
-      }
+      appendRosterButtons(state, rows, true);
       const pass = actionRows(state, rows[0]?.characterId ?? state.characters[0]!.id).find((a) => a.id === 'PASS')!;
       actionsPanel.append(actionButton(pass, () => runPassWithoutActive()));
       return;
@@ -369,6 +346,38 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     // Le sous-menu s'ouvre au-dessus de la liste : il reste visible sans faire défiler le panneau.
     if (menuEl) actionsPanel.append(menuEl);
     actionsPanel.append(list);
+    // Tant que le personnage n'a ni agi ni bougé, on peut en activer un autre à sa place.
+    if (!activationHasActed(state)) {
+      const others = rosterRows(state, labels).filter((r) => r.characterId !== characterId && r.available);
+      if (others.length > 0) {
+        actionsPanel.append(h('h3', { class: 'hud-subtitle', text: t('actions.switch') }));
+        appendRosterButtons(state, others, false);
+      }
+    }
+  }
+
+  /** Boutons de sélection d'un personnage ; `withKeys` affiche le raccourci clavier (chiffres, actifs seulement sans activation). */
+  function appendRosterButtons(state: GameState, rows: readonly RosterRow[], withKeys: boolean): void {
+    for (const r of rows) {
+      const unavailable = !r.available;
+      actionsPanel.append(
+        h(
+          'button',
+          {
+            class: `hud-btn${unavailable ? ' is-unavailable' : ''}`,
+            attrs: { type: 'button', 'data-fid': `select-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : r.name },
+            on: {
+              click: () => {
+                if (unavailable) toast(r.reason ?? '', 'error');
+                else dispatch({ type: 'SELECT_CHARACTER', playerId: state.turn.activePlayerId!, characterId: r.characterId });
+              },
+            },
+          },
+          h('span', { class: 'hud-btn-label' }, h('span', { text: `${t('action.SELECT')} · ${r.name}` }), withKeys ? h('kbd', { text: r.key }) : null),
+          unavailable ? h('span', { class: 'hud-btn-reason', text: r.reason }) : null,
+        ),
+      );
+    }
   }
 
   // --- Phase d'Overwatch : un personnage par décision, ou passer ---
@@ -377,16 +386,23 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   }
 
   function renderPlacement(p: NonNullable<ReturnType<typeof placementModel>>): void {
+    // Décision attendue d'abord, puis qui décide et ses PC ; le coût vient du modèle (`placementModel`), jamais calculé ici.
     actionsPanel.append(
-      h('h3', { class: 'hud-subtitle', text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
+      h(
+        'div',
+        { class: 'hud-decision' },
+        h('div', { class: 'hud-decision-title', text: t('placement.decision') }),
+        h('div', { class: 'hud-decision-who', text: t('placement.player', { player: p.playerName, pc: p.commandPoints }) }),
+      ),
     );
+    const anyAvailable = p.rows.some((r) => r.available);
     for (const r of p.rows) {
       const unavailable = !r.available;
       actionsPanel.append(
         h(
           'button',
           {
-            class: `hud-btn${unavailable ? ' is-unavailable' : ''}${r.placed ? ' is-placed' : ''}`,
+            class: `hud-btn${unavailable ? ' is-unavailable is-explained' : ''}${r.placed ? ' is-placed' : ''}`,
             attrs: { type: 'button', 'data-fid': `place-${r.characterId}`, 'aria-disabled': unavailable ? 'true' : undefined, title: unavailable ? undefined : r.name },
             on: {
               click: () => {
@@ -399,7 +415,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
             'span',
             { class: 'hud-btn-label' },
             h('span', { text: r.placed ? `◉ ${r.name} · ${t('placement.placed')}` : t('placement.place', { name: r.name }) }),
-            h('kbd', { text: r.key }),
+            h('span', { class: 'hud-btn-meta' }, r.placed ? null : h('span', { class: 'hud-cost', text: t('status.pc', { n: p.cost }) }), h('kbd', { text: r.key })),
           ),
           unavailable ? h('span', { class: 'hud-btn-reason', text: r.reason }) : null,
         ),
@@ -410,7 +426,8 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       h(
         'button',
         {
-          class: `hud-btn hud-btn-primary${p.passAvailable ? '' : ' is-unavailable'}`,
+          // Passer devient l'action principale seulement quand aucun placement n'est possible.
+          class: `hud-btn${anyAvailable ? '' : ' hud-btn-primary'}${p.passAvailable ? '' : ' is-unavailable is-explained'}`,
           attrs: { type: 'button', 'data-fid': 'pass-overwatch', 'aria-disabled': p.passAvailable ? undefined : 'true', title: p.passAvailable ? t('placement.passHint') : undefined },
           on: {
             click: () => {
@@ -549,6 +566,7 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   });
 
   return {
+    phaseElement: phase.element,
     render,
     toast,
     closeMenu,

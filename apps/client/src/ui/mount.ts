@@ -12,6 +12,8 @@ import { t } from './i18n';
 export interface UiHandle {
   /** Espace occupé par les panneaux latéraux et le bandeau des phases en haut (px) : à déduire de la zone de cadrage de la caméra. */
   insets(): { left: number; right: number; top: number };
+  /** Enregistre un rappel appelé quand la place occupée par le HUD change (ex. journal replié/déplié) : recadrer la caméra. */
+  onLayoutChange(callback: () => void): void;
 }
 
 /**
@@ -33,11 +35,21 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
 
   const right = h('div', { class: 'hud-right' });
   const menu = createMenu(root);
-  right.append(h('div', { class: 'hud-topbar' }, h('span', { class: 'hud-brand', text: t('app.title') }), menu.opener));
   root.append(right);
 
   const log = createCombatLog(right);
+  let layoutChanged: () => void = () => {};
+  const syncLogLayout = (): void => {
+    root.classList.toggle('log-collapsed', right.querySelector('.hud-log')?.classList.contains('is-collapsed') ?? false);
+  };
+  log.onToggle(() => {
+    syncLogLayout();
+    layoutChanged();
+  });
   const hud = createHud(root, game);
+  // Barre supérieure unique : titre du jeu à gauche, bandeau des phases au centre, Menu à droite.
+  const brand = h('span', { class: 'hud-brand' }, h('span', { class: 'hud-brand-name', text: t('app.title').split(' ')[0] ?? '' }), h('span', { class: 'hud-brand-sub', text: t('app.title').split(' ').slice(1).join(' ') }));
+  root.append(h('header', { class: 'hud-top' }, brand, hud.phaseElement, h('div', { class: 'hud-top-actions' }, log.toggle, menu.opener)));
   const endScreen = createEndScreen(root);
 
   // Les dialogues attendent la fin des animations : on les masque dès qu'un lot d'événements arrive, puis on les
@@ -73,7 +85,8 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
   });
   watchIgnoredInput(game, dispatchCount, (message) => hud.toast(message, 'error'));
 
-  log.append(buildLogEntries(game.state.history, createLabeler(game.state)));
+  log.append(buildLogEntries(game.state.history, createLabeler(game.state)), true);
+  syncLogLayout();
   game.subscribe((events, state) => {
     log.append(buildLogEntries(events, createLabeler(state)));
     if (events.length > 0) deferDialogs();
@@ -93,6 +106,9 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
       const r = right.getBoundingClientRect();
       const p = root.querySelector('.hud-phase')?.getBoundingClientRect();
       return { left: Math.round(l?.right ?? 0), right: Math.round(window.innerWidth - r.left), top: Math.round(p ? p.bottom + 6 : 0) };
+    },
+    onLayoutChange: (callback) => {
+      layoutChanged = callback;
     },
   };
 }

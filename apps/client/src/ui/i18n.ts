@@ -4,11 +4,14 @@
  * Les messages de règle du moteur (`RuleError.message`, `explainCombat`) restent en français ;
  * `reasonText` propose une traduction par code de règle quand elle existe.
  */
+import { characterNameMessages } from '@tannhauser/content';
+
 export type Locale = 'fr' | 'en';
 export type Messages = Readonly<Record<string, string>>;
 export type Params = Readonly<Record<string, string | number>>;
 
 export const FR: Messages = {
+  ...characterNameMessages('fr'),
   'app.title': 'Tannhäuser Digital',
 
   // Statut
@@ -23,9 +26,6 @@ export const FR: Messages = {
   'status.stat.combat': 'Combat',
   'status.stat.physical': 'Physique',
   'status.stat.mental': 'Mental',
-  'status.stat.combat.short': 'C',
-  'status.stat.physical.short': 'P',
-  'status.stat.mental.short': 'M',
   'status.movementLeft': 'PM restants : {n}',
   'status.action.available': 'Action : disponible',
   'status.action.used': 'Action : utilisée',
@@ -108,6 +108,7 @@ export const FR: Messages = {
   // Actions
   'actions.title': 'Actions',
   'actions.roster': 'Personnages à activer',
+  'actions.switch': 'Changer de personnage',
   'actions.rosterEmpty': 'Aucun personnage à activer.',
   'action.SELECT': 'Activer',
   'action.MOVE': 'Se déplacer',
@@ -176,6 +177,7 @@ export const FR: Messages = {
 
   // Phase de placement de l'Overwatch
   'placement.banner': 'Phase Overwatch · {player}, à vous de décider : placer un personnage en Overwatch ({cost} PC) ou passer',
+  'placement.decision': 'Placer un personnage en Overwatch ou passer',
   'placement.player': '{player} décide · {pc} PC disponibles',
   'placement.place': 'Mettre en Overwatch · {name}',
   'placement.placed': 'En Overwatch',
@@ -195,6 +197,8 @@ export const FR: Messages = {
   'log.title': 'Journal de combat',
   'log.collapse': 'Replier le journal',
   'log.expand': 'Déplier le journal',
+  'log.unread': '{n} nouveau(x) événement(s)',
+  'log.button': 'Journal',
   'log.empty': 'Rien à signaler pour le moment.',
   'log.exchange': '{attacker} attaque {target} ({weapon}) : {result}',
   'log.exchange.hit': '{wounds} dégât(s)',
@@ -207,6 +211,7 @@ export const FR: Messages = {
   'log.event.INITIATIVE_ROLLED': 'Initiative : {winner} ({rolls}).',
   'log.event.INITIATIVE_CHANGED': "{winner} commence le tour.",
   'log.event.CHARACTER_ACTIVATION_STARTED': '{character} est activé.',
+  'log.event.CHARACTER_ACTIVATION_CANCELLED': "{character} n'est plus activé (changement de personnage).",
   'log.event.CHARACTER_MOVED': '{character} se déplace ({cost} PM) vers {node}.',
   'log.event.CHARACTER_ACTIVATION_ENDED': '{character} termine son activation.',
   'log.event.OVERWATCH_PLACED': '{character} se met en Overwatch.',
@@ -365,14 +370,6 @@ export const FR: Messages = {
   'room.cave': 'Cave',
   'faction.alpha.name': 'Alpha',
   'faction.beta.name': 'Bêta',
-  'char.alpha.hero.name': 'Eva Krämer',
-  'char.alpha.troop.name': 'Stosstruppen',
-  'char.alpha.troop2.name': 'Schocktruppen',
-  'char.beta.hero.name': 'John MacNeal',
-  'char.alpha.hero2.name': 'Karl « Ozo » Zermann',
-  'char.beta.hero2.name': 'Barry Daniel Brown',
-  'char.beta.troop.name': 'Commando Alpha',
-  'char.beta.troop2.name': 'Commando Delta',
   'weapon.unarmed.name': 'Mains nues',
   'weapon.melee.name': 'Corps à corps',
   'weapon.pistol.name': 'Pistolet',
@@ -448,6 +445,7 @@ export const FR: Messages = {
 };
 
 export const EN: Messages = {
+  ...characterNameMessages('en'),
   'app.title': 'Tannhäuser Digital',
   'status.turn': 'Turn {n}',
   'status.activePlayer': 'Playing: {player}',
@@ -460,9 +458,6 @@ export const EN: Messages = {
   'status.stat.combat': 'Combat',
   'status.stat.physical': 'Physical',
   'status.stat.mental': 'Mental',
-  'status.stat.combat.short': 'C',
-  'status.stat.physical.short': 'P',
-  'status.stat.mental.short': 'M',
   'status.movementLeft': 'Movement left: {n}',
   'status.action.available': 'Action: available',
   'status.action.used': 'Action: used',
@@ -543,6 +538,7 @@ export const EN: Messages = {
   'banner.notice.editor': 'Editor: {state} — click = pick / place, +/− health, J side, N reactivate, X leave',
   'actions.title': 'Actions',
   'actions.roster': 'Characters to activate',
+  'actions.switch': 'Switch character',
   'actions.rosterEmpty': 'No character left to activate.',
   'action.SELECT': 'Activate',
   'action.MOVE': 'Move',
@@ -602,6 +598,7 @@ export const EN: Messages = {
   'reaction.announced.closeDoor': '{character} wants to close door {door}',
   'reaction.optional': 'Optional: if you decline, Overwatch stays active but does not trigger again against this character during its activation.',
   'placement.banner': 'Overwatch phase · {player}, your decision: put one character on Overwatch ({cost} CP) or pass',
+  'placement.decision': 'Put a character on Overwatch, or pass',
   'placement.player': '{player} is deciding · {pc} CP available',
   'placement.place': 'Put on Overwatch · {name}',
   'placement.placed': 'On Overwatch',
@@ -627,6 +624,8 @@ export const EN: Messages = {
   'log.title': 'Combat log',
   'log.collapse': 'Collapse the log',
   'log.expand': 'Expand the log',
+  'log.unread': '{n} new event(s)',
+  'log.button': 'Log',
   'log.empty': 'Nothing to report yet.',
   'log.details': 'Roll details',
   'menu.button': 'Menu',
@@ -743,14 +742,6 @@ export const EN: Messages = {
   'room.cabinet': 'Small office',
   'room.escalier-cave': 'Cellar stairs',
   'room.cave': 'Cellar',
-  'char.alpha.hero.name': 'Eva Krämer',
-  'char.alpha.troop.name': 'Stosstruppen',
-  'char.alpha.troop2.name': 'Schocktruppen',
-  'char.beta.hero.name': 'John MacNeal',
-  'char.alpha.hero2.name': 'Karl “Ozo” Zermann',
-  'char.beta.hero2.name': 'Barry Daniel Brown',
-  'char.beta.troop.name': 'Commando Alpha',
-  'char.beta.troop2.name': 'Commando Delta',
   'weapon.unarmed.name': 'Unarmed',
   'weapon.melee.name': 'Melee',
   'weapon.pistol.name': 'Pistol',
