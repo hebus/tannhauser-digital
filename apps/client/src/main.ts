@@ -61,8 +61,10 @@ async function main(): Promise<void> {
   // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
   // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
   const debugBanner = new URLSearchParams(location.search).get('debugBanner');
-  // Le rendu (ici Pixi 2D) est choisi par sa fabrique : le client ne parle qu'au contrat `BoardRenderer`.
-  const renderer = createPixiRenderer({
+  // Le rendu est choisi par sa fabrique : le client ne parle qu'au contrat `BoardRenderer`. Pixi 2D par défaut ;
+  // `?view=3d` charge le rendu Three.js à la demande (le 2D n'embarque pas Three.js).
+  const createRenderer = new URLSearchParams(location.search).get('view') === '3d' ? (await import('@tannhauser/renderer-3d')).createThreeRenderer : createPixiRenderer;
+  const renderer = createRenderer({
     board: game.state.board,
     layout: game.layout,
     label,

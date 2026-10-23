@@ -7,7 +7,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['apps/**/*.ts', 'packages/renderer/**/*.ts'],
+    files: ['apps/**/*.ts', 'packages/renderer/**/*.ts', 'packages/renderer-3d/**/*.ts'],
     languageOptions: { globals: globals.browser },
   },
   {
@@ -17,6 +17,19 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         { patterns: [{ group: ['pixi.js', 'pixi.js/*', '@pixi/*', 'three', 'three/*'], message: 'Fichier commun aux rendus : aucun moteur graphique ici (voir contract.ts).' }] },
+      ],
+    },
+  },
+  {
+    // Le rendu 3D n'embarque pas Pixi : l'index de @tannhauser/renderer l'importe, on passe donc par ses modules purs (sous-chemins).
+    files: ['packages/renderer-3d/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: '@tannhauser/renderer', message: "Importer le module pur voulu (@tannhauser/renderer/src/…) : l'index tire Pixi." }],
+          patterns: [{ group: ['pixi.js', 'pixi.js/*', '@pixi/*'], message: 'Le rendu 3D ne dépend pas de Pixi.' }],
+        },
       ],
     },
   },

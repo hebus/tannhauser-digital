@@ -4,6 +4,7 @@
     { "path": "packages/core" },
     { "path": "packages/content" },
     { "path": "packages/renderer" },
+    { "path": "packages/renderer-3d" },
     { "path": "packages/ai" },
     { "path": "tools/board-generator" },
     { "path": "apps/client" }
