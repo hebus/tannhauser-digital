@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { BoardNode, BoardState } from '@tannhauser/core';
-import { buildColorMap, colorHex } from './palette';
+import { buildColorMap, colorHex, TERRAIN_COLORS } from './palette';
 import {
   corridorSegments,
   doorGeometry,
@@ -113,21 +113,21 @@ export class BoardView extends Container {
       for (const s of segs) g.moveTo(s.a.x, s.a.y).lineTo(s.b.x, s.b.y);
       g.stroke({ width: c.width + 10, color: 0x07080a, alpha: 0.9, cap: 'round', join: 'round' });
       for (const s of segs) g.moveTo(s.a.x, s.a.y).lineTo(s.b.x, s.b.y);
-      g.stroke({ width: c.width, color: 0x2e333c, cap: 'round', join: 'round' });
+      g.stroke({ width: c.width, color: TERRAIN_COLORS.corridor, cap: 'round', join: 'round' });
     }
     for (const r of layout.rooms) {
       if (r.polygon.length < 3) continue;
       const flat = flattenPoints(r.polygon);
-      g.poly(flat).fill(0x1f2329);
+      g.poly(flat).fill(TERRAIN_COLORS.room);
       const tint = parseHexColor(r.fill);
-      if (tint !== undefined) g.poly(flat).fill({ color: tint, alpha: 0.28 });
+      if (tint !== undefined) g.poly(flat).fill({ color: tint, alpha: TERRAIN_COLORS.roomTintAlpha });
     }
     // Murs tracés après tous les fonds : un couloir ne déborde jamais sur le mur d'une pièce.
     for (const r of layout.rooms) {
       if (r.polygon.length < 3) continue;
       const flat = flattenPoints(r.polygon);
       g.poly(flat, true).stroke({ width: 8, color: 0x0b0c0e, join: 'round', cap: 'round' });
-      g.poly(flat, true).stroke({ width: 4, color: 0x8a8f9a, join: 'round', cap: 'round' });
+      g.poly(flat, true).stroke({ width: 4, color: TERRAIN_COLORS.wall, join: 'round', cap: 'round' });
     }
     this.terrainLayer.addChild(g);
 

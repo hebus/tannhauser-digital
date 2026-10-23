@@ -57,3 +57,17 @@ export function playerShapeGlyph(index: number): string {
 export function cssColor(hex: number): string {
   return `#${hex.toString(16).padStart(6, '0')}`;
 }
+
+/** Couleurs des surcouches d'interaction, communes aux rendus 2D et 3D (un seul jeu de couleurs, quel que soit le rendu). */
+export const OVERLAY_COLORS = {
+  path: 0xffe066,
+  target: 0xff4d4f,
+  losVisible: 0x2fbf71,
+  losHidden: 0xff6b6b,
+} as const;
+
+/** Anneau de surbrillance des cases : déplacement possible (blanc), ou case visable par un lancer (orange). */
+export const HIGHLIGHT_COLORS = { move: 0xffffff, throw: 0xffb454 } as const;
+
+/** Teintes du terrain : sol d'une pièce (la teinte de la pièce n'en colore que `ROOM_TINT_ALPHA`), sol d'un couloir, murs. */
+export const TERRAIN_COLORS = { room: 0x1f2329, roomTintAlpha: 0.28, corridor: 0x2e333c, wall: 0x8a8f9a } as const;

@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist-types", "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["vite/client"] },
   "include": ["src"],
-  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/content" }, { "path": "../../packages/renderer" }]
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/content" }, { "path": "../../packages/renderer" }, { "path": "../../packages/renderer-3d" }]
 }
