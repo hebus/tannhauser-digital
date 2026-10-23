@@ -5,6 +5,7 @@ import { Camera } from './camera';
 import { CharacterLayer } from './character-layer';
 import type { BoardRenderer, BoardRendererFactory, BoardRendererOptions, HighlightTone } from './contract';
 import { FlagLayer } from './flag-layer';
+import { HIGHLIGHT_COLORS } from './palette';
 import { HighlightLayer } from './highlight-layer';
 import { OverlayLayer } from './overlay-layer';
 import { SmokeLayer } from './smoke-layer';
@@ -13,8 +14,6 @@ import { PixiScreenEffects, PixiWorldEffects } from './presentation/pixi-effects
 import { textScaleForZoom, type PathPreview } from './presentation/path-geometry';
 import { Presentation } from './presentation/presentation';
 
-/** Couleur de la surbrillance d'une case visable par un lancer (grenade, fumigène). */
-const THROW_COLOR = 0xffb454;
 /** Durée du recentrage de la caméra sur une case (ms). */
 const FOCUS_DURATION = 450;
 /** Un clic doit rester sous ce déplacement cumulé (px) : au-delà, c'est un glissement de caméra. */
@@ -124,8 +123,7 @@ export class PixiBoardRenderer implements BoardRenderer {
   }
 
   showReachable(nodeIds: Iterable<string>, tone: HighlightTone = 'move'): void {
-    if (tone === 'throw') this.highlight.show(nodeIds, THROW_COLOR);
-    else this.highlight.show(nodeIds);
+    this.highlight.show(nodeIds, HIGHLIGHT_COLORS[tone]);
   }
 
   showTargets(nodeIds: Iterable<string>): void {

@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { BoardState, GameState } from '@tannhauser/core';
 import type { BoardRenderer, BoardRendererFactory, BoardRendererOptions, HighlightTone } from '@tannhauser/renderer/src/contract';
 import { AnimationRunner } from '@tannhauser/renderer/src/presentation/animation-queue';
+import { OVERLAY_COLORS } from '@tannhauser/renderer/src/palette';
 import { easeInOutQuad } from '@tannhauser/renderer/src/presentation/easing';
 import type { PathPreview } from '@tannhauser/renderer/src/presentation/path-geometry';
 import { Presentation } from '@tannhauser/renderer/src/presentation/presentation';
@@ -18,7 +19,6 @@ import { ThreeWorldEffects } from './world-effects';
 const CLICK_SLOP = 4;
 /** Durée du recentrage de la caméra sur une case (ms). */
 const FOCUS_DURATION = 450;
-const PATH_COLOR = 0xffd43b;
 const BACKGROUND = 0x14161a;
 /** Direction (du point visé vers la caméra) du cadrage : vue de dessus inclinée, lisible pour un jeu tactique. */
 const VIEW_DIRECTION = new THREE.Vector3(0, 0.82, 0.6).normalize();
@@ -168,7 +168,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
   showPath(preview: PathPreview | null): void {
     clearGroup(this.pathGroup);
     if (!preview || preview.points.length < 2) return;
-    const material = new THREE.MeshBasicMaterial({ color: PATH_COLOR });
+    const material = new THREE.MeshBasicMaterial({ color: OVERLAY_COLORS.path });
     const y = 6;
     const pts = preview.points;
     for (let i = 0; i + 1 < pts.length; i++) {
@@ -190,7 +190,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
     const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(9), material);
     diamond.position.set(end.x, y + 6, end.y);
     this.pathGroup.add(diamond);
-    const label = createTextSprite(`${preview.cost} PM`, { worldHeight: 12, color: '#111111', stroke: '#ffd43b' });
+    const label = createTextSprite(`${preview.cost} PM`, { worldHeight: 12, color: '#111111', stroke: '#ffe066' });
     label.position.set(end.x, y + 30, end.y);
     this.pathGroup.add(label);
   }

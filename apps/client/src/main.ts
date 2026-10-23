@@ -1,4 +1,4 @@
-import { ReducedMotion, buildPathPreview, createPixiRenderer, type BannerKind, type BannerPlan, type BoardRenderer } from '@tannhauser/renderer';
+import { ReducedMotion, buildPathPreview, createPixiRenderer, type BannerKind, type BannerPlan, type BoardRenderer, type BoardRendererFactory, type BoardRendererOptions } from '@tannhauser/renderer';
 import { activationHasActed, explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
@@ -9,8 +9,9 @@ import { createLabeler } from './ui/labels';
 import { startFromSetup } from './ui/boot';
 import { detectLocale, hasKey, setLocale, t } from './ui/i18n';
 import { enforceLandscape } from './ui/landscape';
-import { mountUi } from './ui/mount';
+import { mountUi, type ViewKind } from './ui/mount';
 import { cancelTargeting, getTargeting, isTargetable, subscribeTargeting } from './ui/targeting';
+import { browserStorage, initialView, rememberView } from './ui/view-preference';
 
 function showError(message: string): void {
   const el = document.getElementById('error');
@@ -49,9 +50,15 @@ async function main(): Promise<void> {
     const picks = [nodes[Math.floor(nodes.length / 3)], nodes[Math.floor(nodes.length / 2)]].flatMap((n) => (n ? [n] : []));
     game.replaceState({ ...game.state, effects: [...game.state.effects, ...picks.map((n, i) => ({ id: `debug-smoke-${i}`, type: 'SMOKE' as const, origin: n.id, remainingTurns: 2 - i }))] });
   }
+  // Vue du plateau : `?view=3d|2d`, sinon le dernier choix mémorisé, sinon 2D. Le 3D n'est chargé qu'à la demande.
+  let view: ViewKind = initialView(location.search, browserStorage());
+  const loadFactory = async (kind: ViewKind): Promise<BoardRendererFactory> =>
+    kind === '3d' ? (await import('@tannhauser/renderer-3d')).createThreeRenderer : createPixiRenderer;
   let rendererRef: BoardRenderer | null = null;
   const ui = mountUi(game, {
     whenIdle: (callback) => (rendererRef ? rendererRef.presentation.onIdle(callback) : callback()),
+    view,
+    onToggleView: () => void switchView(view === '2d' ? '3d' : '2d'),
   });
   // Libellés de la mise en page (noms de pièces) : traduction si la clé existe, sinon la clé telle quelle.
   const label = (key: string): string => (hasKey(key) ? t(key) : key);
@@ -61,10 +68,9 @@ async function main(): Promise<void> {
   // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
   // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
   const debugBanner = new URLSearchParams(location.search).get('debugBanner');
-  // Le rendu est choisi par sa fabrique : le client ne parle qu'au contrat `BoardRenderer`. Pixi 2D par défaut ;
-  // `?view=3d` charge le rendu Three.js à la demande (le 2D n'embarque pas Three.js).
-  const createRenderer = new URLSearchParams(location.search).get('view') === '3d' ? (await import('@tannhauser/renderer-3d')).createThreeRenderer : createPixiRenderer;
-  const renderer = createRenderer({
+  // Le rendu est choisi par sa fabrique : le client ne parle qu'au contrat `BoardRenderer`. Changer de vue = détruire
+  // le rendu et en construire un autre avec les MÊMES options (voir `switchView`).
+  const rendererOptions: BoardRendererOptions = {
     board: game.state.board,
     layout: game.layout,
     label,
@@ -83,8 +89,8 @@ async function main(): Promise<void> {
       },
       onInteract: () => renderer.presentation.skip(),
     },
-  });
-  const presentation = renderer.presentation;
+  };
+  let renderer = (await loadFactory(view))(rendererOptions);
   await renderer.init(host);
   // Les styles du HUD (frise des phases) respectent aussi la bascule « mouvement réduit » (touche R).
   const syncReducedMotionAttr = (reduced: boolean): void => {
@@ -172,7 +178,7 @@ async function main(): Promise<void> {
   let shown: GameState = game.state;
   const unsubscribeGame = game.subscribe((events, state) => {
     // Les animations sont lancées avant la mise à jour des pions (positions de départ) ; elles ne touchent pas à l'état.
-    presentation.play(events, shown, state);
+    renderer.presentation.play(events, shown, state);
     const before = shown;
     shown = state;
     // Début d'une activation à venir : la caméra va vers le premier personnage activable de l'équipe qui joue,
@@ -182,7 +188,7 @@ async function main(): Promise<void> {
       state.turn.activeCharacterId === undefined &&
       (before.phase !== 'ACTIVATION' || before.turn.activePlayerId !== state.turn.activePlayerId || before.turn.activeCharacterId !== undefined);
     if (awaitingSelection) {
-      presentation.onIdle(() => {
+      renderer.presentation.onIdle(() => {
         const cur = game.state;
         if (cur.phase !== 'ACTIVATION' || cur.turn.activeCharacterId !== undefined) return;
         const next = cur.characters.find((c) => c.playerId === cur.turn.activePlayerId && c.alive && !c.activated && !c.overwatch);
@@ -202,6 +208,45 @@ async function main(): Promise<void> {
     if (!res.accepted) log(`✖ ${res.errors.map((e) => e.message).join(' ')}`);
     return res;
   };
+  /**
+   * Bascule 2D / 3D à chaud : le nouveau rendu est construit et initialisé AVANT de détruire l'ancien (en cas d'échec,
+   * ex. WebGL indisponible, on reste sur la vue courante), puis tout est ré-affiché depuis l'état du moteur.
+   */
+  let switching = false;
+  async function switchView(next: ViewKind): Promise<void> {
+    if (switching || next === view) return;
+    switching = true;
+    let fresh: BoardRenderer | null = null;
+    try {
+      fresh = (await loadFactory(next))(rendererOptions);
+      await fresh.init(host!);
+    } catch (err) {
+      console.error(err);
+      try {
+        fresh?.destroy();
+      } catch {
+        // le rendu n'avait pas fini de s'initialiser : rien de plus à libérer
+      }
+      renderer.presentation.notify(t('banner.notice.viewFailed', { view: next.toUpperCase() }));
+      switching = false;
+      return;
+    }
+    renderer.presentation.skip();
+    const old = renderer;
+    renderer = fresh;
+    rendererRef = fresh;
+    view = next;
+    old.destroy();
+    hoverNode = null;
+    ui.setView(next);
+    rememberView(next, browserStorage());
+    if (showIds) renderer.setShowNodeIds(true);
+    refresh();
+    renderer.fit();
+    renderer.presentation.notify(t('banner.notice.view', { view: next.toUpperCase() }));
+    switching = false;
+  }
+
   refresh();
   renderer.fit();
   if (debugBanner !== null) {
@@ -210,7 +255,7 @@ async function main(): Promise<void> {
     const s = game.state;
     const [first, second] = s.characters;
     const plan: BannerPlan = { kind, turn: s.turn.number, playerId: s.turn.activePlayerId, ...(first && second ? { overwatcherId: first.id, targetId: second.id } : {}) };
-    presentation.announce(plan, s.players);
+    renderer.presentation.announce(plan, s.players);
   }
 
   // Entrées → commandes. Aucune règle ici : tout passe par la façade et le moteur.
@@ -252,7 +297,7 @@ async function main(): Promise<void> {
       if (isTargetable(nodeId)) {
         cancelTargeting();
         send({ type: 'THROW_GRENADE', playerId: player, characterId: aiming.characterId, equipmentId: aiming.equipmentId, nodeId });
-      } else presentation.notify(t('actions.grenade.invalid'));
+      } else renderer.presentation.notify(t('actions.grenade.invalid'));
       return;
     }
     if (!player || s.phase === 'FINISHED' || s.turn.reaction) return;
@@ -300,7 +345,7 @@ async function main(): Promise<void> {
     const key = e.key.toLowerCase();
     if (key === ' ') {
       e.preventDefault();
-      presentation.skip();
+      renderer.presentation.skip();
       return;
     }
     if (key === 'x') {
@@ -308,7 +353,7 @@ async function main(): Promise<void> {
       editorPick = null;
       refresh();
       refreshEditor();
-      presentation.notify(t('banner.notice.editor', { state: t(editor ? 'banner.notice.on' : 'banner.notice.off') }));
+      renderer.presentation.notify(t('banner.notice.editor', { state: t(editor ? 'banner.notice.on' : 'banner.notice.off') }));
       return;
     }
     if (editor && onEditorKey(key)) {
@@ -318,18 +363,22 @@ async function main(): Promise<void> {
     // Débogage de l'explosion : avec `?debugExplosion=1`, K fait exploser la case survolée (à défaut, celle du personnage actif).
     if (key === 'k' && new URLSearchParams(location.search).get('debugExplosion') !== null) {
       const nodeId = hoverNode ?? activeCharacter()?.nodeId ?? Object.keys(game.state.board.nodes)[0];
-      if (nodeId) presentation.explode(nodeId, game.state);
+      if (nodeId) renderer.presentation.explode(nodeId, game.state);
+      return;
+    }
+    if (key === 'w') {
+      void switchView(view === '2d' ? '3d' : '2d');
       return;
     }
     if (key === 'l') {
       showLos = !showLos;
       refresh();
-      presentation.notify(t('banner.notice.los', { state: t(showLos ? 'banner.notice.shown' : 'banner.notice.hidden') }));
+      renderer.presentation.notify(t('banner.notice.los', { state: t(showLos ? 'banner.notice.shown' : 'banner.notice.hidden') }));
       return;
     }
     if (key === 'r') {
       const reduced = reducedMotion.toggle();
-      presentation.notify(t('banner.notice.reducedMotion', { state: t(reduced ? 'banner.notice.on' : 'banner.notice.off') }));
+      renderer.presentation.notify(t('banner.notice.reducedMotion', { state: t(reduced ? 'banner.notice.on' : 'banner.notice.off') }));
       return;
     }
     const player = activePlayer();
@@ -361,7 +410,7 @@ async function main(): Promise<void> {
   }, { signal });
 
   // Joueurs pilotés par l'IA : elle joue quand les animations sont terminées ; les erreurs vont au journal.
-  const stopAi = startAiDriver(game, { whenIdle: (cb) => presentation.onIdle(cb), onError: (m) => log(`✖ ${m}`) });
+  const stopAi = startAiDriver(game, { whenIdle: (cb) => renderer.presentation.onIdle(cb), onError: (m) => log(`✖ ${m}`) });
 
   const cleanup = (): void => {
     stopAi();

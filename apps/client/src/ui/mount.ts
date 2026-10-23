@@ -14,7 +14,12 @@ export interface UiHandle {
   insets(): { left: number; right: number; top: number };
   /** Enregistre un rappel appelé quand la place occupée par le HUD change (ex. journal replié/déplié) : recadrer la caméra. */
   onLayoutChange(callback: () => void): void;
+  /** Indique la vue affichée (le bouton propose l'autre). */
+  setView(view: ViewKind): void;
 }
+
+/** Vue du plateau : rendu 2D ou 3D. */
+export type ViewKind = '2d' | '3d';
 
 /**
  * Monte tout le HUD HTML (statut, actions, réaction, journal, menu, fin de partie) sur une façade déjà créée.
@@ -26,6 +31,9 @@ export interface MountOptions {
    * Les dialogues (réaction d'Overwatch, fin de partie) attendent ce signal pour s'afficher.
    */
   whenIdle?(callback: () => void): void;
+  /** Vue affichée au démarrage ; avec `onToggleView`, le bouton de la barre du haut permet de basculer. */
+  view?: ViewKind;
+  onToggleView?(): void;
 }
 
 export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle {
@@ -49,7 +57,17 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
   const hud = createHud(root, game);
   // Barre supérieure unique : titre du jeu à gauche, bandeau des phases au centre, Menu à droite.
   const brand = h('span', { class: 'hud-brand' }, h('span', { class: 'hud-brand-name', text: t('app.title').split(' ')[0] ?? '' }), h('span', { class: 'hud-brand-sub', text: t('app.title').split(' ').slice(1).join(' ') }));
-  root.append(h('header', { class: 'hud-top' }, brand, hud.phaseElement, h('div', { class: 'hud-top-actions' }, log.toggle, menu.opener)));
+  // Bascule 2D / 3D : le bouton annonce la vue où l'on va (pas celle où l'on est).
+  const viewButton = h('button', { class: 'hud-btn hud-menu-button view-toggle', attrs: { type: 'button' } });
+  const setView = (view: ViewKind): void => {
+    const target = view === '2d' ? '3d' : '2d';
+    viewButton.textContent = `◫ ${t(`view.button.to${target}`)}`;
+    viewButton.title = t(`view.title.to${target}`);
+    viewButton.setAttribute('aria-label', t(`view.title.to${target}`));
+  };
+  setView(options.view ?? '2d');
+  viewButton.addEventListener('click', () => options.onToggleView?.());
+  root.append(h('header', { class: 'hud-top' }, brand, hud.phaseElement, h('div', { class: 'hud-top-actions' }, ...(options.onToggleView ? [viewButton] : []), log.toggle, menu.opener)));
   const endScreen = createEndScreen(root);
 
   // Les dialogues attendent la fin des animations : on les masque dès qu'un lot d'événements arrive, puis on les
@@ -110,5 +128,6 @@ export function mountUi(game: GameFacade, options: MountOptions = {}): UiHandle 
     onLayoutChange: (callback) => {
       layoutChanged = callback;
     },
+    setView,
   };
 }

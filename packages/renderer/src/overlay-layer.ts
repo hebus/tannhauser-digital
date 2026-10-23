@@ -1,14 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { BoardState, NodeId } from '@tannhauser/core';
 import { NODE_RADIUS } from './board-view';
+import { OVERLAY_COLORS } from './palette';
 import type { PathPreview } from './presentation/path-geometry';
-
-export const OVERLAY_COLORS = {
-  path: 0xffe066,
-  target: 0xff4d4f,
-  losVisible: 0x2fbf71,
-  losHidden: 0xff6b6b,
-} as const;
 
 /**
  * Aperçus d'interaction (tracé de chemin, cibles d'attaque, ligne de vue). Lecture seule : les données

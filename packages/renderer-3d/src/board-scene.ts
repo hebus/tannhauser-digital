@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import type { BoardState } from '@tannhauser/core';
 import { doorGeometry, layoutBounds, parseHexColor, polygonCentroid, type BoardLayout, type Box } from '@tannhauser/renderer/src/board-layout';
 import type { HighlightTone } from '@tannhauser/renderer/src/contract';
-import { buildColorMap } from '@tannhauser/renderer/src/palette';
-import { corridorPolygons, passageWidth, planWalls, type Polygon, type WallPlan } from './wall-geometry';
+import { buildColorMap, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { corridorPolygons, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
 import { createTextPlane, createTextSprite, disposeTree } from './three-util';
 
 /** Dimensions en unités plateau (les nœuds sont espacés d'environ 100). */
@@ -24,11 +24,20 @@ const OCCLUDER_RADIUS = 36;
 /** Marge autour du plateau pour le cadrage de la caméra. */
 const BOUNDS_MARGIN = 40;
 
-const TONE_COLORS: Record<HighlightTone, number> = { move: 0xffd43b, throw: 0xffb454 };
-const TARGET_COLOR = 0xff4d4f;
-const LOS_COLOR = 0xffffff;
+/** Couleurs reprises du rendu 2D (`BoardView`) : chemins, flèches, portails, portes. */
+const EDGE_UNDERLAY = 0x0b0c0e;
+const EDGE_LINE = 0xb4b7c2;
+const PORTAL_COLOR = 0xc084fc;
+const DOOR_CLOSED = 0xd9902f;
+const DOOR_CLOSED_REINFORCED = 0x9a5b12;
+const DOOR_OPEN = 0x7bd88f;
+const DOOR_POST = 0xe8c47c;
+const BLOCKED_COLOR = 0xff4d4f;
+const NODE_OUTLINE = 0x1c1f24;
 
 const flat = (color: number) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 1 });
+const basic = (color: number, opacity = 1) =>
+  new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, side: THREE.DoubleSide, depthWrite: opacity >= 1 });
 
 export interface BoardScene {
   readonly group: THREE.Group;
@@ -40,7 +49,7 @@ export interface BoardScene {
   setReachable(nodeIds: Iterable<string>, tone: HighlightTone): void;
   /** Cases ciblées : anneau rouge et repères. */
   setTargets(nodeIds: Iterable<string>): void;
-  /** Cases vues depuis `origin` ; `null` = masquer. */
+  /** Ligne de vue depuis `origin` : cases vues (vert) et cachées (rouge, croix) ; `null` = masquer. */
   setLineOfSight(origin: string | null, visible: ReadonlySet<string> | null): void;
   setShowIds(show: boolean): void;
   /** Décale une case (secousse d'explosion) ; `(0, 0)` la remet en place. */
@@ -112,11 +121,43 @@ function extrude(group: THREE.Group, polygons: readonly Polygon[], depth: number
   }
 }
 
+interface Segment {
+  readonly a: Pt;
+  readonly b: Pt;
+}
+
+/** Rubans plats (un quadrilatère par segment) fusionnés en UNE géométrie : des centaines d'arêtes pour un seul appel de dessin. */
+function ribbons(segments: readonly Segment[], width: number, y: number): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const indices: number[] = [];
+  segments.forEach(({ a, b }, i) => {
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = (-(b.y - a.y) / len) * (width / 2);
+    const nz = ((b.x - a.x) / len) * (width / 2);
+    positions.push(a.x + nx, y, a.y + nz, b.x + nx, y, b.y + nz, b.x - nx, y, b.y - nz, a.x - nx, y, a.y - nz);
+    const o = i * 4;
+    indices.push(o, o + 1, o + 2, o, o + 2, o + 3);
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}
+
+/** Triangles plats fusionnés (flèches de sens unique). */
+function triangles(tris: readonly (readonly [Pt, Pt, Pt])[], y: number): THREE.BufferGeometry {
+  const positions = tris.flatMap((t) => t.flatMap((p) => [p.x, y, p.y]));
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  return geometry;
+}
+
 /** Plateau → scène : le plan du plateau (x, y) devient le sol (x, z) ; le dessus du sol est à y = 0. */
 export function buildBoardScene(board: BoardState, layout: BoardLayout | undefined, label: (key: string) => string): BoardScene {
   const group = new THREE.Group();
   const tiles = new Map<string, THREE.Group>();
   const pickables: THREE.Mesh[] = [];
+  const R = TILE_RADIUS;
 
   const box = (length: number, height: number, depth: number, x: number, y: number, z: number, angle: number, material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(length, height, depth), material);
@@ -132,7 +173,8 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     radius: { value: OCCLUDER_RADIUS },
   };
 
-  // Murs : bande autour de l'union des pièces et couloirs ; ouvertures là où une arête du graphe sort de l'empreinte.
+  // Terrain : sols sombres à peine teintés (comme le 2D, pour que les couleurs des cases — celles de la ligne de vue —
+  // restent le seul repère coloré), murs en union des pièces et couloirs, ouvertures là où une arête sort de l'empreinte.
   let plan: WallPlan | null = null;
   if (layout) {
     const edges = board.edges.flatMap((e) => {
@@ -148,8 +190,10 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     );
 
     for (const room of layout.rooms) {
-      const base = parseHexColor(room.fill) ?? 0x5a6070;
-      extrude(group, [{ outer: room.polygon.map((p) => ({ x: p.x, y: p.y })), holes: [] }], FLOOR_THICKNESS, 0, flat(new THREE.Color(base).multiplyScalar(0.6).getHex()));
+      const tint = parseHexColor(room.fill);
+      const floor = new THREE.Color(TERRAIN_COLORS.room);
+      if (tint !== undefined) floor.lerp(new THREE.Color(tint), TERRAIN_COLORS.roomTintAlpha);
+      extrude(group, [{ outer: room.polygon.map((p) => ({ x: p.x, y: p.y })), holes: [] }], FLOOR_THICKNESS, 0, flat(floor.getHex()));
       if (room.nameKey) {
         const c = polygonCentroid(room.polygon);
         const name = createTextPlane(label(room.nameKey), { worldHeight: 16, opacity: 0.5 });
@@ -158,101 +202,172 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       }
     }
     // Un peu plus bas que les pièces, pour qu'aucun sol ne scintille (z-fighting) là où ils se recouvrent.
-    const corridorMaterial = flat(0x4a4f5c);
+    const corridorMaterial = flat(TERRAIN_COLORS.corridor);
     for (const corridor of layout.corridors) extrude(group, corridorPolygons(corridor, CORRIDOR_CAP), FLOOR_THICKNESS, -1.5, corridorMaterial);
-    extrude(group, plan.walls, WALL_HEIGHT + FLOOR_THICKNESS, WALL_HEIGHT, occludable(flat(0x9aa0ad), occluders));
+    extrude(group, plan.walls, WALL_HEIGHT + FLOOR_THICKNESS, WALL_HEIGHT, occludable(flat(TERRAIN_COLORS.wall), occluders));
   } else {
     const nodes = Object.values(board.nodes);
     const w = Math.max(...nodes.map((n) => n.x)) + 100;
     const h = Math.max(...nodes.map((n) => n.y)) + 100;
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(w, FLOOR_THICKNESS, h), flat(0x3a3f4c));
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(w, FLOOR_THICKNESS, h), flat(TERRAIN_COLORS.room));
     floor.position.set(w / 2 - 50, -FLOOR_THICKNESS / 2, h / 2 - 50);
     group.add(floor);
   }
 
-  // Tuiles de nœuds : disque en camembert, un secteur égal par couleur de ligne de vue (comme le rendu 2D) ; teintes de
-  // `buildColorMap`, distinctes par id puisque la ligne de vue repose sur l'identité des couleurs. Infranchissable = bloc sombre.
+  // Chemins : les arêtes du graphe (là où l'on peut se déplacer), un trait clair sur une ombre, comme le 2D.
+  const edgeSegments: Segment[] = [];
+  const arrows: [Pt, Pt, Pt][] = [];
+  for (const e of board.edges) {
+    const a = board.nodes[e.from];
+    const b = board.nodes[e.to];
+    if (!a || !b) continue;
+    edgeSegments.push({ a, b });
+    if (e.oneWay) {
+      // Flèche de sens unique : pointe vers la case d'arrivée, juste avant son bord.
+      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const ux = (b.x - a.x) / len;
+      const uy = (b.y - a.y) / len;
+      const tip = { x: b.x - ux * (R + 4), y: b.y - uy * (R + 4) };
+      const back = { x: tip.x - ux * 18, y: tip.y - uy * 18 };
+      arrows.push([tip, { x: back.x - uy * 10, y: back.y + ux * 10 }, { x: back.x + uy * 10, y: back.y - ux * 10 }]);
+    }
+  }
+  group.add(new THREE.Mesh(ribbons(edgeSegments, 7, 0.5), basic(EDGE_UNDERLAY, 0.6)));
+  group.add(new THREE.Mesh(ribbons(edgeSegments, 3.4, 0.9), basic(EDGE_LINE, 0.95)));
+  if (arrows.length > 0) group.add(new THREE.Mesh(triangles(arrows, 1.2), basic(0xffffff)));
+
+  // Portails (portes secrètes) : trait pointillé violet entre deux cases.
+  const dashes: Segment[] = [];
+  for (const p of board.portals) {
+    const a = board.nodes[p.from];
+    const b = board.nodes[p.to];
+    if (!a || !b) continue;
+    const steps = 24;
+    for (let i = 0; i < steps; i += 2) {
+      const t0 = i / steps;
+      const t1 = (i + 1) / steps;
+      dashes.push({ a: { x: a.x + (b.x - a.x) * t0, y: a.y + (b.y - a.y) * t0 }, b: { x: a.x + (b.x - a.x) * t1, y: a.y + (b.y - a.y) * t1 } });
+    }
+  }
+  if (dashes.length > 0) group.add(new THREE.Mesh(ribbons(dashes, 4.5, 1.4), basic(PORTAL_COLOR)));
+
+  // Tuiles de nœuds : disque en camembert, un secteur égal par couleur de ligne de vue, dans le même ordre que le 2D
+  // (premier secteur en haut, puis dans le sens des aiguilles d'une montre) ; teintes de `buildColorMap`, distinctes par id
+  // puisque la ligne de vue repose sur l'identité des couleurs.
   const colorMap = buildColorMap(Object.values(board.nodes).flatMap((n) => n.colors));
+  const outlineGeometry = new THREE.CylinderGeometry(R + 2, R + 2, TILE_HEIGHT * 0.6, 24);
+  const entryGeometry = new THREE.RingGeometry(R + 4, R + 6.5, 32).rotateX(-Math.PI / 2);
+  const entryMaterial = basic(0xffffff, 0.9);
+  const crossGeometry = new THREE.BoxGeometry(R * 1.1, 1.6, 4.5);
+  const crossMaterial = basic(BLOCKED_COLOR);
   for (const node of Object.values(board.nodes)) {
     const tile = new THREE.Group();
     tile.position.set(node.x, 0, node.y);
     const passable = node.properties.passable;
-    const colors = passable && node.colors.length > 0 ? node.colors : [null];
+    const outline = new THREE.Mesh(outlineGeometry, new THREE.MeshBasicMaterial({ color: passable ? NODE_OUTLINE : BLOCKED_COLOR }));
+    outline.position.y = TILE_HEIGHT * 0.3;
+    tile.add(outline);
+    const colors = node.colors.length > 0 ? node.colors : [null];
     const sector = (Math.PI * 2) / colors.length;
     colors.forEach((c, i) => {
-      const hex = c === null ? 0x15161a : (colorMap.get(c) ?? 0x888888);
-      const geometry = new THREE.CylinderGeometry(TILE_RADIUS, TILE_RADIUS, TILE_HEIGHT, Math.max(3, Math.ceil(24 / colors.length)), 1, false, i * sector, sector);
-      const mesh = new THREE.Mesh(geometry, flat(hex));
-      mesh.position.y = TILE_HEIGHT / 2;
+      const hex = c === null ? 0x888888 : (colorMap.get(c) ?? 0x888888);
+      // Secteur i : du haut vers la droite en sens horaire, comme `BoardView` (Three mesure l'angle depuis +z).
+      const geometry = new THREE.CylinderGeometry(R, R, TILE_HEIGHT, Math.max(3, Math.ceil(24 / colors.length)), 1, false, Math.PI - (i + 1) * sector, sector);
+      // Sans éclairage : la couleur d'une case décide de la ligne de vue, elle doit s'afficher exacte, ni ombrée ni éclaircie.
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: hex }));
+      mesh.position.y = TILE_HEIGHT / 2 + 0.2;
       mesh.userData.nodeId = node.id;
       tile.add(mesh);
       pickables.push(mesh);
     });
     if (!passable) {
-      const block = new THREE.Mesh(new THREE.BoxGeometry(34, 26, 34), flat(0x2b2d34));
-      block.position.y = 13;
-      tile.add(block);
-    } else if (node.properties.kind !== 'NORMAL') {
-      const marker = new THREE.Mesh(new THREE.OctahedronGeometry(8), flat(node.properties.kind === 'OBJECTIVE' ? 0xf5c518 : 0xffffff));
-      marker.position.y = 14;
-      tile.add(marker);
+      // Case impraticable : croix rouge à plat, comme le 2D.
+      for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+        const bar = new THREE.Mesh(crossGeometry, crossMaterial);
+        bar.position.y = TILE_HEIGHT + 0.9;
+        bar.rotation.y = angle;
+        tile.add(bar);
+      }
+    }
+    if (node.properties.kind === 'ENTRY_POINT') {
+      const ring = new THREE.Mesh(entryGeometry, entryMaterial);
+      ring.position.y = TILE_HEIGHT + 0.4;
+      tile.add(ring);
+    }
+    if (node.properties.movementCostModifier > 0) {
+      const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { worldHeight: 11 });
+      badge.position.set(R * 0.75, 12, -R * 0.75);
+      tile.add(badge);
     }
     group.add(tile);
     tiles.set(node.id, tile);
   }
 
-  // Portes : dalle perpendiculaire à l'arête ; fermée = debout, ouverte = couchée au sol.
+  // Portes, orientées sur leur arête : fermée = vantail debout (ambre, plus sombre si renforcée) ; ouverte = vantail vert
+  // couché le long du passage, avec ses deux montants.
   for (const edge of board.edges) {
     if (!edge.doorId) continue;
     const door = board.doors[edge.doorId];
     const a = board.nodes[edge.from];
     const b = board.nodes[edge.to];
     if (!door || !a || !b) continue;
-    const g = doorGeometry(a, b, OPENING_WIDTH);
+    const reinforced = door.type === 'REINFORCED';
+    const first = doorGeometry(a, b, OPENING_WIDTH);
     // Une porte bouche exactement le passage où elle se trouve (mesuré dans l'empreinte), à défaut une largeur par défaut.
-    const measured = plan ? passageWidth(plan.footprint, { x: g.x, y: g.y }, g.barAngle, 70) : 0;
+    const measured = plan ? passageWidth(plan.footprint, { x: first.x, y: first.y }, first.barAngle, 70) : 0;
     const width = measured > 20 ? measured : OPENING_WIDTH;
-    const material = occludable(flat(door.type === 'REINFORCED' ? 0x8892a0 : 0x8b5a2b), occluders);
-    if (door.state === 'CLOSED') box(width, DOOR_HEIGHT, DOOR_THICKNESS, g.x, DOOR_HEIGHT / 2, g.y, g.barAngle, material);
-    else box(width, 3, DOOR_THICKNESS, g.x, 1.5, g.y, g.barAngle, material);
+    const g = doorGeometry(a, b, width);
+    if (door.state === 'CLOSED') {
+      box(width, DOOR_HEIGHT, reinforced ? DOOR_THICKNESS + 3 : DOOR_THICKNESS, g.x, DOOR_HEIGHT / 2, g.y, g.barAngle, occludable(flat(reinforced ? DOOR_CLOSED_REINFORCED : DOOR_CLOSED), occluders));
+    } else {
+      const leaf = width * 0.82;
+      const mid = { x: g.p1.x + Math.cos(g.edgeAngle) * (leaf / 2), y: g.p1.y + Math.sin(g.edgeAngle) * (leaf / 2) };
+      box(leaf, 3, reinforced ? 7 : 5, mid.x, 1.5, mid.y, g.edgeAngle, flat(DOOR_OPEN));
+      for (const p of [g.p1, g.p2]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 8, 10), flat(DOOR_POST));
+        post.position.set(p.x, 4, p.y);
+        group.add(post);
+      }
+    }
   }
 
   // Surcouches de cases, créées à la demande (un plateau compte des centaines de cases, peu sont mises en avant à la fois).
-  const ringGeometry = new THREE.RingGeometry(TILE_RADIUS + 2, TILE_RADIUS + 7, 32).rotateX(-Math.PI / 2);
-  const targetGeometry = new THREE.RingGeometry(TILE_RADIUS + 9, TILE_RADIUS + 13, 32).rotateX(-Math.PI / 2);
-  const tickGeometry = new THREE.BoxGeometry(3, 1, 9);
-  const losGeometry = new THREE.CircleGeometry(TILE_RADIUS * 0.95, 24).rotateX(-Math.PI / 2);
+  const ringGeometry = new THREE.RingGeometry(R + 4, R + 8, 32).rotateX(-Math.PI / 2);
+  const targetRingGeometry = new THREE.RingGeometry(R + 9, R + 13, 32).rotateX(-Math.PI / 2);
+  const targetDiscGeometry = new THREE.CircleGeometry(R + 13, 32).rotateX(-Math.PI / 2);
+  const tickGeometry = new THREE.BoxGeometry(3.5, 1, 9);
+  const losDiscGeometry = new THREE.CircleGeometry(R + 3, 28).rotateX(-Math.PI / 2);
+  const losRingGeometry = new THREE.RingGeometry(R + 1.5, R + 4.5, 32).rotateX(-Math.PI / 2);
+  const losDotGeometry = new THREE.SphereGeometry(4, 10, 8);
+  const losBarGeometry = new THREE.BoxGeometry(12, 1.4, 3);
   const ringMaterials: Record<HighlightTone, THREE.MeshBasicMaterial> = {
-    move: new THREE.MeshBasicMaterial({ color: TONE_COLORS.move }),
-    throw: new THREE.MeshBasicMaterial({ color: TONE_COLORS.throw }),
+    move: basic(HIGHLIGHT_COLORS.move),
+    throw: basic(HIGHLIGHT_COLORS.throw),
   };
-  const targetMaterial = new THREE.MeshBasicMaterial({ color: TARGET_COLOR });
-  const losMaterial = new THREE.MeshBasicMaterial({ color: LOS_COLOR, transparent: true, opacity: 0.3, depthWrite: false });
-  const losOriginMaterial = new THREE.MeshBasicMaterial({ color: LOS_COLOR });
+  const targetMaterial = basic(OVERLAY_COLORS.target);
+  const targetFill = basic(OVERLAY_COLORS.target, 0.16);
+  const losVisible = basic(OVERLAY_COLORS.losVisible);
+  const losVisibleFill = basic(OVERLAY_COLORS.losVisible, 0.28);
+  const losHiddenFill = basic(OVERLAY_COLORS.losHidden, 0.18);
+  const losHidden = basic(OVERLAY_COLORS.losHidden);
+  type OverlayKind = 'reach' | 'target' | 'losVisible' | 'losHidden';
   const lazy = new Map<string, THREE.Object3D>();
-  const overlay = (nodeId: string, kind: string, build: () => THREE.Object3D): THREE.Object3D | null => {
-    const tile = tiles.get(nodeId);
-    if (!tile) return null;
-    const key = `${kind}:${nodeId}`;
-    let obj = lazy.get(key);
-    if (!obj) {
-      obj = build();
-      obj.visible = false;
-      tile.add(obj);
-      lazy.set(key, obj);
-    }
-    return obj;
-  };
-  const shown: Record<'reach' | 'target' | 'los', Set<string>> = { reach: new Set(), target: new Set(), los: new Set() };
-  const setShown = (kind: 'reach' | 'target' | 'los', ids: Iterable<string>, build: (id: string) => THREE.Object3D, after?: (obj: THREE.Object3D) => void): void => {
+  const shown: Record<OverlayKind, Set<string>> = { reach: new Set(), target: new Set(), losVisible: new Set(), losHidden: new Set() };
+  const setShown = (kind: OverlayKind, ids: Iterable<string>, build: () => THREE.Object3D, after?: (obj: THREE.Object3D) => void): void => {
     for (const id of shown[kind]) {
       const o = lazy.get(`${kind}:${id}`);
       if (o) o.visible = false;
     }
     shown[kind] = new Set(ids);
     for (const id of shown[kind]) {
-      const o = overlay(id, kind, () => build(id));
-      if (!o) continue;
+      const tile = tiles.get(id);
+      if (!tile) continue;
+      let o = lazy.get(`${kind}:${id}`);
+      if (!o) {
+        o = build();
+        tile.add(o);
+        lazy.set(`${kind}:${id}`, o);
+      }
       o.visible = true;
       after?.(o);
     }
@@ -288,12 +403,12 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     setTargets(nodeIds) {
       setShown('target', nodeIds, () => {
         const reticle = new THREE.Group();
-        reticle.add(new THREE.Mesh(targetGeometry, targetMaterial));
+        reticle.add(new THREE.Mesh(targetDiscGeometry, targetFill), new THREE.Mesh(targetRingGeometry, targetMaterial));
         // Repères aux quatre points cardinaux : la cible se lit à la forme, pas seulement à la couleur.
         for (let i = 0; i < 4; i++) {
           const tick = new THREE.Mesh(tickGeometry, targetMaterial);
           const a = (i * Math.PI) / 2;
-          tick.position.set(Math.cos(a) * (TILE_RADIUS + 11), 0.6, Math.sin(a) * (TILE_RADIUS + 11));
+          tick.position.set(Math.cos(a) * (R + 11), 0.6, Math.sin(a) * (R + 11));
           tick.rotation.y = -a;
           reticle.add(tick);
         }
@@ -302,21 +417,36 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       });
     },
     setLineOfSight(origin, visible) {
-      const wanted = origin !== null && visible !== null ? [...visible, origin] : [];
-      setShown(
-        'los',
-        wanted,
-        (id) => {
-          const disc = new THREE.Mesh(losGeometry, id === origin ? losOriginMaterial : losMaterial);
-          disc.position.y = TILE_HEIGHT + 0.5;
-          return disc;
-        },
-        (o) => ((o as THREE.Mesh).material = losMaterial),
-      );
-      if (origin !== null) {
-        const o = lazy.get(`los:${origin}`) as THREE.Mesh | undefined;
-        if (o) o.material = losOriginMaterial;
+      const seen: string[] = [];
+      const hidden: string[] = [];
+      if (origin !== null && visible !== null) {
+        for (const n of nodes) {
+          if (n.id === origin) continue;
+          (visible.has(n.id) ? seen : hidden).push(n.id);
+        }
       }
+      // Case vue : disque et anneau verts, pastille ; case cachée : disque rouge et croix (lisible sans la couleur).
+      setShown('losVisible', seen, () => {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(losDiscGeometry, losVisibleFill), new THREE.Mesh(losRingGeometry, losVisible));
+        const dot = new THREE.Mesh(losDotGeometry, losVisible);
+        dot.position.set(-R * 0.8, 3, -R * 0.8);
+        g.add(dot);
+        g.position.y = TILE_HEIGHT + 0.5;
+        return g;
+      });
+      setShown('losHidden', hidden, () => {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(losDiscGeometry, losHiddenFill));
+        for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+          const bar = new THREE.Mesh(losBarGeometry, losHidden);
+          bar.position.set(-R * 0.8, 2.5, -R * 0.8);
+          bar.rotation.y = angle;
+          g.add(bar);
+        }
+        g.position.y = TILE_HEIGHT + 0.5;
+        return g;
+      });
     },
     setShowIds(show) {
       for (const [id, tile] of tiles) {
@@ -342,8 +472,10 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     },
     dispose() {
       disposeTree(group);
-      for (const g of [ringGeometry, targetGeometry, tickGeometry, losGeometry]) g.dispose();
-      for (const m of [...Object.values(ringMaterials), targetMaterial, losMaterial, losOriginMaterial]) m.dispose();
+      const geometries = [outlineGeometry, entryGeometry, crossGeometry, ringGeometry, targetRingGeometry, targetDiscGeometry, tickGeometry, losDiscGeometry, losRingGeometry, losDotGeometry, losBarGeometry];
+      for (const g of geometries) g.dispose();
+      const materials = [...Object.values(ringMaterials), entryMaterial, crossMaterial, targetMaterial, targetFill, losVisible, losVisibleFill, losHiddenFill, losHidden];
+      for (const m of materials) m.dispose();
     },
   };
 }
