@@ -10,4 +10,6 @@ export * from './flag-layer';
 export * from './smoke-model';
 export * from './smoke-layer';
 export * from './presentation';
+export * from './contract';
+export * from './pixi-board-renderer';
 export * from './board-layout';

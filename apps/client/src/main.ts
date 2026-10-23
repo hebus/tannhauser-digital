@@ -1,21 +1,4 @@
-import { Application, Container } from 'pixi.js';
-import {
-  BoardView,
-  Camera,
-  CharacterLayer,
-  FlagLayer,
-  HighlightLayer,
-  LAYOUT_NODE_RADIUS,
-  NODE_RADIUS,
-  OverlayLayer,
-  SmokeLayer,
-  Presentation,
-  ReducedMotion,
-  type BannerKind,
-  type BannerPlan,
-  buildPathPreview,
-  textScaleForZoom,
-} from '@tannhauser/renderer';
+import { ReducedMotion, buildPathPreview, createPixiRenderer, type BannerKind, type BannerPlan, type BoardRenderer } from '@tannhauser/renderer';
 import { activationHasActed, explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
@@ -42,10 +25,6 @@ async function main(): Promise<void> {
   const host = document.getElementById('app');
   if (!host) throw new Error('Conteneur #app introuvable');
 
-  const app = new Application();
-  await app.init({ resizeTo: window, background: 0x14161a, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
-  host.appendChild(app.canvas);
-
   // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
   // Plateau de démonstration non orthogonal : développement uniquement (`?demoBoard=castle`), sans écran de mise en place.
   const demoBoard = import.meta.env.DEV ? new URLSearchParams(location.search).get('demoBoard') : null;
@@ -70,126 +49,50 @@ async function main(): Promise<void> {
     const picks = [nodes[Math.floor(nodes.length / 3)], nodes[Math.floor(nodes.length / 2)]].flatMap((n) => (n ? [n] : []));
     game.replaceState({ ...game.state, effects: [...game.state.effects, ...picks.map((n, i) => ({ id: `debug-smoke-${i}`, type: 'SMOKE' as const, origin: n.id, remainingTurns: 2 - i }))] });
   }
-  let presentationRef: Presentation | null = null;
+  let rendererRef: BoardRenderer | null = null;
   const ui = mountUi(game, {
-    whenIdle: (callback) => (presentationRef ? presentationRef.onIdle(callback) : callback()),
+    whenIdle: (callback) => (rendererRef ? rendererRef.presentation.onIdle(callback) : callback()),
   });
   // Libellés de la mise en page (noms de pièces) : traduction si la clé existe, sinon la clé telle quelle.
   const label = (key: string): string => (hasKey(key) ? t(key) : key);
-  const world = new Container();
-  app.stage.addChild(world);
 
   let showIds = false;
-  let boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
-  const doorSignature = (board: GameState['board']): string =>
-    Object.values(board.doors).map((d) => `${d.id}:${d.state}`).join('|');
-  let shownDoors = doorSignature(game.state.board);
-  /** Redessine le plateau (ids, état des portes) : une porte ouverte ou fermée doit changer de dessin. */
-  const rebuildBoardView = (): void => {
-    world.removeChild(boardView);
-    boardView.destroy({ children: true });
-    boardView = new BoardView(game.state.board, { showNodeIds: showIds, layout: game.layout, label });
-    world.addChildAt(boardView, 0);
-    shownDoors = doorSignature(game.state.board);
-  };
-  const highlight = new HighlightLayer(game.state.board);
-  const overlays = new OverlayLayer(game.state.board);
-  const characters = new CharacterLayer();
-  const flags = new FlagLayer(game.layout ? LAYOUT_NODE_RADIUS : NODE_RADIUS);
-  const smoke = new SmokeLayer(game.layout ? LAYOUT_NODE_RADIUS : NODE_RADIUS);
   const reducedMotion = new ReducedMotion();
   // Débogage des bannières : `?debugBanner=1` (ou un type : turnStart, overwatchPhase, activationPhase, turnOf,
   // reaction, victory) affiche une bannière figée au démarrage, qui reste jusqu'à la suivante.
   const debugBanner = new URLSearchParams(location.search).get('debugBanner');
-  const presentation = new Presentation({
-    characters,
+  // Le rendu (ici Pixi 2D) est choisi par sa fabrique : le client ne parle qu'au contrat `BoardRenderer`.
+  const renderer = createPixiRenderer({
+    board: game.state.board,
+    layout: game.layout,
+    label,
     reducedMotion,
-    screenSize: () => ({ width: app.screen.width, height: app.screen.height }),
+    insets: () => ui.insets(),
+    characterLabels: (s) => createLabeler(s).character,
     bannerText: (plan) => bannerText(plan, createLabeler(game.state)),
-    shakeNode: (nodeId, dx, dy) => boardView.setNodeOffset(nodeId, dx, dy),
     calloutText: (tone) => t(`callout.${tone}`),
     holdBanners: debugBanner !== null,
+    events: {
+      onPick: (nodeId) => onNodeClick(nodeId),
+      onHover: (nodeId) => {
+        hoverNode = nodeId;
+        updatePath();
+        previewBlast();
+      },
+      onInteract: () => renderer.presentation.skip(),
+    },
   });
+  const presentation = renderer.presentation;
+  await renderer.init(host);
   // Les styles du HUD (frise des phases) respectent aussi la bascule « mouvement réduit » (touche R).
   const syncReducedMotionAttr = (reduced: boolean): void => {
     document.documentElement.dataset.reducedMotion = String(reduced);
   };
   syncReducedMotionAttr(reducedMotion.value);
   const unsubscribeReducedAttr = reducedMotion.subscribe(syncReducedMotionAttr);
-  presentationRef = presentation;
-  world.addChild(boardView, highlight, overlays, flags, characters, smoke, presentation.worldLayer);
-  // Bannières et avis : dessinés sur un second canevas transparent posé AU-DESSUS du HUD (qui est en DOM) ; il laisse passer les clics.
-  const overlayApp = new Application();
-  await overlayApp.init({ resizeTo: window, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio, autoDensity: true });
-  Object.assign(overlayApp.canvas.style, { position: 'fixed', inset: '0', zIndex: '1000', pointerEvents: 'none' });
-  document.body.appendChild(overlayApp.canvas);
-  overlayApp.stage.addChild(presentation.screenLayer);
+  rendererRef = renderer;
 
-  // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
-  const lifetime = new AbortController();
-  const { signal } = lifetime;
-  const tickAnimations = (ticker: { deltaMS: number }): void => {
-    presentation.tick(ticker.deltaMS, performance.now());
-    smoke.tick(ticker.deltaMS, reducedMotion.value);
-  };
-  app.ticker.add(tickAnimations);
-
-  const camera = new Camera(world, { width: app.screen.width, height: app.screen.height });
-  const syncTextScale = () => {
-    const k = textScaleForZoom(camera.zoom);
-    characters.setTextScale(k);
-    presentation.setTextScale(k);
-    return k;
-  };
-  const fit = () => {
-    const { left, right, top } = ui.insets();
-    camera.resize(Math.max(200, app.screen.width - left - right), Math.max(200, app.screen.height - top));
-    camera.fit(boardView.bounds2D());
-    camera.pan(left, top);
-    camera.resize(app.screen.width, app.screen.height);
-    fitZoom = camera.zoom;
-    syncTextScale();
-    updatePath();
-  };
-
-  let fitZoom = camera.zoom;
-  ui.onLayoutChange(fit);
-  let cameraTween: ((ticker: { deltaMS: number }) => void) | null = null;
-  const cancelCameraTween = (): void => {
-    if (cameraTween) app.ticker.remove(cameraTween);
-    cameraTween = null;
-  };
-  /** Centre la caméra sur un nœud (animation courte ; instantané en mouvement réduit). */
-  const focusNode = (nodeId: string): void => {
-    const n = game.state.board.nodes[nodeId];
-    if (!n) return;
-    const { left, right, top } = ui.insets();
-    const cx = left + (app.screen.width - left - right) / 2;
-    const cy = top + (app.screen.height - top) / 2;
-    const z = camera.zoom;
-    const tx = cx - n.x * z;
-    const ty = cy - n.y * z;
-    cancelCameraTween();
-    if (reducedMotion.value) {
-      world.position.set(tx, ty);
-      updatePath();
-      return;
-    }
-    const sx = world.x;
-    const sy = world.y;
-    let elapsed = 0;
-    const duration = 450;
-    const step = (ticker: { deltaMS: number }): void => {
-      elapsed += ticker.deltaMS;
-      const p = Math.min(1, elapsed / duration);
-      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      world.position.set(sx + (tx - sx) * e, sy + (ty - sy) * e);
-      updatePath();
-      if (p >= 1) cancelCameraTween();
-    };
-    cameraTween = step;
-    app.ticker.add(step);
-  };
+  ui.onLayoutChange(() => renderer.fit());
 
   const statusEl = document.getElementById('status');
   const logEl = document.getElementById('log');
@@ -208,20 +111,19 @@ async function main(): Promise<void> {
   let hoverNode: string | null = null;
   let reachableNow: ReturnType<GameFacade['reachable']> = [];
 
-  const THROW_COLOR = 0xffb454;
   /** Aperçu de la zone touchée par la case survolée : case + voisines pour une grenade, la case seule pour un fumigène. */
   function previewBlast(): void {
     const throwing = getTargeting();
     if (!throwing) return;
     const over = hoverNode !== null && isTargetable(hoverNode) ? hoverNode : null;
-    overlays.showTargets(over ? (throwing.smoke ? [over] : explosionZone(game.state.board, over)) : []);
+    renderer.showTargets(over ? (throwing.smoke ? [over] : explosionZone(game.state.board, over)) : []);
   }
 
   /** Aperçu de chemin : uniquement vers un nœud atteignable (liste du moteur) ; sinon aucun tracé. */
   function updatePath(): void {
     const active = activeCharacter();
     const preview = active ? buildPathPreview(game.state.board, active.nodeId, reachableNow, hoverNode) : null;
-    overlays.showPath(preview, textScaleForZoom(camera.zoom));
+    renderer.showPath(preview);
   }
 
   let editor = false;
@@ -229,15 +131,13 @@ async function main(): Promise<void> {
   const refreshEditor = (): void => {
     if (!editor) return;
     const picked = game.state.characters.find((c) => c.id === editorPick);
-    highlight.show(picked ? freeNodes(game.state, picked.id) : []);
-    overlays.showTargets(picked ? [picked.nodeId] : []);
-    overlays.showPath(null, 1);
+    renderer.showReachable(picked ? freeNodes(game.state, picked.id) : []);
+    renderer.showTargets(picked ? [picked.nodeId] : []);
+    renderer.showPath(null);
   };
   const refresh = () => {
     const s = game.state;
-    characters.update(s, createLabeler(s).character);
-    flags.update(s);
-    smoke.update(s);
+    renderer.update(s);
     const active = activeCharacter();
     // Ciblage d'une grenade : seul le lanceur actif peut encore viser ; sinon on quitte le mode (changement de tour, action utilisée…).
     const aiming = getTargeting();
@@ -247,13 +147,13 @@ async function main(): Promise<void> {
     reachableNow = reachable;
     if (throwing) {
       // Cases visables (orange) ; la zone touchée par la case survolée s'affiche en cibles (voir `previewBlast`).
-      highlight.show(throwing.nodeIds, THROW_COLOR);
+      renderer.showReachable(throwing.nodeIds, 'throw');
       previewBlast();
     } else {
-      highlight.show(reachable.map((r) => r.nodeId));
-      overlays.showTargets(active ? game.targetable(active.id).map((t) => t.nodeId) : []);
+      renderer.showReachable(reachable.map((r) => r.nodeId));
+      renderer.showTargets(active ? game.targetable(active.id).map((t) => t.nodeId) : []);
     }
-    overlays.showLineOfSight(active && showLos ? active.nodeId : null, active && showLos ? game.visibleFrom(active.id) : null);
+    renderer.showLineOfSight(active && showLos ? active.nodeId : null, active && showLos ? game.visibleFrom(active.id) : null);
     updatePath();
     const cp = s.players.map((p) => `${p.id}: ${p.commandPoints} PC`).join(' · ');
     const reaction = s.turn.reaction ? ` — RÉACTION : ${s.turn.reaction.forPlayerId} (T = tirer, D = refuser)` : '';
@@ -273,7 +173,6 @@ async function main(): Promise<void> {
     presentation.play(events, shown, state);
     const before = shown;
     shown = state;
-    if (doorSignature(state.board) !== shownDoors) rebuildBoardView();
     // Début d'une activation à venir : la caméra va vers le premier personnage activable de l'équipe qui joue,
     // une fois les animations terminées (utile quand on a zoomé : plus besoin de chercher ses pions à la souris).
     const awaitingSelection =
@@ -286,7 +185,7 @@ async function main(): Promise<void> {
         if (cur.phase !== 'ACTIVATION' || cur.turn.activeCharacterId !== undefined) return;
         const next = cur.characters.find((c) => c.playerId === cur.turn.activePlayerId && c.alive && !c.activated && !c.overwatch);
         // Plateau entièrement visible (zoom de cadrage) : inutile de bouger la caméra.
-        if (next && camera.zoom > fitZoom * 1.1) focusNode(next.nodeId);
+        if (next && renderer.isZoomedIn()) renderer.focusNode(next.nodeId);
       });
     }
     for (const e of events) {
@@ -302,7 +201,7 @@ async function main(): Promise<void> {
     return res;
   };
   refresh();
-  fit();
+  renderer.fit();
   if (debugBanner !== null) {
     const kinds: readonly BannerKind[] = ['turnStart', 'overwatchPhase', 'activationPhase', 'turnOf', 'reaction', 'victory'];
     const kind = kinds.find((k) => k === debugBanner) ?? 'turnStart';
@@ -313,16 +212,6 @@ async function main(): Promise<void> {
   }
 
   // Entrées → commandes. Aucune règle ici : tout passe par la façade et le moteur.
-  const nodeAt = (sx: number, sy: number): string | null => {
-    const wx = (sx - world.x) / world.scale.x;
-    const wy = (sy - world.y) / world.scale.y;
-    let best: { id: string; d: number } | null = null;
-    for (const n of Object.values(game.state.board.nodes)) {
-      const d = Math.hypot(n.x - wx, n.y - wy);
-      if (d <= NODE_RADIUS * 1.3 && (!best || d < best.d)) best = { id: n.id, d };
-    }
-    return best?.id ?? null;
-  };
 
   // Éditeur (touche X) : retouches d'état hors règles pour tester des configurations ; aucune commande du moteur.
   const applyEdit = (result: EditResult): void => {
@@ -401,89 +290,9 @@ async function main(): Promise<void> {
     if (target) send({ type: 'MOVE_CHARACTER', playerId: player, characterId: active.id, path: target.path });
   };
 
-  // Pointeurs actifs (souris, doigt, stylet) : un seul = glisser pour déplacer / cliquer ; deux = pincer pour zoomer et déplacer.
-  app.canvas.style.touchAction = 'none'; // les gestes tactiles sont gérés ici, pas par le navigateur
-  const pointers = new Map<number, { x: number; y: number }>();
-  let moved = 0;
-  let multiTouch = false; // un geste à deux doigts a eu lieu : le relâchement n'est pas un clic
-  const pinchState = () => {
-    const [a, b] = [...pointers.values()];
-    return { cx: (a!.x + b!.x) / 2, cy: (a!.y + b!.y) / 2, dist: Math.hypot(a!.x - b!.x, a!.y - b!.y) };
-  };
-  app.canvas.addEventListener(
-    'pointerdown',
-    (e) => {
-      presentation.skip(); // un clic termine les animations en cours
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      app.canvas.setPointerCapture?.(e.pointerId);
-      if (pointers.size === 1) {
-        moved = 0;
-        multiTouch = false;
-      } else multiTouch = true;
-    },
-    { signal },
-  );
-  const endPointer = (e: PointerEvent, click: boolean) => {
-    if (!pointers.has(e.pointerId)) return;
-    const wasClick = click && pointers.size === 1 && !multiTouch && moved < 4;
-    pointers.delete(e.pointerId);
-    if (wasClick && e.target === app.canvas) {
-      const id = nodeAt(e.offsetX, e.offsetY);
-      if (id) onNodeClick(id);
-    }
-  };
-  window.addEventListener('pointerup', (e) => endPointer(e, true), { signal });
-  window.addEventListener('pointercancel', (e) => endPointer(e, false), { signal });
-  window.addEventListener(
-    'pointermove',
-    (e) => {
-      const prev = pointers.get(e.pointerId);
-      if (prev) {
-        if (pointers.size >= 2) {
-          const before = pinchState();
-          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          const after = pinchState();
-          const rect = app.canvas.getBoundingClientRect();
-          if (before.dist > 0) camera.zoomAt(after.dist / before.dist, after.cx - rect.left, after.cy - rect.top);
-          camera.pan(after.cx - before.cx, after.cy - before.cy);
-          syncTextScale();
-          updatePath();
-        } else {
-          const dx = e.clientX - prev.x;
-          const dy = e.clientY - prev.y;
-          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          moved += Math.abs(dx) + Math.abs(dy);
-          if (moved >= 4) camera.pan(dx, dy);
-        }
-        return;
-      }
-      const next = e.target === app.canvas ? nodeAt(e.offsetX, e.offsetY) : null;
-      if (next !== hoverNode) {
-        hoverNode = next;
-        updatePath();
-        previewBlast();
-      }
-    },
-    { signal },
-  );
-  app.canvas.addEventListener(
-    'wheel',
-    (e) => {
-      e.preventDefault();
-      camera.zoomAt(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.offsetX, e.offsetY);
-      syncTextScale();
-      updatePath();
-    },
-    { passive: false, signal },
-  );
-  window.addEventListener(
-    'resize',
-    () => {
-      camera.resize(app.screen.width, app.screen.height);
-      fit();
-    },
-    { signal },
-  );
+  // Tous les écouteurs partagent ce signal : un seul `abort()` libère tout (pas de fuite).
+  const lifetime = new AbortController();
+  const { signal } = lifetime;
 
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
@@ -524,10 +333,10 @@ async function main(): Promise<void> {
     const player = activePlayer();
     const s = game.state;
     const reaction = s.turn.reaction;
-    if (key === 'c') fit();
+    if (key === 'c') renderer.fit();
     else if (key === 'i') {
       showIds = !showIds;
-      rebuildBoardView();
+      renderer.setShowNodeIds(showIds);
     } else if (reaction && (key === 't' || key === 'd')) {
       const ow = s.characters.find((c) => c.id === reaction.overwatcherId);
       if (key === 'd') send({ type: 'OVERWATCH_DECLINE', playerId: reaction.forPlayerId });
@@ -558,12 +367,9 @@ async function main(): Promise<void> {
     unsubscribeGame();
     unsubscribeTargeting();
     cancelTargeting();
-    app.ticker.remove(tickAnimations);
-    presentation.destroy();
     unsubscribeReducedAttr();
+    renderer.destroy();
     reducedMotion.destroy();
-    overlayApp.destroy(true, { children: true });
-    app.destroy(true, { children: true });
   };
   window.addEventListener('pagehide', cleanup, { once: true });
   import.meta.hot?.dispose(cleanup);

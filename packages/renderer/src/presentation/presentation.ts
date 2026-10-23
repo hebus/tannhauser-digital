@@ -1,100 +1,45 @@
-import { Container, Graphics, Text } from 'pixi.js';
 import type { GameEvent, GameState } from '@tannhauser/core';
-import { NODE_RADIUS } from '../board-view';
-import { createPennant, type CharacterLayer } from '../character-layer';
-import { playerColor } from '../palette';
-import { AnimationQueue, AnimationRunner, action, tween, type Animation } from './animation-queue';
-import { easeInOutQuad, easeOutCubic, lerp } from './easing';
-import { pointAlong, type Point } from './path-geometry';
-import { BANNER_DURATIONS, bannerPose, type BannerPlan, type BannerText } from './banner';
-import { createBannerView, type BannerView } from './banner-view';
-import { playExplosion } from './explosion-effect';
-import { shakeOffset } from './explosion-model';
 import { explosionZone } from '@tannhauser/core';
-import { planPresentation, type CalloutTone, type PresentationStep } from './plan';
+import type { PresentationControls } from '../contract';
+import { AnimationQueue, AnimationRunner, action } from './animation-queue';
+import type { BannerPlan } from './banner';
+import type { ScreenEffects, WorldEffects } from './effects';
+import type { Point } from './path-geometry';
+import { planPresentation, type PresentationStep } from './plan';
 import type { ReducedMotion } from './reduced-motion';
 
-/** Durées en ms (volontairement courtes : le jeu ne attend jamais les animations pour accepter une commande). */
-export const TIMING = {
-  moveStep: 130,
-  moveMax: 900,
-  flash: 220,
-  floater: 900,
-  /** Message d'issue (raté, passage forcé, bloqué) : un peu plus long qu'un chiffre de dégâts pour être lu. */
-  callout: 1300,
-  shake: 260,
-  /** Secousse des cases touchées par une explosion. */
-  blastShake: 650,
-  defeat: 650,
-  ring: 550,
-  bolt: 650,
-  /** Vol d'un fanion (ramassage, dépôt, plantage). */
-  flagFlight: 550,
-  /** Message court (changement d'option). Les durées des bannières sont dans `BANNER_DURATIONS`. */
-  notice: 1400,
-  /** Durée d'affichage statique des indicateurs en mouvement réduit (aucun mouvement). */
-  staticHold: 1200,
-} as const;
-
 export interface PresentationOptions {
-  readonly characters: CharacterLayer;
   readonly reducedMotion: ReducedMotion;
-  /** Taille de l'écran (px) pour centrer la bannière. */
-  readonly screenSize: () => { width: number; height: number };
-  /** Titre et sous-titre (localisés par le client) d'une bannière : le renderer ne contient aucun texte de jeu. */
-  readonly bannerText: (plan: BannerPlan) => BannerText;
-  /** Texte (localisé par le client) du message flottant d'une issue : « Raté ! », « Passage forcé ! », « Bloqué ! ». */
-  readonly calloutText: (tone: CalloutTone) => string;
   /**
-   * Décale le dessin d'une case du plateau (secousse d'explosion) ; `(0, 0)` la remet en place. Le renderer ne détient pas le
-   * `BoardView` (reconstruit quand une porte change) : le client le fournit.
+   * Exécuteur d'interpolations PARTAGÉ avec les effets : ils y planifient leurs animations non bloquantes, et la présentation
+   * n'est « au repos » que lorsqu'il est vide.
    */
-  readonly shakeNode?: (nodeId: string, dx: number, dy: number) => void;
-  /** Débogage : la bannière reste affichée (figée) jusqu'à la suivante au lieu de disparaître. */
-  readonly holdBanners?: boolean;
+  readonly runner: AnimationRunner;
+  readonly world: WorldEffects;
+  readonly screen: ScreenEffects;
 }
 
 /**
- * Présentation animée pilotée par les événements du moteur. Ne mute jamais `GameState` :
- * elle ne pilote que des surcharges d'affichage (`CharacterLayer.setDisplay`) et des effets éphémères.
- * Les mouvements et éclairs bloquants passent par une file sérialisée ; flashs/chiffres/bannières sont des
- * effets parallèles non bloquants déclenchés au bon moment de la file. `skip()` termine tout instantanément.
+ * Présentation animée pilotée par les événements du moteur, commune à tous les rendus : elle décide de l'ordre, de la file
+ * d'attente et de l'état « au repos », et délègue le dessin à `WorldEffects` et `ScreenEffects`. Ne mute jamais `GameState`.
+ * Les mouvements et éclairs bloquants passent par une file sérialisée ; flashs, chiffres et bannières sont des effets
+ * parallèles non bloquants déclenchés au bon moment de la file. `skip()` termine tout instantanément.
  */
-export class Presentation {
-  /** Effets en coordonnées plateau : à ajouter au monde, au-dessus des personnages. */
-  readonly worldLayer = new Container();
-  /** Effets en coordonnées écran (bannière) : à ajouter à la scène, hors monde. */
-  readonly screenLayer = new Container();
-
+export class Presentation implements PresentationControls {
   private readonly queue: AnimationQueue;
-  private readonly runner = new AnimationRunner();
-  private readonly characters: CharacterLayer;
+  private readonly runner: AnimationRunner;
   private readonly reducedMotion: ReducedMotion;
-  private readonly screenSize: () => { width: number; height: number };
-  private readonly bannerText: (plan: BannerPlan) => BannerText;
-  private readonly calloutText: (tone: CalloutTone) => string;
-  private readonly holdBanners: boolean;
-  private readonly shakeNode: ((nodeId: string, dx: number, dy: number) => void) | undefined;
+  private readonly world: WorldEffects;
+  private readonly screen: ScreenEffects;
   private readonly unsubscribe: () => void;
-  private textScale = 1;
-  private bannerToken = 0;
-  private bannerView: BannerView | null = null;
-  private noticeToken = 0;
-  private noticeView: Container | null = null;
   private destroyed = false;
-  private explosions = 0;
   private idleCallbacks: Array<() => void> = [];
 
   constructor(options: PresentationOptions) {
-    this.characters = options.characters;
     this.reducedMotion = options.reducedMotion;
-    this.screenSize = options.screenSize;
-    this.bannerText = options.bannerText;
-    this.calloutText = options.calloutText;
-    this.holdBanners = options.holdBanners ?? false;
-    this.shakeNode = options.shakeNode;
-    this.worldLayer.label = 'PresentationWorld';
-    this.screenLayer.label = 'PresentationScreen';
+    this.runner = options.runner;
+    this.world = options.world;
+    this.screen = options.screen;
     this.queue = new AnimationQueue({ reduced: this.reducedMotion.value });
     this.unsubscribe = this.reducedMotion.subscribe((reduced) => {
       this.queue.reduced = reduced;
@@ -105,12 +50,7 @@ export class Presentation {
     return this.queue.idle && this.runner.size === 0;
   }
 
-  /** Échelle des textes monde (inverse du zoom caméra) pour rester lisibles. */
-  setTextScale(k: number): void {
-    this.textScale = k;
-  }
-
-  /** À appeler AVANT `CharacterLayer.update(next)` : fixe les pions mobiles à leur case de départ. */
+  /** À appeler AVANT la mise à jour de l'affichage des pions : fixe les pions mobiles à leur case de départ. */
   play(events: readonly GameEvent[], prev: GameState | null, next: GameState): void {
     if (this.destroyed) return;
     for (const step of planPresentation(events, prev, next)) this.schedule(step, next);
@@ -120,7 +60,7 @@ export class Presentation {
     if (this.destroyed) return;
     this.queue.tick(dtMs);
     this.runner.tick(dtMs);
-    this.characters.tick(nowMs, this.reducedMotion.value);
+    this.world.tick?.(nowMs);
     this.flushIdle();
   }
 
@@ -152,7 +92,7 @@ export class Presentation {
   announce(plan: BannerPlan, players?: readonly { readonly id: string }[]): void {
     if (this.destroyed) return;
     const index = players ? players.findIndex((p) => p.id === plan.playerId) : -1;
-    this.showBanner(plan, index >= 0 ? index : null);
+    this.screen.banner(plan, index >= 0 ? index : null);
   }
 
   /** Joue tout de suite une explosion sur une case (débogage : `?debugExplosion=1`) ; en jeu, elle vient de l'événement GRENADE_EXPLODED. */
@@ -163,7 +103,7 @@ export class Presentation {
 
   /** Message court non bloquant au centre haut de l'écran (ex. changement d'option). */
   notify(text: string): void {
-    this.showNotice(text);
+    this.screen.notice(text);
   }
 
   destroy(): void {
@@ -172,467 +112,64 @@ export class Presentation {
     this.unsubscribe();
     this.queue.clear();
     this.runner.clear();
-    this.characters.clearDisplay();
-    this.worldLayer.destroy({ children: true });
-    this.screenLayer.destroy({ children: true });
-  }
-
-  private get reduced(): boolean {
-    return this.reducedMotion.value;
+    this.world.destroy();
+    this.screen.destroy();
   }
 
   private schedule(step: PresentationStep, next: GameState): void {
+    const at = (nodeId: string): Point | null => {
+      const n = next.board.nodes[nodeId];
+      return n ? { x: n.x, y: n.y } : null;
+    };
     switch (step.kind) {
-      case 'move':
-        this.queue.enqueue(this.moveAnimation(step.characterId, step.nodeIds, next));
+      case 'move': {
+        const points: Point[] = step.nodeIds.flatMap((id) => {
+          const p = at(id);
+          return p ? [p] : [];
+        });
+        this.queue.enqueue(this.world.move(step.characterId, points));
         break;
+      }
       case 'damage':
-        this.queue.enqueue(action(() => this.damageEffects(step.targetId, step.wounds)));
+        this.queue.enqueue(action(() => this.world.damage(step.targetId, step.wounds)));
         break;
       case 'callout': {
-        const n = step.nodeId !== undefined ? next.board.nodes[step.nodeId] : undefined;
-        this.queue.enqueue(action(() => this.calloutEffects(step, n ? { x: n.x, y: n.y } : null)));
+        const node = step.nodeId !== undefined ? at(step.nodeId) : null;
+        this.queue.enqueue(action(() => this.world.callout(step.tone, step.characterId, node)));
         break;
       }
       case 'explosion': {
-        const n = next.board.nodes[step.nodeId];
-        if (n) {
-          this.queue.enqueue(
-            action(() => {
-              playExplosion(this.runner, this.worldLayer, { x: n.x, y: n.y }, NODE_RADIUS, `boom:${step.nodeId}:${(this.explosions += 1)}`, this.reduced);
-              this.zoneShake(step.nodeId, step.zone, next);
-            }),
-          );
-        }
+        const node = at(step.nodeId);
+        if (node) this.queue.enqueue(action(() => this.world.explosion(step.nodeId, node, step.zone, next)));
         break;
       }
       case 'defeat':
-        this.queue.enqueue(action(() => this.defeatEffects(step.characterId)));
+        this.queue.enqueue(action(() => this.world.defeat(step.characterId)));
         break;
       case 'overwatchPlaced':
-        this.queue.enqueue(action(() => this.ringEffect(step.characterId)));
+        this.queue.enqueue(action(() => this.world.overwatchRing(step.characterId)));
         break;
-      case 'overwatchTriggered': {
-        const target = next.board.nodes[step.nodeId];
-        this.queue.enqueue(this.boltAnimation(step.overwatcherId, target ? { x: target.x, y: target.y } : null, step.targetId));
+      case 'overwatchTriggered':
+        this.queue.enqueue(this.world.overwatchBolt(step.overwatcherId, at(step.nodeId), step.targetId));
         break;
-      }
       case 'flagPlaced': {
-        const node = next.board.nodes[step.nodeId];
-        if (node) this.queue.enqueue(action(() => this.flagBurst({ x: node.x, y: node.y }, playerColor(step.ownerIndex))));
+        const node = at(step.nodeId);
+        if (node) this.queue.enqueue(action(() => this.world.flagPlaced(node, step.ownerIndex)));
         break;
       }
-      case 'flagCaptured': {
-        const node = next.board.nodes[step.nodeId];
-        if (node) this.queue.enqueue(action(() => this.flagFlight({ x: node.x, y: node.y }, () => this.characters.tokenPosition(step.characterId), step.ownerIndex, false)));
-        break;
-      }
-      case 'flagDropped': {
-        const node = next.board.nodes[step.nodeId];
-        if (node) this.queue.enqueue(action(() => this.flagFlight(this.characters.tokenPosition(step.characterId) ?? { x: node.x, y: node.y }, () => ({ x: node.x, y: node.y }), step.ownerIndex, false)));
-        break;
-      }
+      case 'flagCaptured':
+      case 'flagDropped':
       case 'flagPlanted': {
-        const node = next.board.nodes[step.nodeId];
-        if (node) this.queue.enqueue(action(() => this.flagFlight(this.characters.tokenPosition(step.characterId) ?? { x: node.x, y: node.y }, () => ({ x: node.x, y: node.y }), step.ownerIndex, true)));
+        const node = at(step.nodeId);
+        const kind = step.kind === 'flagCaptured' ? 'captured' : step.kind === 'flagDropped' ? 'dropped' : 'planted';
+        if (node) this.queue.enqueue(action(() => this.world.flagFlight(kind, node, step.characterId, step.ownerIndex)));
         break;
       }
       case 'banner': {
         const index = next.players.findIndex((p) => p.id === step.banner.playerId);
-        this.queue.enqueue(action(() => this.showBanner(step.banner, index >= 0 ? index : null)));
+        this.queue.enqueue(action(() => this.screen.banner(step.banner, index >= 0 ? index : null)));
         break;
       }
     }
-  }
-
-  // ---- Déplacement : tween case par case ---------------------------------------------------------------
-
-  private moveAnimation(characterId: string, nodeIds: readonly string[], next: GameState): Animation {
-    const points: Point[] = nodeIds.flatMap((id) => {
-      const n = next.board.nodes[id];
-      return n ? [{ x: n.x, y: n.y }] : [];
-    });
-    // Le pion reste à l'origine du tracé jusqu'à ce que la file atteigne cette animation.
-    const first = points[0];
-    if (first && points.length > 1) this.characters.setDisplay(characterId, { x: first.x, y: first.y });
-    const duration = Math.min(TIMING.moveMax, TIMING.moveStep * Math.max(0, points.length - 1));
-    // Décalage de slot (plusieurs pions sur un nœud) : on garde l'écart entre la case finale et la position réelle.
-    return tween({
-      duration,
-      ease: easeInOutQuad,
-      onUpdate: (p) => {
-        const pos = pointAlong(points, p);
-        const base = this.characters.basePosition(characterId);
-        const endNode = points[points.length - 1];
-        const slotDx = base && endNode ? base.x - endNode.x : 0;
-        const slotDy = base && endNode ? base.y - endNode.y : 0;
-        this.characters.setDisplay(characterId, { x: pos.x + slotDx * p, y: pos.y + slotDy * p });
-      },
-      onFinish: () => this.characters.setDisplay(characterId, { x: undefined, y: undefined }),
-    });
-  }
-
-  // ---- Dégâts : flash, chiffre flottant, secousse -----------------------------------------------------
-
-  private damageEffects(targetId: string, wounds: number): void {
-    const at = this.characters.tokenPosition(targetId);
-    if (!at) return;
-    const reduced = this.reduced;
-    const k = this.textScale;
-
-    const text = new Text({
-      text: `−${wounds}`,
-      style: { fill: 0xffa8a8, fontSize: 24, fontWeight: '900', stroke: { color: 0x000000, width: 5 } },
-    });
-    text.anchor.set(0.5, 1);
-    text.scale.set(k);
-    text.position.set(at.x, at.y - NODE_RADIUS * 0.8);
-    this.worldLayer.addChild(text);
-
-    if (reduced) {
-      // Pas de mouvement : le chiffre reste affiché un instant, immobile.
-      this.runner.add({ duration: TIMING.staticHold, finish: () => text.destroy() });
-      return;
-    }
-
-    this.runner.add(
-      tween({
-        duration: TIMING.floater,
-        ease: easeOutCubic,
-        onUpdate: (p) => {
-          if (text.destroyed) return;
-          text.position.y = at.y - NODE_RADIUS * 0.8 - 36 * k * p;
-          text.alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
-        },
-        onFinish: () => text.destroy(),
-      }),
-    );
-
-    const flash = new Graphics();
-    flash.circle(0, 0, NODE_RADIUS * 0.9).fill({ color: 0xffffff, alpha: 0.9 });
-    flash.position.set(at.x, at.y);
-    this.worldLayer.addChild(flash);
-    this.runner.add(
-      tween({
-        duration: TIMING.flash,
-        onUpdate: (p) => {
-          if (flash.destroyed) return;
-          flash.alpha = 1 - p;
-          flash.scale.set(1 + 0.4 * p);
-        },
-        onFinish: () => flash.destroy(),
-      }),
-    );
-
-    this.runner.add(
-      tween({
-        duration: TIMING.shake,
-        onUpdate: (p) => this.characters.setDisplay(targetId, { dx: Math.sin(p * Math.PI * 6) * 4 * (1 - p) }),
-        onFinish: () => this.characters.setDisplay(targetId, { dx: 0 }),
-      }),
-    );
-  }
-
-  // ---- Issue sans dégât : message flottant (+ anneau et secousse pour le passage en force) ---------------
-
-  private calloutEffects(step: Extract<PresentationStep, { kind: 'callout' }>, node: Point | null): void {
-    const at = (step.characterId !== undefined ? this.characters.tokenPosition(step.characterId) : null) ?? node;
-    if (!at) return;
-    const color = step.tone === 'forced' ? 0x8ce99a : step.tone === 'blocked' ? 0xff8787 : 0xdee2e6;
-    const k = this.textScale;
-    const text = new Text({
-      text: this.calloutText(step.tone),
-      style: { fill: color, fontSize: 26, fontWeight: '900', stroke: { color: 0x000000, width: 6 } },
-    });
-    text.anchor.set(0.5, 1);
-    text.scale.set(k);
-    text.position.set(at.x, at.y - NODE_RADIUS * 0.8);
-    this.worldLayer.addChild(text);
-    if (step.tone !== 'miss') this.flagBurst(at, color);
-    if (this.reduced) {
-      this.runner.add({ duration: TIMING.staticHold, finish: () => text.destroy() });
-      return;
-    }
-    this.runner.add(
-      tween({
-        duration: TIMING.callout,
-        ease: easeOutCubic,
-        onUpdate: (p) => {
-          if (text.destroyed) return;
-          text.position.y = at.y - NODE_RADIUS * 0.8 - 30 * k * p;
-          text.scale.set(k * (p < 0.15 ? lerp(0.6, 1.15, p / 0.15) : lerp(1.15, 1, Math.min(1, (p - 0.15) * 4))));
-          text.alpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
-        },
-        onFinish: () => text.destroy(),
-      }),
-    );
-  }
-
-  // ---- Secousse : la case visée vibre, les cases adjacentes sont ébranlées dans le sens de l'onde de choc ------
-
-  private zoneShake(centerId: string, zone: readonly string[], state: GameState): void {
-    if (this.reduced) return;
-    const center = state.board.nodes[centerId];
-    if (!center) return;
-    for (const id of zone) {
-      const node = state.board.nodes[id];
-      if (!node) continue;
-      const isCenter = id === centerId;
-      // Direction : radiale pour les cases voisines (l'onde les pousse), verticale pour la case visée.
-      const angle = isCenter ? -Math.PI / 2 : Math.atan2(node.y - center.y, node.x - center.x);
-      const amp = isCenter ? 7 : 5;
-      // Les voisines sont touchées juste après la case visée : la secousse se propage.
-      const delay = isCenter ? 0 : 0.12;
-      const riders = state.characters.filter((c) => c.nodeId === id).map((c) => c.id);
-      const apply = (dx: number, dy: number): void => {
-        this.shakeNode?.(id, dx, dy);
-        for (const characterId of riders) this.characters.setDisplay(characterId, { dx, dy });
-      };
-      this.runner.add(
-        tween({
-          duration: TIMING.blastShake,
-          onUpdate: (p) => {
-            const q = Math.max(0, (p - delay) / (1 - delay));
-            const o = shakeOffset(q, amp, angle);
-            apply(o.dx, o.dy);
-          },
-          onFinish: () => apply(0, 0),
-        }),
-      );
-    }
-  }
-
-  // ---- Défaite : fondu + croix -----------------------------------------------------------------------
-
-  private defeatEffects(characterId: string): void {
-    if (this.reduced) return;
-    const at = this.characters.tokenPosition(characterId);
-    if (!at) return;
-    const cross = new Graphics();
-    const r = NODE_RADIUS * 0.7;
-    cross.moveTo(-r, -r).lineTo(r, r).moveTo(r, -r).lineTo(-r, r).stroke({ width: 7, color: 0xff4d4f });
-    cross.position.set(at.x, at.y);
-    this.worldLayer.addChild(cross);
-    this.runner.add(
-      tween({
-        duration: TIMING.defeat,
-        ease: easeOutCubic,
-        onStart: () => this.characters.setDisplay(characterId, { alpha: 0.15 }),
-        onUpdate: (p) => {
-          if (cross.destroyed) return;
-          cross.scale.set(lerp(1.6, 1, p));
-          cross.alpha = 1 - p;
-          this.characters.setDisplay(characterId, { alpha: lerp(0.15, 0.6, p) });
-        },
-        onFinish: () => {
-          cross.destroy();
-          this.characters.setDisplay(characterId, { alpha: undefined });
-        },
-      }),
-    );
-  }
-
-  // ---- Overwatch --------------------------------------------------------------------------------------
-
-  private ringEffect(characterId: string): void {
-    const at = this.characters.tokenPosition(characterId);
-    if (!at) return;
-    const ring = new Graphics();
-    ring.circle(0, 0, NODE_RADIUS * 0.62 + 8).stroke({ width: 4, color: 0xffffff });
-    ring.position.set(at.x, at.y);
-    this.worldLayer.addChild(ring);
-    if (this.reduced) {
-      this.runner.add({ duration: TIMING.staticHold, finish: () => ring.destroy() });
-      return;
-    }
-    this.runner.add(
-      tween({
-        duration: TIMING.ring,
-        ease: easeOutCubic,
-        onUpdate: (p) => {
-          if (ring.destroyed) return;
-          ring.scale.set(1 + 1.4 * p);
-          ring.alpha = 1 - p;
-        },
-        onFinish: () => ring.destroy(),
-      }),
-    );
-  }
-
-  private boltAnimation(overwatcherId: string, to: Point | null, targetId: string): Animation {
-    let bolt: Graphics | null = null;
-    const build = (): Graphics | null => {
-      const from = this.characters.tokenPosition(overwatcherId);
-      const dest = to ?? this.characters.tokenPosition(targetId);
-      if (!from || !dest) return null;
-      const g = new Graphics();
-      const dx = dest.x - from.x;
-      const dy = dest.y - from.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len;
-      const ny = dx / len;
-      const segments = 6;
-      const points: Point[] = [{ x: from.x, y: from.y }];
-      for (let i = 1; i < segments; i += 1) {
-        const t = i / segments;
-        const jitter = (i % 2 === 0 ? 1 : -1) * 9;
-        points.push({ x: from.x + dx * t + nx * jitter, y: from.y + dy * t + ny * jitter });
-      }
-      points.push({ x: dest.x, y: dest.y });
-      // Pixi v8 démarre un NOUVEAU tracé après chaque `stroke()` : on retrace donc la ligne à chaque passe
-      // (sinon seule la première passe, sombre, serait visible).
-      const trace = (width: number, color: number, alpha: number): void => {
-        g.moveTo(points[0]!.x, points[0]!.y);
-        for (const p of points.slice(1)) g.lineTo(p.x, p.y);
-        g.stroke({ width, color, alpha, join: 'round', cap: 'round' });
-      };
-      trace(16, 0xff7a00, 0.35); // halo orangé
-      trace(9, 0xffc247, 0.9); // corps lumineux
-      trace(4, 0xffffff, 1); // cœur blanc
-      g.circle(dest.x, dest.y, 18).fill({ color: 0xfff3bf, alpha: 0.75 }).stroke({ width: 3, color: 0xff7a00 });
-      g.circle(from.x, from.y, 12).fill({ color: 0xffffff, alpha: 0.8 });
-      this.worldLayer.addChild(g);
-      return g;
-    };
-    if (this.reduced) {
-      // Mouvement réduit : pas d'animation bloquante, l'éclair reste affiché fixe un instant.
-      return action(() => {
-        const g = build();
-        if (g) this.runner.add({ duration: TIMING.staticHold, finish: () => g.destroy() });
-      });
-    }
-    return tween({
-      duration: TIMING.bolt,
-      onStart: () => {
-        bolt = build();
-      },
-      onUpdate: (p) => {
-        if (bolt && !bolt.destroyed) bolt.alpha = p < 0.5 ? 1 : 1 - (p - 0.5) * 2;
-      },
-      onFinish: () => {
-        bolt?.destroy();
-        bolt = null;
-      },
-    });
-  }
-
-  // ---- Drapeaux (Capture du drapeau) ------------------------------------------------------------------
-
-  /** Anneau qui s'élargit autour d'une case (apparition d'un drapeau, arrivée d'un fanion) ; fixe et bref en mouvement réduit. */
-  private flagBurst(at: Point, color: number, gold = false): void {
-    const ring = new Graphics();
-    ring.circle(0, 0, NODE_RADIUS * 0.8).stroke({ width: 4, color: gold ? 0xf0c040 : color });
-    ring.circle(0, 0, NODE_RADIUS * 0.8 + 6).stroke({ width: 2, color: 0xffffff, alpha: 0.8 });
-    ring.position.set(at.x, at.y);
-    this.worldLayer.addChild(ring);
-    if (this.reduced) {
-      this.runner.add({ duration: TIMING.staticHold, finish: () => ring.destroy() });
-      return;
-    }
-    this.runner.add(
-      tween({
-        duration: TIMING.ring,
-        ease: easeOutCubic,
-        onUpdate: (p) => {
-          if (ring.destroyed) return;
-          ring.scale.set(1 + 0.9 * p);
-          ring.alpha = 1 - p;
-        },
-        onFinish: () => ring.destroy(),
-      }),
-    );
-  }
-
-  /**
-   * Fanion fantôme qui vole de `from` vers `to` (ramassage : case → porteur ; dépôt : porteur → case ; plantage : porteur → camp),
-   * puis anneau à l'arrivée. Le vrai fanion est déjà dessiné d'après l'état : le fantôme n'est qu'un effet. En mouvement
-   * réduit : aucun vol, seul l'anneau d'arrivée reste affiché un instant.
-   */
-  private flagFlight(from: Point, to: () => Point | null, ownerIndex: number, planted: boolean): void {
-    const dest = to();
-    if (!dest) return;
-    const color = playerColor(ownerIndex);
-    if (this.reduced) {
-      this.flagBurst(dest, color, planted);
-      return;
-    }
-    const ghost = createPennant(ownerIndex, 1, planted);
-    ghost.position.set(from.x, from.y);
-    this.worldLayer.addChild(ghost);
-    this.runner.add(
-      tween({
-        duration: TIMING.flagFlight,
-        ease: easeInOutQuad,
-        onUpdate: (p) => {
-          if (ghost.destroyed) return;
-          ghost.position.set(lerp(from.x, dest.x, p), lerp(from.y, dest.y, p) - Math.sin(p * Math.PI) * 18);
-          ghost.alpha = p < 0.8 ? 1 : 1 - (p - 0.8) / 0.2;
-        },
-        onFinish: () => {
-          ghost.destroy({ children: true });
-          this.flagBurst(dest, color, planted);
-        },
-      }),
-    );
-  }
-
-  // ---- Bannière ---------------------------------------------------------------------------------------
-
-  /**
-   * Bannière de grande transition : glisse + zoome à l'entrée, se maintient, sort en douceur. Une nouvelle bannière
-   * REMPLACE proprement la précédente (jamais de superposition). En mouvement réduit : affichage fixe bref.
-   */
-  private showBanner(plan: BannerPlan, playerIndex: number | null): void {
-    this.bannerView?.destroy();
-    const token = (this.bannerToken += 1);
-    const view = createBannerView(plan.kind, this.bannerText(plan), playerIndex);
-    const { width, height } = this.screenSize();
-    view.container.position.set(width / 2, height * 0.28);
-    this.screenLayer.addChild(view.container);
-    this.bannerView = view;
-    const isCurrent = (): boolean => token === this.bannerToken && !view.container.destroyed;
-    if (this.holdBanners) {
-      view.setPose(bannerPose(0.5, false)); // débogage : la bannière reste affichée jusqu'à la suivante
-      return;
-    }
-    view.setPose(bannerPose(0, this.reduced));
-    this.runner.add({
-      duration: this.reduced ? TIMING.staticHold : BANNER_DURATIONS[plan.kind],
-      update: (p) => {
-        if (isCurrent()) view.setPose(bannerPose(p, this.reduced));
-      },
-      finish: () => {
-        if (token !== this.bannerToken) return; // remplacée : déjà détruite
-        view.destroy();
-        this.bannerView = null;
-      },
-    });
-  }
-
-  /** Message court non bloquant (ex. changement d'option), distinct des bannières : ne les remplace pas. */
-  private showNotice(text: string): void {
-    this.noticeView?.destroy({ children: true });
-    const token = (this.noticeToken += 1);
-    const label = new Text({ text, style: { fill: 0xffffff, fontSize: 18, fontWeight: '700', stroke: { color: 0x000000, width: 4 } } });
-    label.anchor.set(0.5);
-    const bg = new Graphics();
-    bg.roundRect(-label.width / 2 - 18, -label.height / 2 - 8, label.width + 36, label.height + 16, 8).fill({ color: 0x0b0d10, alpha: 0.88 }).stroke({ width: 1.5, color: 0xffffff });
-    const view = new Container();
-    view.addChild(bg, label);
-    const { width } = this.screenSize();
-    view.position.set(width / 2, 28);
-    this.screenLayer.addChild(view);
-    this.noticeView = view;
-    this.runner.add({
-      duration: this.reduced ? TIMING.staticHold : TIMING.notice,
-      update: (p) => {
-        if (view.destroyed || token !== this.noticeToken || this.reduced) return;
-        view.alpha = p > 0.8 ? 1 - (p - 0.8) / 0.2 : 1;
-      },
-      finish: () => {
-        if (!view.destroyed) view.destroy({ children: true });
-        if (this.noticeView === view) this.noticeView = null;
-      },
-    });
   }
 }
