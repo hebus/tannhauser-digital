@@ -109,3 +109,27 @@ describe('diagnostics', () => {
     expect(d.find((x) => x.code === 'OUTSIDE_LAYOUT')!.nodeIds).toEqual(['b']);
   });
 });
+
+describe('caisses dans l’éditeur', () => {
+  const twoNodes = (): EditorDoc => ({
+    ...newBoard('t'),
+    nodes: [{ id: 'a', x: 0, y: 0, colors: ['red'], properties: { kind: 'ENTRY_POINT' } }, { id: 'b', x: 100, y: 0, colors: ['red'], properties: { kind: 'ENTRY_POINT' } }],
+    edges: [{ from: 'a', to: 'b' }],
+  });
+
+  it('outil caisse : un clic sur une case pose la caisse, un second la retire', () => {
+    let doc = twoNodes();
+    let state = setTool(initialToolState(), 'crate');
+    ({ state, doc } = click(state, doc, { x: 100, y: 0 }));
+    expect(doc.crates).toEqual([{ id: 'crate1', nodeId: 'b' }]);
+    ({ state, doc } = click(state, doc, { x: 100, y: 0 }));
+    expect(doc.crates).toBeUndefined();
+  });
+
+  it('diagnostic : une caisse rend la case impraticable et bloque une case d’entrée', () => {
+    const d = diagnose({ ...twoNodes(), crates: [{ id: 'crate1', nodeId: 'b' }] });
+    expect(d.find((x) => x.code === 'FEW_NODES')!.message).toMatch(/^1 cases praticables/);
+    expect(d.find((x) => x.code === 'CRATE_ON_ENTRY')!.nodeIds).toEqual(['b']);
+    expect(hasErrors(d)).toBe(false);
+  });
+});

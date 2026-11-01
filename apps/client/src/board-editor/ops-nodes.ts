@@ -1,4 +1,5 @@
 import { snap, zoneAt } from './geometry';
+import { renameCrateNode, setCrates } from './ops-crates';
 import { nextId, omit, type EditorDoc, type EditorNode, type NodeKind, type Pt } from './model';
 
 /** Opérations pures sur les cases. Aucune ne modifie le document reçu. */
@@ -39,13 +40,13 @@ export function moveNodes(doc: EditorDoc, origin: Readonly<Record<string, Pt>>, 
   };
 }
 
-/** Supprime des cases et tout ce qui les relie (arêtes, portails), puis les portes devenues inutiles. */
+/** Supprime des cases et tout ce qui les relie (arêtes, portails, caisses), puis les portes devenues inutiles. */
 export function deleteNodes(doc: EditorDoc, ids: readonly string[]): EditorDoc {
   const gone = new Set(ids);
   const edges = doc.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to));
   const used = new Set(edges.flatMap((e) => (e.doorId ? [e.doorId] : [])));
   return {
-    ...doc,
+    ...setCrates(doc, ids, false),
     nodes: doc.nodes.filter((n) => !gone.has(n.id)),
     edges,
     doors: (doc.doors ?? []).filter((d) => used.has(d.id)),
@@ -65,7 +66,7 @@ export function renameNode(doc: EditorDoc, oldId: string, newId: string): Rename
   return {
     ok: true,
     doc: {
-      ...doc,
+      ...renameCrateNode(doc, oldId, id),
       nodes: doc.nodes.map((n) => (n.id === oldId ? { ...n, id } : n)),
       edges: doc.edges.map((e) => ({ ...e, from: swap(e.from), to: swap(e.to) })),
       portals: (doc.portals ?? []).map((p) => ({ ...p, from: swap(p.from), to: swap(p.to) })),

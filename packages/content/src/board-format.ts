@@ -2,7 +2,7 @@ import type { BoardJson } from './schemas';
 
 /**
  * Format canonique d'un plateau JSON : même ordre de clés que les plateaux générés, aucune valeur `undefined`,
- * `doors` et `portals` toujours présents. L'ordre des tableaux n'est jamais modifié (relire puis réécrire un plateau
+ * `doors` et `portals` toujours présents, `crates` seulement s'il y a des caisses. L'ordre des tableaux n'est jamais modifié (relire puis réécrire un plateau
  * ne produit aucune différence). Pur : partagé par le générateur et l'éditeur de plateaux.
  */
 
@@ -46,9 +46,11 @@ export function normalizeBoardJson(json: BoardJson): BoardJson {
       edges: json.edges.map((e) => pick(e, ['from', 'to', 'oneWay', 'doorId'])),
       doors: (json.doors ?? []).map((d) => pick(d, ['id', 'type', 'state'])),
       portals: (json.portals ?? []).map((p) => pick(p, ['id', 'from', 'to', 'type'])),
+      // Absent si le plateau n'a pas de caisse : les plateaux existants restent identiques.
+      crates: json.crates && json.crates.length > 0 ? json.crates.map((c) => pick(c, ['id', 'nodeId'])) : undefined,
       layout,
     },
-    ['id', 'nameKey', 'nodes', 'edges', 'doors', 'portals', 'layout'],
+    ['id', 'nameKey', 'nodes', 'edges', 'doors', 'portals', 'crates', 'layout'],
   );
 }
 

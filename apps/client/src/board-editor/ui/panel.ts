@@ -3,6 +3,7 @@ import { h, withFocusKept } from '../../ui/dom';
 import type { Diagnostic } from '../diagnostics';
 import { NODE_KINDS, type EditorDoc, type NodeKind, type Selection } from '../model';
 import { findEdge, reverseEdge, setDoor, setOneWay, toggleDoor, removePortal, disconnect } from '../ops-edges';
+import { hasCrate, setCrates } from '../ops-crates';
 import { deleteShape, renameZone, setCorridorWidth, setRoom } from '../ops-layout';
 import { assignZones, deleteNodes, renameNode, setBoardMeta, setNodeColors, setNodePosition, setNodeProperties, setNodeZone } from '../ops-nodes';
 
@@ -107,6 +108,7 @@ function nodesSection(state: PanelState, ids: readonly string[], actions: PanelA
       'div',
       { class: 'be-row' },
       field('Praticable', checkbox('node-passable', props.passable !== false, (v) => actions.apply(setNodeProperties(doc, ids, { passable: v })))),
+      field('Caisse', checkbox('node-crate', nodes.every((n) => hasCrate(doc, n.id)), (v) => actions.apply(setCrates(doc, ids, v)))),
       field('Coût +PM', input('node-cost', props.movementCostModifier ?? 0, (v) => actions.apply(setNodeProperties(doc, ids, { movementCostModifier: Math.max(0, Math.floor(Number(v) || 0)) })), { type: 'number', min: 0, step: 1 })),
     ),
     single
@@ -252,7 +254,7 @@ export function renderPanel(root: HTMLElement, state: PanelState, actions: Panel
         h('div', { class: 'be-board-id' }, h('b', { text: doc.id }), h('span', { class: `be-tag ${state.editable ? 'is-ok' : 'is-ro'}`, text: state.editable ? (state.isNew ? 'nouveau' : 'modifiable') : 'généré : lecture seule' })),
         state.editable ? null : h('p', { class: 'be-hint', text: 'Plateau produit par tools/board-generator : modifier son .map.ts puis npm run generate:boards, ou « Enregistrer sous » pour en faire une copie modifiable.' }),
         field('Nom (clé i18n)', input('board-name', doc.nameKey, (v) => actions.apply(setBoardMeta(doc, { nameKey: v.trim() || doc.nameKey })))),
-        h('p', { class: 'be-hint', text: `${doc.nodes.length} cases · ${doc.edges.length} arêtes · ${(doc.doors ?? []).length} portes · ${(doc.portals ?? []).length} portails · ${doc.layout?.rooms.length ?? 0} pièces · ${doc.layout?.corridors.length ?? 0} couloirs` }),
+        h('p', { class: 'be-hint', text: `${doc.nodes.length} cases · ${doc.edges.length} arêtes · ${(doc.doors ?? []).length} portes · ${(doc.portals ?? []).length} portails · ${(doc.crates ?? []).length} caisses · ${doc.layout?.rooms.length ?? 0} pièces · ${doc.layout?.corridors.length ?? 0} couloirs` }),
       ),
       selectionSection(state, actions),
       diagnosticsSection(state, actions),

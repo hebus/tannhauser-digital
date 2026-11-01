@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import type { BoardState } from '@tannhauser/core';
+import { crateAt, type BoardState } from '@tannhauser/core';
 import { doorGeometry, layoutBounds, parseHexColor, polygonCentroid, type BoardLayout, type Box } from '@tannhauser/renderer/src/board-layout';
 import type { HighlightTone } from '@tannhauser/renderer/src/contract';
-import { buildColorMap, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
 import { corridorPolygons, footprintMask, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
 import { createTextPlane, createTextSprite, disposeTree } from './three-util';
 
@@ -309,6 +309,43 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
   const entryMaterial = basic(0xffffff, 0.9);
   const crossGeometry = new THREE.BoxGeometry(R * 1.1, 1.6, 4.5);
   const crossMaterial = basic(BLOCKED_COLOR);
+  // Caisse en bois (fermée : case impraticable) : corps en planches, montants d'angle, cadres haut et bas, croisillon
+  // sur le dessus. Géométries et matériaux partagés par toutes les caisses du plateau.
+  const crateSize = R * 1.25;
+  const crateHeight = crateSize * 0.8;
+  const crateWood = flat(CRATE_COLORS.wood);
+  const crateFrame = flat(CRATE_COLORS.frame);
+  const crateBody = new THREE.BoxGeometry(crateSize, crateHeight, crateSize);
+  const cratePost = new THREE.BoxGeometry(4.5, crateHeight + 1, 4.5);
+  const crateRim = new THREE.BoxGeometry(crateSize + 1, 3.5, 4.5);
+  const crateBrace = new THREE.BoxGeometry(crateSize * 1.3, 2, 4);
+  const crateModel = (): THREE.Group => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(crateBody, crateWood);
+    body.position.y = TILE_HEIGHT + crateHeight / 2;
+    g.add(body);
+    const h = crateSize / 2 - 1.5;
+    for (const [x, z] of [[-h, -h], [h, -h], [h, h], [-h, h]] as const) {
+      const post = new THREE.Mesh(cratePost, crateFrame);
+      post.position.set(x, TILE_HEIGHT + crateHeight / 2, z);
+      g.add(post);
+    }
+    for (const y of [TILE_HEIGHT + 2, TILE_HEIGHT + crateHeight - 1.5]) {
+      for (const [x, z, turn] of [[0, -h, 0], [0, h, 0], [-h, 0, 1], [h, 0, 1]] as const) {
+        const rim = new THREE.Mesh(crateRim, crateFrame);
+        rim.position.set(x, y, z);
+        rim.rotation.y = (turn * Math.PI) / 2;
+        g.add(rim);
+      }
+    }
+    for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+      const brace = new THREE.Mesh(crateBrace, crateFrame);
+      brace.position.y = TILE_HEIGHT + crateHeight + 0.8;
+      brace.rotation.y = angle;
+      g.add(brace);
+    }
+    return g;
+  };
   for (const node of Object.values(board.nodes)) {
     const tile = new THREE.Group();
     tile.position.set(node.x, 0, node.y);
@@ -343,6 +380,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       ring.position.y = TILE_HEIGHT + 0.4;
       tile.add(ring);
     }
+    if (crateAt(board, node.id)) tile.add(crateModel());
     if (node.properties.movementCostModifier > 0) {
       const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { pixelHeight: 13 });
       badge.position.set(R * 0.75, 12, -R * 0.75);

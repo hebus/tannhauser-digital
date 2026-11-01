@@ -1,4 +1,4 @@
-import type { BoardState, NodeId } from '../board/types';
+import { crateAt, type BoardState, type NodeId } from '../board/types';
 import type { RuleError } from '../events/events';
 import type { CharacterId, CharacterState, GameState } from '../state/types';
 
@@ -80,6 +80,9 @@ export function checkStep(
 
   if (!target.properties.passable) {
     return fail('IMPASSABLE', `Impossible : la case ${to} est impraticable.`);
+  }
+  if (crateAt(board, to)) {
+    return fail('IMPASSABLE', `Impossible : une caisse bloque la case ${to}.`);
   }
   const enemy = occupantsOf(state, to, character.id).find((c) => c.playerId !== character.playerId);
   if (enemy) {

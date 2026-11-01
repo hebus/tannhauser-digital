@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { BoardState } from '@tannhauser/core';
-import { buildColorMap } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS } from '@tannhauser/renderer/src/palette';
 import { buildBoardScene, TILE_RADIUS } from './board-scene';
 
 const node = (id: string, x: number, y: number, colors: string[]) => ({ id, x, y, colors, properties: { kind: 'NORMAL' as const, passable: true, movementCostModifier: 0, modifiers: [] } });
@@ -79,5 +79,20 @@ describe('chemins (arêtes)', () => {
     const zs = [0, 1, 2].map((i) => pos.getZ(i));
     expect(Math.max(...zs)).toBeLessThan(150);
     expect(Math.max(...zs)).toBeGreaterThan(150 - TILE_RADIUS - 6);
+  });
+});
+
+describe('caisses', () => {
+  const woodMeshes = (b: BoardState) => {
+    let count = 0;
+    buildBoardScene(b, undefined, (k) => k).group.traverse((o) => {
+      if (o instanceof THREE.Mesh && (o.material as THREE.MeshStandardMaterial).color?.getHex() === CRATE_COLORS.wood) count++;
+    });
+    return count;
+  };
+
+  it('une caisse du plateau est modélisée sur sa case, et seulement là', () => {
+    expect(woodMeshes(board)).toBe(0);
+    expect(woodMeshes({ ...board, crates: [{ id: 'crate1', nodeId: 'b' }] })).toBe(1);
   });
 });

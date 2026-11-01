@@ -28,6 +28,14 @@ describe('format canonique des plateaux', () => {
     expect(out.edges[0]).toEqual({ from: 'a', to: 'b' });
   });
 
+  it('caisses : après les portails, absentes s’il n’y en a pas', () => {
+    const base = { id: 't', nameKey: 'k', nodes: [{ id: 'a', x: 0, y: 0, colors: ['red'] }], edges: [] };
+    const out = normalizeBoardJson({ ...base, layout: { rooms: [], corridors: [] }, crates: [{ nodeId: 'a', id: 'crate1' }] } as BoardJson);
+    expect(Object.keys(out)).toEqual(['id', 'nameKey', 'nodes', 'edges', 'doors', 'portals', 'crates', 'layout']);
+    expect(Object.keys(out.crates![0]!)).toEqual(['id', 'nodeId']);
+    expect('crates' in normalizeBoardJson({ ...base, crates: [] })).toBe(false);
+  });
+
   it('des propriétés vides disparaissent', () => {
     const out = normalizeBoardJson({ id: 't', nameKey: 'k', nodes: [{ id: 'a', x: 0, y: 0, colors: ['red'], properties: {} }], edges: [] });
     expect('properties' in out.nodes[0]!).toBe(false);

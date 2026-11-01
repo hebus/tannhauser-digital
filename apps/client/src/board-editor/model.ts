@@ -37,7 +37,7 @@ export type Selection =
   | { readonly kind: 'corridor'; readonly id: string }
   | null;
 
-export type Tool = 'select' | 'node' | 'connect' | 'door' | 'portal' | 'room' | 'corridor';
+export type Tool = 'select' | 'node' | 'connect' | 'door' | 'portal' | 'crate' | 'room' | 'corridor';
 
 /** Rayon d'une case (unités plateau), comme le rendu 2D (`NODE_RADIUS` / `LAYOUT_NODE_RADIUS` de `board-view.ts`). */
 export const nodeRadius = (doc: EditorDoc): number => (doc.layout ? 22 : 26);

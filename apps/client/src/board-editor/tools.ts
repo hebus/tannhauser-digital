@@ -2,6 +2,7 @@ import { nodesInBox, snap, type Hit } from './geometry';
 import type { EditorDoc, Pt, Selection, Tool } from './model';
 import { disconnect, toggleDoor, toggleEdge, togglePortal, removePortal } from './ops-edges';
 import { addCorridor, addRoom, deleteShape, deleteVertex, insertVertex, moveShape, moveVertex } from './ops-layout';
+import { toggleCrate } from './ops-crates';
 import { addNode, deleteNodes, moveNodes } from './ops-nodes';
 
 /**
@@ -138,6 +139,10 @@ export function pointerDown(state: ToolState, doc: EditorDoc, input: PointerInpu
       }
       const portal = togglePortal(doc, next.pending, hit.id);
       return { state: { ...next, pending: null, selection: portal.id ? { kind: 'portal', id: portal.id } : null }, doc: portal.doc, key: null };
+    }
+    case 'crate': {
+      if (hit.kind !== 'node') return selectDown(next, doc, input);
+      return { state: { ...next, selection: { kind: 'nodes', ids: [hit.id] } }, doc: toggleCrate(doc, hit.id), key: null };
     }
     case 'door': {
       if (hit.kind !== 'edge') return selectDown(next, doc, input);

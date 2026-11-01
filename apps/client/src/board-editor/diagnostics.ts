@@ -38,7 +38,9 @@ export function diagnose(doc: EditorDoc, hasTranslation: (key: string) => boolea
     out.push({ level, code, message, nodeIds });
   };
 
-  const passable = doc.nodes.filter((n) => n.properties?.passable !== false);
+  // Une caisse (fermée) rend sa case impraticable : même règle que le moteur (`isPassable`).
+  const crated = new Set((doc.crates ?? []).map((c) => c.nodeId));
+  const passable = doc.nodes.filter((n) => n.properties?.passable !== false && !crated.has(n.id));
   if (doc.nodes.length > 0 && passable.length < FULL_TEAMS) {
     warn('warning', 'FEW_NODES', `${passable.length} cases praticables : moins de ${FULL_TEAMS}, des équipes complètes ne tiendront pas.`);
   }
@@ -47,6 +49,8 @@ export function diagnose(doc: EditorDoc, hasTranslation: (key: string) => boolea
     warn('info', 'NO_ENTRIES', 'Moins de 2 cases d’entrée : les équipes seront placées sur les cases les plus éloignées.');
   }
   const objectives = passable.filter((n) => n.properties?.kind === 'OBJECTIVE');
+  const blockedEntries = entries.filter((n) => crated.has(n.id)).map((n) => n.id);
+  if (blockedEntries.length > 0) warn('warning', 'CRATE_ON_ENTRY', `${blockedEntries.length} case(s) d’entrée sous une caisse : personne ne pourra y être placé.`, blockedEntries);
   if (doc.nodes.length > 0 && (objectives.length < CTF_OBJECTIVES || entries.length < 2)) {
     warn('info', 'NO_CTF', `Capture du drapeau indisponible : il faut ${CTF_OBJECTIVES} cases objectif praticables (${objectives.length}) et 2 cases d’entrée (${entries.length}).`);
   }

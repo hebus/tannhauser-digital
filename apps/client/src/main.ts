@@ -1,5 +1,5 @@
 import { ReducedMotion, buildPathPreview, createPixiRenderer, type BannerKind, type BannerPlan, type BoardRenderer, type BoardRendererFactory, type BoardRendererOptions } from '@tannhauser/renderer';
-import { activationHasActed, explosionZone, getLegalActions, type GameState } from '@tannhauser/core';
+import { activationHasActed, explosionZone, getLegalActions, isPassable, type GameState } from '@tannhauser/core';
 import { describeEvent } from './event-text';
 import { adjustHealth, freeNodes, relocateCharacter, resetActivation, switchOwner, type EditResult } from './editor/edit-state';
 import { startAiDriver } from './ai-driver';
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   }
   // Débogage de la fumée : `?debugSmoke=1` pose deux fumées (2 tours restants, puis 1) sur des cases praticables (effets SMOKE de l'état), pour les voir sans jouer.
   if (new URLSearchParams(location.search).get('debugSmoke') !== null) {
-    const nodes = Object.values(game.state.board.nodes).filter((n) => n.properties.passable);
+    const nodes = Object.values(game.state.board.nodes).filter((n) => isPassable(game.state.board, n.id));
     const picks = [nodes[Math.floor(nodes.length / 3)], nodes[Math.floor(nodes.length / 2)]].flatMap((n) => (n ? [n] : []));
     game.replaceState({ ...game.state, effects: [...game.state.effects, ...picks.map((n, i) => ({ id: `debug-smoke-${i}`, type: 'SMOKE' as const, origin: n.id, remainingTurns: 2 - i }))] });
   }

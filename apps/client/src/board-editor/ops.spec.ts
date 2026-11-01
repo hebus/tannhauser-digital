@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newBoard, nextId, type EditorDoc } from './model';
 import { connect, disconnect, reverseEdge, setDoor, setOneWay, toggleDoor, toggleEdge, togglePortal } from './ops-edges';
+import { hasCrate, setCrates, toggleCrate } from './ops-crates';
 import { addCorridor, addRoom, deleteShape, deleteVertex, insertVertex, moveShape, renameZone, setRoom } from './ops-layout';
 import { addNode, assignZones, deleteNodes, moveNodes, renameNode, setNodeColors, setNodeProperties } from './ops-nodes';
 
@@ -156,5 +157,26 @@ describe('plan', () => {
     const emptied = deleteShape(deleteShape(corridor.doc, 'corridor', 'couloir-1'), 'room', 'piece-1');
     expect('layout' in emptied).toBe(false);
     expect('zoneId' in emptied.nodes[0]!).toBe(false);
+  });
+});
+
+describe('caisses', () => {
+  it('poser puis retirer : champ absent quand il n’y en a plus', () => {
+    const one = toggleCrate(sample(), 'b');
+    expect(one.crates).toEqual([{ id: 'crate1', nodeId: 'b' }]);
+    expect(hasCrate(one, 'b')).toBe(true);
+    expect('crates' in toggleCrate(one, 'b')).toBe(false);
+  });
+
+  it('plusieurs cases à la fois, jamais deux caisses sur une case ni sur une case inconnue', () => {
+    const doc = setCrates(setCrates(sample(), ['a', 'b'], true), ['a', 'zz'], true);
+    expect(doc.crates!.map((c) => c.nodeId)).toEqual(['a', 'b']);
+  });
+
+  it('suivent la case : suppression et renommage', () => {
+    const doc = setCrates(sample(), ['a', 'b'], true);
+    expect(deleteNodes(doc, ['a']).crates).toEqual([{ id: 'crate2', nodeId: 'b' }]);
+    const renamed = renameNode(doc, 'b', 'z');
+    expect(renamed.ok && renamed.doc.crates![1]).toEqual({ id: 'crate2', nodeId: 'z' });
   });
 });

@@ -45,6 +45,12 @@ export const portalSchema = type({
   type: "'SECRET_DOOR'",
 });
 
+/** Caisse en bois posée sur une case (fermée : la case est impraticable). */
+export const crateSchema = type({
+  id: 'string > 0',
+  nodeId: 'string > 0',
+});
+
 const layoutPoint = type({ x: 'number', y: 'number' });
 
 /** Mise en page d'affichage (voir `BoardLayout` du renderer) : pièces en polygones, couloirs en lignes brisées. */
@@ -69,6 +75,7 @@ export const boardSchema = type({
   edges: edgeSchema.array(),
   'doors?': doorSchema.array(),
   'portals?': portalSchema.array(),
+  'crates?': crateSchema.array(),
   'layout?': layoutSchema,
 });
 

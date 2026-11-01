@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import type { BoardNode, BoardState } from '@tannhauser/core';
-import { buildColorMap, colorHex, TERRAIN_COLORS } from './palette';
+import { crateAt, type BoardNode, type BoardState } from '@tannhauser/core';
+import { buildColorMap, colorHex, CRATE_COLORS, TERRAIN_COLORS } from './palette';
 import {
   corridorSegments,
   doorGeometry,
@@ -265,6 +265,14 @@ export class BoardView extends Container {
     }
     if (node.properties.kind === 'ENTRY_POINT') {
       g.circle(node.x, node.y, R + 6).stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
+    }
+    if (crateAt(this.board, node.id)) {
+      // Caisse en bois vue de dessus (case impraticable tant qu'elle est fermée) : planches et croisillon.
+      const k = R * 0.62;
+      g.roundRect(node.x - k, node.y - k, k * 2, k * 2, 3).fill(CRATE_COLORS.wood).stroke({ width: 2, color: CRATE_COLORS.dark });
+      for (const dy of [-k / 3, k / 3]) g.moveTo(node.x - k, node.y + dy).lineTo(node.x + k, node.y + dy).stroke({ width: 1, color: CRATE_COLORS.dark, alpha: 0.6 });
+      g.moveTo(node.x - k, node.y - k).lineTo(node.x + k, node.y + k).stroke({ width: 3, color: CRATE_COLORS.frame });
+      g.moveTo(node.x + k, node.y - k).lineTo(node.x - k, node.y + k).stroke({ width: 3, color: CRATE_COLORS.frame });
     }
     this.nodeLayer.addChild(g);
     const parts: Container[] = [g];

@@ -1,5 +1,5 @@
 import { doorGeometry, parseHexColor, polygonCentroid } from '@tannhauser/renderer/src/board-layout';
-import { buildColorMap, cssColor, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS, cssColor, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
 import { midpoints } from '../geometry';
 import { nodeRadius, sameEdge, type EditorDoc, type Pt, type Selection } from '../model';
 import { points, s, sectorPath } from './svg';
@@ -40,6 +40,10 @@ const PENDING = '#ffb454';
 const ERROR = '#ff4d4f';
 const WALL = cssColor(TERRAIN_COLORS.wall);
 const KIND_LETTER: Readonly<Record<string, string>> = { ENTRY_POINT: 'E', OBJECTIVE: 'O', ACTION: 'A' };
+/** Bois de la caisse (palette commune aux rendus). */
+const CRATE_WOOD = cssColor(CRATE_COLORS.wood);
+const CRATE_FRAME = cssColor(CRATE_COLORS.frame);
+const CRATE_DARK = cssColor(CRATE_COLORS.dark);
 
 export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): void {
   root.replaceChildren();
@@ -109,6 +113,7 @@ export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): 
   // Cases : secteurs de ligne de vue (premier en haut, sens horaire, comme le 2D), contour, marques de type et de coût.
   const nodes = s('g');
   const selectedIds = new Set(sel?.kind === 'nodes' ? sel.ids : []);
+  const crated = new Set((doc.crates ?? []).map((c) => c.nodeId));
   for (const n of doc.nodes) {
     const g = s('g', { transform: `translate(${n.x},${n.y})` });
     const list = n.colors.length > 0 ? n.colors : [null];
@@ -126,6 +131,7 @@ export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): 
       g.append(s('text', { x: R * 0.7, y: -R * 0.7, class: 'be-badge' }, KIND_LETTER[kind]!));
     }
     if (kind === 'ENTRY_POINT') g.append(s('circle', { r: R + 5, fill: 'none', stroke: '#ffffff', 'stroke-width': 2, 'stroke-opacity': 0.85 }));
+    if (crated.has(n.id)) g.append(crateIcon(R * 0.62));
     const cost = n.properties?.movementCostModifier ?? 0;
     if (cost > 0) g.append(s('text', { x: -R * 0.75, y: -R * 0.75, class: 'be-cost' }, `+${cost}`));
     if (ui.flagged.has(n.id)) g.append(s('circle', { r: R + 9, fill: 'none', stroke: ERROR, 'stroke-width': 3 * u, 'stroke-dasharray': `${5 * u} ${3 * u}` }));
@@ -158,4 +164,16 @@ export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): 
     const y = Math.min(ui.box.a.y, ui.box.b.y);
     root.append(s('rect', { x, y, width: Math.abs(ui.box.a.x - ui.box.b.x), height: Math.abs(ui.box.a.y - ui.box.b.y), class: 'be-box', 'stroke-width': u }));
   }
+}
+
+/** Caisse en bois vue de dessus : planches, cadre et croisillon, comme le pion des rendus 2D et 3D. */
+export function crateIcon(half: number): SVGGElement {
+  const w = half * 2;
+  return s(
+    'g',
+    { class: 'be-crate' },
+    s('rect', { x: -half, y: -half, width: w, height: w, rx: 2, fill: CRATE_WOOD, stroke: CRATE_DARK, 'stroke-width': 2 }),
+    s('path', { d: `M ${-half},${-half / 3} H ${half} M ${-half},${half / 3} H ${half}`, stroke: CRATE_DARK, 'stroke-width': 1, 'stroke-opacity': 0.6 }),
+    s('path', { d: `M ${-half},${-half} L ${half},${half} M ${half},${-half} L ${-half},${half}`, stroke: CRATE_FRAME, 'stroke-width': 3 }),
+  );
 }
