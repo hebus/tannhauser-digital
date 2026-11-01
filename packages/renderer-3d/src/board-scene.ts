@@ -3,7 +3,7 @@ import type { BoardState } from '@tannhauser/core';
 import { doorGeometry, layoutBounds, parseHexColor, polygonCentroid, type BoardLayout, type Box } from '@tannhauser/renderer/src/board-layout';
 import type { HighlightTone } from '@tannhauser/renderer/src/contract';
 import { buildColorMap, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
-import { corridorPolygons, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
+import { corridorPolygons, footprintMask, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
 import { createTextPlane, createTextSprite, disposeTree } from './three-util';
 
 /** Dimensions en unités plateau (les nœuds sont espacés d'environ 100). */
@@ -23,6 +23,10 @@ const MAX_OCCLUDERS = 8;
 const OCCLUDER_RADIUS = 36;
 /** Marge autour du plateau pour le cadrage de la caméra. */
 const BOUNDS_MARGIN = 40;
+/** Hauteur à laquelle un mur qui cache du sol est coupé (murs en coupe). */
+const CUT_HEIGHT = 9;
+/** Teinte de la coupe d'un mur (intérieur vu par le dessus), plus sombre que le mur. */
+const WALL_SECTION = 0x2b2f38;
 
 /** Couleurs reprises du rendu 2D (`BoardView`) : chemins, flèches, portails, portes. */
 const EDGE_UNDERLAY = 0x0b0c0e;
@@ -47,6 +51,8 @@ export interface BoardScene {
   readonly bounds: Box;
   /** Surbrillance des cases (anneau) ; liste vide = aucune. */
   setReachable(nodeIds: Iterable<string>, tone: HighlightTone): void;
+  /** Case sous le pointeur (anneau clair) ; `null` = aucune. */
+  setHover(nodeId: string | null): void;
   /** Cases ciblées : anneau rouge et repères. */
   setTargets(nodeIds: Iterable<string>): void;
   /** Ligne de vue depuis `origin` : cases vues (vert) et cachées (rouge, croix) ; `null` = masquer. */
@@ -65,18 +71,43 @@ interface OccluderUniforms {
   readonly radius: { value: number };
 }
 
+/** Murs en coupe : masque du sol jouable (voir `footprintMask`) et emprise qu'il couvre (x, y, largeur, hauteur). */
+interface CutawayUniforms {
+  readonly mask: { value: THREE.Texture };
+  readonly box: { value: THREE.Vector4 };
+}
+
 /**
  * Matériau dont les fragments sont abandonnés (tramé) quand ils masquent un pion vu depuis la caméra : le mur reste plein
  * partout ailleurs, et seul un trou suit chaque pion. Fonctionne pour n'importe quelle géométrie.
+ * Avec `cutaway`, un mur est en plus coupé à `CUT_HEIGHT` partout où il cache du sol jouable (le rayon caméra → fragment,
+ * prolongé jusqu'au sol, y tombe) : les murs du fond restent entiers, ceux de devant ne masquent plus les cases. La coupe
+ * laisse voir l'intérieur du mur, peint d'une teinte unie (la face arrière, d'où `DoubleSide`).
  */
-function occludable(material: THREE.MeshStandardMaterial, uniforms: OccluderUniforms): THREE.MeshStandardMaterial {
+function occludable(material: THREE.MeshStandardMaterial, uniforms: OccluderUniforms, cutaway?: CutawayUniforms): THREE.MeshStandardMaterial {
+  if (cutaway) material.side = THREE.DoubleSide;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uOcc = uniforms.positions;
     shader.uniforms.uOccCount = uniforms.count;
     shader.uniforms.uOccRadius = uniforms.radius;
+    if (cutaway) {
+      shader.uniforms.uCutMask = cutaway.mask;
+      shader.uniforms.uCutBox = cutaway.box;
+    }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    const cut = cutaway
+      ? `
+  if (vWPos.y > ${CUT_HEIGHT.toFixed(1)}) {
+    vec3 down = vWPos - cameraPosition;
+    if (down.y < -0.001) {
+      vec2 floorHit = (cameraPosition + down * (-cameraPosition.y / down.y)).xz;
+      vec2 uv = (floorHit - uCutBox.xy) / uCutBox.zw;
+      if (uv.x >= 0.0 && uv.y >= 0.0 && uv.x <= 1.0 && uv.y <= 1.0 && texture2D(uCutMask, uv).r > 0.5) discard;
+    }
+  }`
+      : '';
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
@@ -84,7 +115,7 @@ function occludable(material: THREE.MeshStandardMaterial, uniforms: OccluderUnif
 varying vec3 vWPos;
 uniform vec3 uOcc[${MAX_OCCLUDERS}];
 uniform int uOccCount;
-uniform float uOccRadius;`,
+uniform float uOccRadius;${cutaway ? '\nuniform sampler2D uCutMask;\nuniform vec4 uCutBox;' : ''}`,
       )
       .replace(
         '#include <clipping_planes_fragment>',
@@ -102,9 +133,17 @@ uniform float uOccRadius;`,
       float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
       if (keep < noise) discard;
     }
-  }
+  }${cut}
 }`,
       );
+    if (cutaway) {
+      const section = new THREE.Color(WALL_SECTION);
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+  if (!gl_FrontFacing) gl_FragColor.rgb = vec3(${section.r.toFixed(4)}, ${section.g.toFixed(4)}, ${section.b.toFixed(4)});`,
+      );
+    }
   };
   return material;
 }
@@ -176,6 +215,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
   // Terrain : sols sombres à peine teintés (comme le 2D, pour que les couleurs des cases — celles de la ligne de vue —
   // restent le seul repère coloré), murs en union des pièces et couloirs, ouvertures là où une arête sort de l'empreinte.
   let plan: WallPlan | null = null;
+  let cutMask: THREE.DataTexture | null = null;
   if (layout) {
     const edges = board.edges.flatMap((e) => {
       const a = board.nodes[e.from];
@@ -196,7 +236,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       extrude(group, [{ outer: room.polygon.map((p) => ({ x: p.x, y: p.y })), holes: [] }], FLOOR_THICKNESS, 0, flat(floor.getHex()));
       if (room.nameKey) {
         const c = polygonCentroid(room.polygon);
-        const name = createTextPlane(label(room.nameKey), { worldHeight: 16, opacity: 0.5 });
+        const name = createTextPlane(label(room.nameKey), { worldHeight: 26, opacity: 0.5 });
         name.position.set(c.x, 0.4, c.y);
         group.add(name);
       }
@@ -204,7 +244,16 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     // Un peu plus bas que les pièces, pour qu'aucun sol ne scintille (z-fighting) là où ils se recouvrent.
     const corridorMaterial = flat(TERRAIN_COLORS.corridor);
     for (const corridor of layout.corridors) extrude(group, corridorPolygons(corridor, CORRIDOR_CAP), FLOOR_THICKNESS, -1.5, corridorMaterial);
-    extrude(group, plan.walls, WALL_HEIGHT + FLOOR_THICKNESS, WALL_HEIGHT, occludable(flat(TERRAIN_COLORS.wall), occluders));
+    const footprintBox = layoutBounds(layout) ?? { x: 0, y: 0, width: 1, height: 1 };
+    const mask = footprintMask(plan.footprint, footprintBox);
+    cutMask = new THREE.DataTexture(mask.data, mask.width, mask.height, THREE.RedFormat, THREE.UnsignedByteType);
+    cutMask.magFilter = THREE.LinearFilter;
+    cutMask.needsUpdate = true;
+    const cutaway: CutawayUniforms = {
+      mask: { value: cutMask },
+      box: { value: new THREE.Vector4(footprintBox.x, footprintBox.y, footprintBox.width, footprintBox.height) },
+    };
+    extrude(group, plan.walls, WALL_HEIGHT + FLOOR_THICKNESS, WALL_HEIGHT, occludable(flat(TERRAIN_COLORS.wall), occluders, cutaway));
   } else {
     const nodes = Object.values(board.nodes);
     const w = Math.max(...nodes.map((n) => n.x)) + 100;
@@ -295,7 +344,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       tile.add(ring);
     }
     if (node.properties.movementCostModifier > 0) {
-      const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { worldHeight: 11 });
+      const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { pixelHeight: 13 });
       badge.position.set(R * 0.75, 12, -R * 0.75);
       tile.add(badge);
     }
@@ -340,6 +389,10 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
   const losRingGeometry = new THREE.RingGeometry(R + 1.5, R + 4.5, 32).rotateX(-Math.PI / 2);
   const losDotGeometry = new THREE.SphereGeometry(4, 10, 8);
   const losBarGeometry = new THREE.BoxGeometry(12, 1.4, 3);
+  const hoverRingGeometry = new THREE.RingGeometry(R + 1, R + 6, 40).rotateX(-Math.PI / 2);
+  const hoverDiscGeometry = new THREE.CircleGeometry(R + 1, 32).rotateX(-Math.PI / 2);
+  const hoverRing = basic(0xffffff, 0.95);
+  const hoverFill = basic(0xffffff, 0.18);
   const ringMaterials: Record<HighlightTone, THREE.MeshBasicMaterial> = {
     move: basic(HIGHLIGHT_COLORS.move),
     throw: basic(HIGHLIGHT_COLORS.throw),
@@ -350,9 +403,9 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
   const losVisibleFill = basic(OVERLAY_COLORS.losVisible, 0.28);
   const losHiddenFill = basic(OVERLAY_COLORS.losHidden, 0.18);
   const losHidden = basic(OVERLAY_COLORS.losHidden);
-  type OverlayKind = 'reach' | 'target' | 'losVisible' | 'losHidden';
+  type OverlayKind = 'reach' | 'target' | 'losVisible' | 'losHidden' | 'hover';
   const lazy = new Map<string, THREE.Object3D>();
-  const shown: Record<OverlayKind, Set<string>> = { reach: new Set(), target: new Set(), losVisible: new Set(), losHidden: new Set() };
+  const shown: Record<OverlayKind, Set<string>> = { reach: new Set(), target: new Set(), losVisible: new Set(), losHidden: new Set(), hover: new Set() };
   const setShown = (kind: OverlayKind, ids: Iterable<string>, build: () => THREE.Object3D, after?: (obj: THREE.Object3D) => void): void => {
     for (const id of shown[kind]) {
       const o = lazy.get(`${kind}:${id}`);
@@ -399,6 +452,15 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
         },
         (o) => ((o as THREE.Mesh).material = ringMaterials[tone]),
       );
+    },
+    setHover(nodeId) {
+      // Anneau clair et voile : en perspective, la case visée par le pointeur doit se lire sans hésitation.
+      setShown('hover', nodeId === null ? [] : [nodeId], () => {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(hoverDiscGeometry, hoverFill), new THREE.Mesh(hoverRingGeometry, hoverRing));
+        g.position.y = TILE_HEIGHT + 1;
+        return g;
+      });
     },
     setTargets(nodeIds) {
       setShown('target', nodeIds, () => {
@@ -452,7 +514,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       for (const [id, tile] of tiles) {
         let sprite = ids.get(id);
         if (show && !sprite) {
-          sprite = createTextSprite(id, { worldHeight: 9 });
+          sprite = createTextSprite(id, { pixelHeight: 11 });
           sprite.position.y = TILE_HEIGHT + 16;
           tile.add(sprite);
           ids.set(id, sprite);
@@ -472,10 +534,11 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
     },
     dispose() {
       disposeTree(group);
-      const geometries = [outlineGeometry, entryGeometry, crossGeometry, ringGeometry, targetRingGeometry, targetDiscGeometry, tickGeometry, losDiscGeometry, losRingGeometry, losDotGeometry, losBarGeometry];
+      const geometries = [outlineGeometry, entryGeometry, crossGeometry, ringGeometry, targetRingGeometry, targetDiscGeometry, tickGeometry, losDiscGeometry, losRingGeometry, losDotGeometry, losBarGeometry, hoverRingGeometry, hoverDiscGeometry];
       for (const g of geometries) g.dispose();
-      const materials = [...Object.values(ringMaterials), entryMaterial, crossMaterial, targetMaterial, targetFill, losVisible, losVisibleFill, losHiddenFill, losHidden];
+      const materials = [...Object.values(ringMaterials), entryMaterial, crossMaterial, targetMaterial, targetFill, losVisible, losVisibleFill, losHiddenFill, losHidden, hoverRing, hoverFill];
       for (const m of materials) m.dispose();
+      cutMask?.dispose();
     },
   };
 }

@@ -4,7 +4,7 @@ import { carriedOwnerIndexes } from '@tannhauser/renderer/src/flag-model';
 import { playerColor } from '@tannhauser/renderer/src/palette';
 import type { Point } from '@tannhauser/renderer/src/presentation/path-geometry';
 import { createPennant } from './flags-3d';
-import { clearGroup, createTextSprite, setOpacity } from './three-util';
+import { clearGroup, createBadgeSprite, createTextSprite, setOpacity } from './three-util';
 
 /** Surcharge d'affichage d'un pion (animations) : coordonnées plateau, `lift` = hauteur au-dessus du sol. */
 export interface PawnDisplay {
@@ -35,13 +35,13 @@ const defaultName = (c: CharacterState): string => c.definitionId.split('.').pop
 function bodyGeometry(playerIndex: number): { geometry: THREE.BufferGeometry; height: number } {
   switch (((playerIndex % 4) + 4) % 4) {
     case 0:
-      return { geometry: new THREE.CylinderGeometry(11, 13, 28, 16).translate(0, 14, 0), height: 28 };
+      return { geometry: new THREE.CylinderGeometry(15, 18, 40, 16).translate(0, 20, 0), height: 40 };
     case 1:
-      return { geometry: new THREE.OctahedronGeometry(15).scale(1, 1.4, 1).translate(0, 21, 0), height: 42 };
+      return { geometry: new THREE.OctahedronGeometry(20).scale(1, 1.4, 1).translate(0, 28, 0), height: 56 };
     case 2:
-      return { geometry: new THREE.BoxGeometry(22, 28, 22).translate(0, 14, 0), height: 28 };
+      return { geometry: new THREE.BoxGeometry(30, 38, 30).translate(0, 19, 0), height: 38 };
     default:
-      return { geometry: new THREE.ConeGeometry(15, 34, 3).translate(0, 17, 0), height: 34 };
+      return { geometry: new THREE.ConeGeometry(21, 46, 3).translate(0, 23, 0), height: 46 };
   }
 }
 
@@ -133,7 +133,7 @@ export class PawnLayer {
   tick(timeMs: number, reduced: boolean): void {
     for (const pawn of this.pawns.values()) {
       if (pawn.ring) pawn.ring.scale.setScalar(1 + (reduced ? 0 : 0.1 * Math.sin(timeMs / 260)));
-      if (pawn.chevron) pawn.chevron.position.y = pawn.height + 12 + (reduced ? 0 : Math.sin(timeMs / 300) * 2.5);
+      if (pawn.chevron) pawn.chevron.position.y = pawn.height + 20 + (reduced ? 0 : Math.sin(timeMs / 300) * 2.5);
     }
   }
 
@@ -170,8 +170,8 @@ export class PawnLayer {
 
     if (c.alive && active) {
       // Repère « actif » : cône renversé au-dessus du pion (une forme, pas seulement un contour).
-      const chevron = new THREE.Mesh(new THREE.ConeGeometry(6, 10, 4).rotateX(Math.PI), new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true }));
-      chevron.position.y = height + 12;
+      const chevron = new THREE.Mesh(new THREE.ConeGeometry(8, 13, 4).rotateX(Math.PI), new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true }));
+      chevron.position.y = height + 20;
       pawn.root.add(chevron);
       pawn.chevron = chevron;
     }
@@ -180,7 +180,7 @@ export class PawnLayer {
       const ring = new THREE.Group();
       const dash = new THREE.MeshBasicMaterial({ color: 0xffffff });
       for (let i = 0; i < 6; i++) {
-        const arc = new THREE.Mesh(new THREE.TorusGeometry(22, 1.4, 6, 6, Math.PI / 6), dash);
+        const arc = new THREE.Mesh(new THREE.TorusGeometry(27, 1.6, 6, 6, Math.PI / 6), dash);
         arc.rotation.x = -Math.PI / 2;
         arc.rotation.z = (i / 6) * Math.PI * 2;
         ring.add(arc);
@@ -192,15 +192,19 @@ export class PawnLayer {
     // Drapeaux portés : un fanion par drapeau, accroché au flanc du pion (il suit donc ses déplacements).
     carriedOwnerIndexes(state, c.id).forEach((owner, i) => {
       const pennant = createPennant(owner, 0.7);
-      pennant.position.set(14 + i * 8, 4, 6);
+      pennant.position.set(20 + i * 8, 4, 8);
       pawn.root.add(pennant);
     });
     if (c.alive) {
+      // Initiale du type (H : héros, T : troupe…), comme le 2D : pastille posée sur le pion.
+      const badge = createBadgeSprite(defaultName(c).slice(0, 1).toUpperCase() || '?');
+      badge.position.y = height + 6;
+      pawn.root.add(badge);
       const max = c.statRows.length;
       const pips = '■'.repeat(Math.max(0, c.health)) + '□'.repeat(Math.max(0, max - c.health));
       const text = name.length > MAX_NAME_CHARS ? `${name.slice(0, MAX_NAME_CHARS - 1)}…` : name;
-      const label = createTextSprite(`${text}\n${pips}`, { worldHeight: 15 });
-      label.position.y = height + (active ? 46 : 34);
+      const label = createTextSprite(`${text}\n${pips}`, { pixelHeight: 13 });
+      label.position.y = height + (active ? 40 : 26);
       pawn.root.add(label);
     }
   }
