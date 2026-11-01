@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRng, applyCommand, createInitialState, type CharacterState, type GameState } from '@tannhauser/core';
 import { BoardBuilder } from '@tannhauser/core';
-import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, announcedText, placementModel, reactionContext, rosterRows, statusModel, visibleActions } from './hud-model';
+import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, attackMode, announcedText, placementModel, reactionContext, rosterRows, statusModel, visibleActions } from './hud-model';
 import { setLocale } from './i18n';
 import { describeRefusals, explainIgnoredClick, explainIgnoredKey } from './input-feedback';
 import { createLabeler } from './labels';
@@ -77,6 +77,42 @@ describe('modèle du HUD', () => {
     const hudKeys = Object.values(ACTION_KEYS).map((k) => k!.toLowerCase());
     const own = hudKeys.filter((k) => !MAIN_HANDLED_KEYS.has(k));
     expect(own.sort()).toEqual(['a', 'b', 'f', 'g', 'h', 'm', 'q', 'u']);
+  });
+});
+
+describe("mode d'attaque du personnage actif", () => {
+  const sword = { id: 'weapon.sword', kind: 'CAC', dice: 2 } as const;
+  const smg = { id: 'weapon.smg', kind: 'AUTOMATIC', dice: 5, maxRange: 6 } as const;
+  const mind = { id: 'weapon.mind', kind: 'MENTAL', dice: 4 } as const;
+  const withWeapons = (weapons: CharacterState['weapons']): ReturnType<typeof statusModel>['character'] => {
+    const s = game({ activeCharacterId: 'h1' });
+    const state = { ...s, characters: s.characters.map((c) => (c.id === 'h1' ? { ...c, weapons } : c)) };
+    return statusModel(state, createLabeler(state)).character;
+  };
+
+  it('classe comme le moteur : seule la famille CAC est de la mêlée', () => {
+    expect(attackMode(sword)).toBe('MELEE');
+    for (const w of [pistol, smg, mind]) expect(attackMode(w)).toBe('RANGED');
+  });
+
+  it('une arme de mêlée : mode mêlée, sans portée', () => {
+    expect(withWeapons([sword])?.weapons).toEqual([{ name: 'weapon.sword', mode: 'MELEE', range: null }]);
+  });
+
+  it("une arme à distance : portée de l'arme si elle en a une, sinon ligne de vue seule (null)", () => {
+    expect(withWeapons([smg, pistol])?.weapons).toEqual([
+      { name: 'weapon.smg', mode: 'RANGED', range: 6 },
+      { name: 'Pistolet', mode: 'RANGED', range: null },
+    ]);
+  });
+
+  it("plusieurs armes : la mêlée est listée avant la distance, quel que soit l'ordre d'équipement", () => {
+    expect(withWeapons([pistol, sword])?.weapons.map((w) => w.mode)).toEqual(['MELEE', 'RANGED']);
+  });
+
+  it("aucune arme (liste vide ou absente) : aucune ligne d'attaque", () => {
+    expect(withWeapons([])?.weapons).toEqual([]);
+    expect(withWeapons(undefined)?.weapons).toEqual([]);
   });
 });
 
