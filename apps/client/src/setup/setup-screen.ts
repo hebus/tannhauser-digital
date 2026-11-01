@@ -381,8 +381,8 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       h('button', { class: 'setup-play setup-home-play', attrs: { type: 'button' }, on: { click: quickPlay } }, icon(ICON_PLAY, 20), t('setup.quick')),
       h('p', { class: 'setup-hint', text: t('setup.quick.hint') }),
       h('button', { class: 'setup-btn setup-home-custom', attrs: { type: 'button' }, on: { click: () => showWizard(0) } }, t('setup.customize')),
-      // Éditeur de plateaux : outil de développement, absent du jeu publié (voir docs/boards.md).
-      import.meta.env.DEV ? h('a', { class: 'setup-btn setup-home-editor', text: t('setup.editor'), attrs: { href: `${import.meta.env.BASE_URL}?editor`, title: t('setup.editor.hint') } }) : null,
+      // Éditeur de plateaux : lien discret (en production il enregistre dans le navigateur, voir docs/boards.md).
+      h('a', { class: 'setup-home-editor', text: t('setup.editor'), attrs: { href: `${import.meta.env.BASE_URL}?editor`, title: t('setup.editor.hint') } }),
     );
     const wizard = h('div', { class: 'setup-wizard' }, stepper, stage, nav);
 
