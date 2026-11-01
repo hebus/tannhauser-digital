@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { crateAt, type BoardNode, type BoardState } from '@tannhauser/core';
-import { buildColorMap, colorHex, CRATE_COLORS, TERRAIN_COLORS } from './palette';
+import { buildColorMap, colorHex, CRATE_COLORS, PORTAL_COLOR, TERRAIN_COLORS } from './palette';
 import {
   corridorSegments,
   doorGeometry,
@@ -238,7 +238,7 @@ export class BoardView extends Container {
         const t1 = (i + 1) / steps;
         g.moveTo(a.x + (b.x - a.x) * t0, a.y + (b.y - a.y) * t0)
           .lineTo(a.x + (b.x - a.x) * t1, a.y + (b.y - a.y) * t1)
-          .stroke({ width, color: 0xc084fc });
+          .stroke({ width, color: PORTAL_COLOR });
       }
     }
     this.edgeLayer.addChild(g);
@@ -265,6 +265,20 @@ export class BoardView extends Container {
     }
     if (node.properties.kind === 'ENTRY_POINT') {
       g.circle(node.x, node.y, R + 6).stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
+    }
+    if (this.board.portals.some((p) => p.from === node.id || p.to === node.id)) {
+      // Case à portail (porte secrète) : bande violette en pointillés autour de la case et pastille « anneau » dans le
+      // coin haut gauche, hors du jeton d'un pion posé dessus (rien n'est masqué) ; même marque que le rendu 3D.
+      for (let i = 0; i < 12; i += 1) {
+        const a0 = (i / 12) * Math.PI * 2 + 0.08;
+        g.moveTo(node.x + Math.cos(a0) * (R + 9), node.y + Math.sin(a0) * (R + 9))
+          .arc(node.x, node.y, R + 9, a0, a0 + (Math.PI * 2) / 12 - 0.16)
+          .stroke({ width: 3.5, color: PORTAL_COLOR });
+      }
+      const gx = node.x - R * 0.78;
+      const gy = node.y - R * 0.78;
+      g.circle(gx, gy, 8).fill(0x1c1f24).stroke({ width: 2, color: 0x111111 });
+      g.circle(gx, gy, 5).stroke({ width: 3, color: PORTAL_COLOR });
     }
     if (crateAt(this.board, node.id)) {
       // Caisse en bois vue de dessus (case impraticable tant qu'elle est fermée) : planches et croisillon.

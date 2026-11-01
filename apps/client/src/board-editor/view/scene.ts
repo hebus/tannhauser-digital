@@ -1,5 +1,5 @@
 import { doorGeometry, parseHexColor, polygonCentroid } from '@tannhauser/renderer/src/board-layout';
-import { buildColorMap, CRATE_COLORS, cssColor, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS, cssColor, PORTAL_COLOR, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
 import { midpoints } from '../geometry';
 import { nodeRadius, sameEdge, type EditorDoc, type Pt, type Selection } from '../model';
 import { points, s, sectorPath } from './svg';
@@ -31,7 +31,7 @@ export interface SceneState {
 
 const EDGE = '#b4b7c2';
 const EDGE_UNDER = '#0b0c0e';
-const PORTAL = '#c084fc';
+const PORTAL = cssColor(PORTAL_COLOR);
 const DOOR_CLOSED = '#d9902f';
 const DOOR_CLOSED_REINFORCED = '#9a5b12';
 const DOOR_OPEN = '#7bd88f';
@@ -114,6 +114,7 @@ export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): 
   const nodes = s('g');
   const selectedIds = new Set(sel?.kind === 'nodes' ? sel.ids : []);
   const crated = new Set((doc.crates ?? []).map((c) => c.nodeId));
+  const portalEnds = new Set((doc.portals ?? []).flatMap((p) => [p.from, p.to]));
   for (const n of doc.nodes) {
     const g = s('g', { transform: `translate(${n.x},${n.y})` });
     const list = n.colors.length > 0 ? n.colors : [null];
@@ -132,6 +133,12 @@ export function renderScene(root: SVGGElement, doc: EditorDoc, ui: SceneState): 
     }
     if (kind === 'ENTRY_POINT') g.append(s('circle', { r: R + 5, fill: 'none', stroke: '#ffffff', 'stroke-width': 2, 'stroke-opacity': 0.85 }));
     if (crated.has(n.id)) g.append(crateIcon(R * 0.62));
+    if (portalEnds.has(n.id)) {
+      // Case à portail : bande violette en pointillés et pastille « anneau » en haut à gauche, comme le jeu.
+      g.append(s('circle', { r: R + 9, fill: 'none', stroke: PORTAL, 'stroke-width': 3.5, 'stroke-dasharray': '10 6' }));
+      g.append(s('circle', { cx: -R * 0.78, cy: -R * 0.78, r: 8, fill: '#1c1f24', stroke: '#111111', 'stroke-width': 2 }));
+      g.append(s('circle', { cx: -R * 0.78, cy: -R * 0.78, r: 5, fill: 'none', stroke: PORTAL, 'stroke-width': 3 }));
+    }
     const cost = n.properties?.movementCostModifier ?? 0;
     if (cost > 0) g.append(s('text', { x: -R * 0.75, y: -R * 0.75, class: 'be-cost' }, `+${cost}`));
     if (ui.flagged.has(n.id)) g.append(s('circle', { r: R + 9, fill: 'none', stroke: ERROR, 'stroke-width': 3 * u, 'stroke-dasharray': `${5 * u} ${3 * u}` }));

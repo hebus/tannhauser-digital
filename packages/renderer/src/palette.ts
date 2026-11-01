@@ -74,3 +74,6 @@ export const TERRAIN_COLORS = { room: 0x1f2329, roomTintAlpha: 0.28, corridor: 0
 
 /** Caisse en bois (planches, cadre, ombres), commune aux rendus 2D et 3D et à l'éditeur de plateaux. */
 export const CRATE_COLORS = { wood: 0xa0703c, frame: 0x6b4423, dark: 0x3d2614 } as const;
+
+/** Portail (porte secrète) : trait et marques de ses deux cases, communs aux rendus 2D et 3D et à l'éditeur. */
+export const PORTAL_COLOR = 0xc084fc;

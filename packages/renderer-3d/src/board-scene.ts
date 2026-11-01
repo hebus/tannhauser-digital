@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { crateAt, type BoardState } from '@tannhauser/core';
 import { doorGeometry, layoutBounds, parseHexColor, polygonCentroid, type BoardLayout, type Box } from '@tannhauser/renderer/src/board-layout';
 import type { HighlightTone } from '@tannhauser/renderer/src/contract';
-import { buildColorMap, CRATE_COLORS, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS, HIGHLIGHT_COLORS, OVERLAY_COLORS, PORTAL_COLOR, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
 import { corridorPolygons, footprintMask, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
 import { createTextPlane, createTextSprite, disposeTree } from './three-util';
 
@@ -31,7 +31,6 @@ const WALL_SECTION = 0x2b2f38;
 /** Couleurs reprises du rendu 2D (`BoardView`) : chemins, flèches, portails, portes. */
 const EDGE_UNDERLAY = 0x0b0c0e;
 const EDGE_LINE = 0xb4b7c2;
-const PORTAL_COLOR = 0xc084fc;
 const DOOR_CLOSED = 0xd9902f;
 const DOOR_CLOSED_REINFORCED = 0x9a5b12;
 const DOOR_OPEN = 0x7bd88f;
