@@ -324,6 +324,8 @@ export const FR: Messages = {
   'setup.quick': 'Partie rapide',
   'setup.quick.hint': 'Reprend vos derniers réglages (ou ceux par défaut) avec une nouvelle graine.',
   'setup.customize': 'Personnaliser',
+  'setup.editor': 'Éditeur de plateaux',
+  'setup.editor.hint': 'Outil de développement : créer ou modifier un plateau',
   'setup.next': 'Suivant',
   'setup.back': 'Précédent',
   'setup.home': 'Accueil',
@@ -728,6 +730,8 @@ export const EN: Messages = {
   'setup.quick': 'Quick game',
   'setup.quick.hint': 'Reuses your last settings (or the defaults) with a new seed.',
   'setup.customize': 'Customize',
+  'setup.editor': 'Board editor',
+  'setup.editor.hint': 'Development tool: create or edit a board',
   'setup.next': 'Next',
   'setup.back': 'Back',
   'setup.home': 'Home',
@@ -855,6 +859,11 @@ export function t(key: string, params?: Params, locale: Locale = current): strin
 /** Vrai si la clé existe au moins en français. */
 export function hasKey(key: string): boolean {
   return key in FR;
+}
+
+/** Nom affiché d'un plateau : sa clé traduite, à défaut son identifiant (plateau tout juste créé par l'éditeur). */
+export function boardLabel(board: { readonly id: string; readonly nameKey: string }): string {
+  return hasKey(board.nameKey) ? t(board.nameKey) : board.id;
 }
 
 /** Message d'un refus du moteur : traduction par code si connue, sinon texte français du moteur. */

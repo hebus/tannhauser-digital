@@ -1,5 +1,5 @@
 import { h } from '../ui/dom';
-import { t } from '../ui/i18n';
+import { boardLabel, t } from '../ui/i18n';
 import { modeRules } from '../ui/mode-rules';
 import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
 import { SETUP_STEPS, issueStep, stepIssues, type SetupStep } from './setup-steps';
@@ -89,7 +89,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
     const boardSelect = h(
       'select',
       { class: 'setup-input setup-select', attrs: { id: 'setup-board', 'aria-label': t('setup.board') }, on: { change: (e) => { boardId = (e.target as HTMLSelectElement).value; renderBoardMeta(); } } },
-      ...content.boards.map((b) => h('option', { text: t(b.nameKey), attrs: { value: b.id, selected: b.id === boardId } })),
+      ...content.boards.map((b) => h('option', { text: boardLabel(b), attrs: { value: b.id, selected: b.id === boardId } })),
     );
     renderBoardMeta();
     const boardField = h('div', { class: 'setup-board-field' }, boardSelect, boardMeta);
@@ -280,7 +280,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
           .join(', ');
       summaryList.textContent = '';
       summaryList.append(
-        ...row(t('setup.board'), board ? `${t(board.nameKey)} · ${t('setup.boardSize', { n: Object.keys(board.board.nodes).length })}` : boardId),
+        ...row(t('setup.board'), board ? `${boardLabel(board)} · ${t('setup.boardSize', { n: Object.keys(board.board.nodes).length })}` : boardId),
         ...row(t('setup.mode'), t(`modeCard.${mode}.title`)),
         ...row(t('setup.seedShort'), seedInput.value.trim() || '—'),
         ...PLAYER_IDS.flatMap((id) => row(`${t(`player.${id}`)} · ${aiPlayers.has(id) ? t('setup.aiShort') : t('setup.human')}`, names(id) || '—')),
@@ -381,6 +381,8 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
       h('button', { class: 'setup-play setup-home-play', attrs: { type: 'button' }, on: { click: quickPlay } }, icon(ICON_PLAY, 20), t('setup.quick')),
       h('p', { class: 'setup-hint', text: t('setup.quick.hint') }),
       h('button', { class: 'setup-btn setup-home-custom', attrs: { type: 'button' }, on: { click: () => showWizard(0) } }, t('setup.customize')),
+      // Éditeur de plateaux : outil de développement, absent du jeu publié (voir docs/boards.md).
+      import.meta.env.DEV ? h('a', { class: 'setup-btn setup-home-editor', text: t('setup.editor'), attrs: { href: `${import.meta.env.BASE_URL}?editor`, title: t('setup.editor.hint') } }) : null,
     );
     const wizard = h('div', { class: 'setup-wizard' }, stepper, stage, nav);
 

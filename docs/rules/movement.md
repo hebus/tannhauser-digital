@@ -11,6 +11,7 @@ Le plateau est un **graphe** de nœuds. La validation de contenu (ArkType) garan
 | RULE-NODE-003 | Un nœud peut être **impraticable** : aucun personnage ne peut y entrer ni le traverser. Il reste éventuellement présent pour la ligne de vue (voir OQ-LOS-004). |
 | RULE-NODE-004 | Un nœud peut ajouter un **coût de déplacement** supplémentaire (+1, +2, ...) à son entrée. Le coût total d'entrée est `coûtBase + surcoût`. |
 | RULE-NODE-005 | Un nœud peut porter d'autres bonus/malus (voir RULE-NODE-001) qui s'appliquent aux jets des personnages qui l'occupent ou le ciblent selon la donnée. |
+| RULE-NODE-006 | Une **caisse en bois** (au plus une par case, `crates` du plateau) rend sa case impraticable tant qu'elle est fermée : ni déplacement, ni drapeau, ni placement d'équipe. Elle ne change pas la ligne de vue. Son ouverture et son contenu (matériel) viendront avec l'inventaire (RULE-EQUIP-002). |
 
 ## Arêtes
 

@@ -26,35 +26,62 @@ export function createPennant(ownerIndex: number, scale = 1, planted = false): T
   return g;
 }
 
-/** Drapeaux au sol ou plantés, et anneaux des cases d'objectif (Capture du drapeau) : reflètent l'état, ne le modifient pas. */
+/** Hauteur des marques posées sur les tuiles (au-dessus de la tuile et de son contour). */
+const MARK_Y = 3.2;
+
+/**
+ * Marque d'une case d'objectif : bande dorée en pointillés autour de la tuile (pleine et large : lisible vue de dessus,
+ * sans masquer la couleur de la case) et quatre piquets dorés aux angles (le relief se lit aussi en vue rasante).
+ */
+export function createObjectiveMarker(): THREE.Group {
+  const g = new THREE.Group();
+  const band = new THREE.MeshBasicMaterial({ color: OBJECTIVE_COLOR, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+  const dashes = 8;
+  for (let i = 0; i < dashes; i++) {
+    const arc = (Math.PI * 2) / dashes;
+    const dash = new THREE.Mesh(new THREE.RingGeometry(TILE_RADIUS + 3, TILE_RADIUS + 9, 6, 1, i * arc + arc * 0.15, arc * 0.7), band);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.y = MARK_Y;
+    g.add(dash);
+  }
+  const gold = new THREE.MeshStandardMaterial({ color: OBJECTIVE_COLOR, emissive: 0x4a3600, flatShading: true, roughness: 0.5, metalness: 0.3 });
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    const stake = new THREE.Mesh(new THREE.ConeGeometry(5, 18, 4), gold);
+    stake.position.set(Math.cos(a) * (TILE_RADIUS + 6), MARK_Y + 9, Math.sin(a) * (TILE_RADIUS + 6));
+    stake.castShadow = true;
+    g.add(stake);
+  }
+  return g;
+}
+
+/** Double bande pleine : une case où un drapeau est planté (forme distincte de l'objectif libre). */
+function createPlantedMarker(): THREE.Group {
+  const g = new THREE.Group();
+  const band = new THREE.MeshBasicMaterial({ color: OBJECTIVE_COLOR, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
+  for (const [inner, outer] of [[TILE_RADIUS + 10, TILE_RADIUS + 13.5], [TILE_RADIUS + 16, TILE_RADIUS + 18]] as const) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 40), band);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = MARK_Y;
+    g.add(ring);
+  }
+  return g;
+}
+
+/** Drapeaux au sol ou plantés, et marques des cases d'objectif (Capture du drapeau) : reflètent l'état, ne le modifient pas. */
 export class FlagLayer3D {
   readonly group = new THREE.Group();
 
   update(state: GameState): void {
     clearGroup(this.group);
-    const ringMaterial = new THREE.MeshBasicMaterial({ color: OBJECTIVE_COLOR, transparent: true, opacity: 0.75 });
-    const ring = (x: number, y: number, radius: number, dashed: boolean): void => {
-      // Pointillé = l'objectif se lit à la forme, sans masquer la couleur de la case.
-      const arcs = dashed ? 8 : 1;
-      for (let i = 0; i < arcs; i++) {
-        const arc = dashed ? Math.PI / 8 : Math.PI * 2;
-        const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.9, 6, dashed ? 4 : 32, arc), ringMaterial);
-        mesh.rotation.x = -Math.PI / 2;
-        mesh.rotation.z = (i / arcs) * Math.PI * 2;
-        mesh.position.set(x, 3, y);
-        this.group.add(mesh);
-      }
+    const place = (marker: THREE.Object3D, nodeId: string): void => {
+      const n = state.board.nodes[nodeId];
+      if (!n) return;
+      marker.position.set(n.x, 0, n.y);
+      this.group.add(marker);
     };
-    for (const id of objectiveNodeIds(state)) {
-      const n = state.board.nodes[id];
-      if (n) ring(n.x, n.y, TILE_RADIUS + 4, true);
-    }
-    for (const id of plantedNodeIds(state)) {
-      const n = state.board.nodes[id];
-      if (!n) continue;
-      ring(n.x, n.y, TILE_RADIUS + 9, false);
-      ring(n.x, n.y, TILE_RADIUS + 13, false);
-    }
+    for (const id of objectiveNodeIds(state)) place(createObjectiveMarker(), id);
+    for (const id of plantedNodeIds(state)) place(createPlantedMarker(), id);
     for (const mark of flagMarks(state)) {
       const n = state.board.nodes[mark.nodeId];
       if (!n) continue;

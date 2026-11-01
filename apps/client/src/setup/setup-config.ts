@@ -1,4 +1,4 @@
-import { FLAGS_PER_PLAYER, type BoardState, type GameMode, type NodeId } from '@tannhauser/core';
+import { FLAGS_PER_PLAYER, isPassable, type BoardState, type GameMode, type NodeId } from '@tannhauser/core';
 import type { CharacterDefinition, LoadedBoard } from '@tannhauser/content';
 
 /** Configuration d'une partie choisie sur l'écran de mise en place. Pure et sérialisable (hash d'URL). */
@@ -64,11 +64,11 @@ export function validateSetup(config: SetupConfig, content: SetupContent): Setup
     total += team.characterIds.length;
   }
   if (board) {
-    const free = Object.values(board.board.nodes).filter((n) => n.properties.passable).length;
+    const free = Object.values(board.board.nodes).filter((n) => isPassable(board.board, n.id)).length;
     if (free < total) issues.push({ code: 'NOT_ENOUGH_NODES', params: { n: total } });
     if (config.mode === 'CAPTURE_THE_FLAG') {
       const nodes = Object.values(board.board.nodes);
-      const objectives = nodes.filter((n) => n.properties.kind === 'OBJECTIVE' && n.properties.passable).length;
+      const objectives = nodes.filter((n) => n.properties.kind === 'OBJECTIVE' && isPassable(board.board, n.id)).length;
       const entries = nodes.filter((n) => n.properties.kind === 'ENTRY_POINT').length;
       const needed = config.teams.length * FLAGS_PER_PLAYER;
       if (objectives < needed || entries < config.teams.length) issues.push({ code: 'MODE_UNSUPPORTED_BOARD', params: { objectives: needed, entries: config.teams.length } });
@@ -91,6 +91,15 @@ export function defaultSetup(content: SetupContent, seed: number): SetupConfig {
     return { playerId, characterIds: ids.slice(0, MAX_TEAM_SIZE) };
   });
   return { boardId: content.boards[0]?.id ?? '', seed, teams };
+}
+
+/**
+ * Plateau présélectionné par l'URL (`?board=<id>`, bouton « Tester » de l'éditeur de plateaux) ; un identifiant inconnu
+ * ou absent laisse la configuration telle quelle.
+ */
+export function preselectBoard(config: SetupConfig, search: string, boards: readonly { readonly id: string }[]): SetupConfig {
+  const id = new URLSearchParams(search).get('board');
+  return id !== null && boards.some((b) => b.id === id) ? { ...config, boardId: id } : config;
 }
 
 // --- Sérialisation (hash d'URL : permet de rejouer une partie en rechargeant la page) ---
@@ -168,7 +177,7 @@ function movementReachable(board: BoardState, from: NodeId): Set<NodeId> {
   const queue = [from];
   while (queue.length > 0) {
     for (const m of next.get(queue.shift()!) ?? []) {
-      if (seen.has(m) || !board.nodes[m]?.properties.passable) continue;
+      if (seen.has(m) || !isPassable(board, m)) continue;
       seen.add(m);
       queue.push(m);
     }
@@ -196,7 +205,7 @@ const cmp = (x: number, y: number): number => (x === y ? 0 : x < y ? -1 : 1);
  */
 export function placeTeams(board: BoardState, teams: readonly { readonly playerId: string; readonly count: number }[]): Record<string, NodeId[]> | null {
   const passable = Object.values(board.nodes)
-    .filter((n) => n.properties.passable)
+    .filter((n) => isPassable(board, n.id))
     .map((n) => n.id)
     .sort();
   const total = teams.reduce((sum, t) => sum + t.count, 0);

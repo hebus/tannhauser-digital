@@ -791,6 +791,7 @@ kbd {
 .setup-home-play { width: 340px; }
 .setup-home .setup-hint { margin: 0; max-width: 340px; }
 .setup-home-custom { justify-content: center; width: 340px; height: 48px; }
+.setup-home-editor { box-sizing: border-box; justify-content: center; width: 340px; height: 40px; text-decoration: none; opacity: 0.85; }
 
 .setup-wizard { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .setup-stage { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }

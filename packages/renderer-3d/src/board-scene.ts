@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import type { BoardState } from '@tannhauser/core';
+import { crateAt, type BoardState } from '@tannhauser/core';
 import { doorGeometry, layoutBounds, parseHexColor, polygonCentroid, type BoardLayout, type Box } from '@tannhauser/renderer/src/board-layout';
 import type { HighlightTone } from '@tannhauser/renderer/src/contract';
-import { buildColorMap, HIGHLIGHT_COLORS, OVERLAY_COLORS, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
+import { buildColorMap, CRATE_COLORS, HIGHLIGHT_COLORS, OVERLAY_COLORS, PORTAL_COLOR, TERRAIN_COLORS } from '@tannhauser/renderer/src/palette';
 import { corridorPolygons, footprintMask, passageWidth, planWalls, type Polygon, type Pt, type WallPlan } from './wall-geometry';
 import { createTextPlane, createTextSprite, disposeTree } from './three-util';
 
@@ -31,7 +31,6 @@ const WALL_SECTION = 0x2b2f38;
 /** Couleurs reprises du rendu 2D (`BoardView`) : chemins, flèches, portails, portes. */
 const EDGE_UNDERLAY = 0x0b0c0e;
 const EDGE_LINE = 0xb4b7c2;
-const PORTAL_COLOR = 0xc084fc;
 const DOOR_CLOSED = 0xd9902f;
 const DOOR_CLOSED_REINFORCED = 0x9a5b12;
 const DOOR_OPEN = 0x7bd88f;
@@ -298,7 +297,9 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       dashes.push({ a: { x: a.x + (b.x - a.x) * t0, y: a.y + (b.y - a.y) * t0 }, b: { x: a.x + (b.x - a.x) * t1, y: a.y + (b.y - a.y) * t1 } });
     }
   }
-  if (dashes.length > 0) group.add(new THREE.Mesh(ribbons(dashes, 4.5, 1.4), basic(PORTAL_COLOR)));
+  if (dashes.length > 0) group.add(new THREE.Mesh(ribbons(dashes, 5.5, 1.4), basic(PORTAL_COLOR)));
+  // Extrémités des portails : chaque case reliée reçoit une marque (voir `createPortalMarker`).
+  const portalEnds = new Set(board.portals.flatMap((p) => (p.from in board.nodes && p.to in board.nodes ? [p.from, p.to] : [])));
 
   // Tuiles de nœuds : disque en camembert, un secteur égal par couleur de ligne de vue, dans le même ordre que le 2D
   // (premier secteur en haut, puis dans le sens des aiguilles d'une montre) ; teintes de `buildColorMap`, distinctes par id
@@ -309,6 +310,43 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
   const entryMaterial = basic(0xffffff, 0.9);
   const crossGeometry = new THREE.BoxGeometry(R * 1.1, 1.6, 4.5);
   const crossMaterial = basic(BLOCKED_COLOR);
+  // Caisse en bois (fermée : case impraticable) : corps en planches, montants d'angle, cadres haut et bas, croisillon
+  // sur le dessus. Géométries et matériaux partagés par toutes les caisses du plateau.
+  const crateSize = R * 1.25;
+  const crateHeight = crateSize * 0.8;
+  const crateWood = flat(CRATE_COLORS.wood);
+  const crateFrame = flat(CRATE_COLORS.frame);
+  const crateBody = new THREE.BoxGeometry(crateSize, crateHeight, crateSize);
+  const cratePost = new THREE.BoxGeometry(4.5, crateHeight + 1, 4.5);
+  const crateRim = new THREE.BoxGeometry(crateSize + 1, 3.5, 4.5);
+  const crateBrace = new THREE.BoxGeometry(crateSize * 1.3, 2, 4);
+  const crateModel = (): THREE.Group => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(crateBody, crateWood);
+    body.position.y = TILE_HEIGHT + crateHeight / 2;
+    g.add(body);
+    const h = crateSize / 2 - 1.5;
+    for (const [x, z] of [[-h, -h], [h, -h], [h, h], [-h, h]] as const) {
+      const post = new THREE.Mesh(cratePost, crateFrame);
+      post.position.set(x, TILE_HEIGHT + crateHeight / 2, z);
+      g.add(post);
+    }
+    for (const y of [TILE_HEIGHT + 2, TILE_HEIGHT + crateHeight - 1.5]) {
+      for (const [x, z, turn] of [[0, -h, 0], [0, h, 0], [-h, 0, 1], [h, 0, 1]] as const) {
+        const rim = new THREE.Mesh(crateRim, crateFrame);
+        rim.position.set(x, y, z);
+        rim.rotation.y = (turn * Math.PI) / 2;
+        g.add(rim);
+      }
+    }
+    for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+      const brace = new THREE.Mesh(crateBrace, crateFrame);
+      brace.position.y = TILE_HEIGHT + crateHeight + 0.8;
+      brace.rotation.y = angle;
+      g.add(brace);
+    }
+    return g;
+  };
   for (const node of Object.values(board.nodes)) {
     const tile = new THREE.Group();
     tile.position.set(node.x, 0, node.y);
@@ -343,6 +381,8 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       ring.position.y = TILE_HEIGHT + 0.4;
       tile.add(ring);
     }
+    if (crateAt(board, node.id)) tile.add(crateModel());
+    if (portalEnds.has(node.id)) tile.add(createPortalMarker());
     if (node.properties.movementCostModifier > 0) {
       const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { pixelHeight: 13 });
       badge.position.set(R * 0.75, 12, -R * 0.75);
@@ -541,4 +581,49 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       cutMask?.dispose();
     },
   };
+}
+
+/** Rayon de l'anneau dressé d'une case à portail (unités plateau ; une case fait 60 de diamètre). */
+const PORTAL_RING_RADIUS = 18;
+/** Recul de l'anneau derrière le centre de la case : au-delà du corps d'un pion (rayon ≈ 20). */
+const PORTAL_RING_BACK = TILE_RADIUS * 0.85;
+
+/**
+ * Marque d'une case reliée par un portail (porte secrète), centrée sur la tuile : bande violette en pointillés autour
+ * de la case (lisible vue de dessus, sans masquer sa couleur) et anneau violet dressé sur la case, qui pivote pour
+ * toujours faire face à la caméra (jamais vu par la tranche), dressé au bord arrière de la case (un pion posé dessus reste devant, visible). Même principe
+ * que les cases d'objectif.
+ */
+export function createPortalMarker(): THREE.Group {
+  const g = new THREE.Group();
+  const R = TILE_RADIUS;
+  const band = new THREE.MeshBasicMaterial({ color: PORTAL_COLOR, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+  const dashes = 10;
+  for (let i = 0; i < dashes; i++) {
+    const arc = (Math.PI * 2) / dashes;
+    const dash = new THREE.Mesh(new THREE.RingGeometry(R + 3, R + 8, 6, 1, i * arc + arc * 0.2, arc * 0.6), band);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.y = TILE_HEIGHT + 1.2;
+    g.add(dash);
+  }
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(PORTAL_RING_RADIUS, 3.4, 10, 36),
+    new THREE.MeshStandardMaterial({ color: PORTAL_COLOR, emissive: 0x3b1a66, flatShading: true, roughness: 0.6 }),
+  );
+  ring.position.y = TILE_HEIGHT + PORTAL_RING_RADIUS + 1;
+  ring.castShadow = true;
+  // Face à la caméra autour de l'axe vertical et posé au bord ARRIÈRE de la case (côté opposé à la caméra) : un pion
+  // sur la case reste entièrement devant l'anneau, donc visible ; recalculé juste avant chaque dessin.
+  const center = new THREE.Vector3();
+  ring.onBeforeRender = (_renderer, _scene, camera) => {
+    g.getWorldPosition(center);
+    const yaw = Math.atan2(camera.position.x - center.x, camera.position.z - center.z);
+    if (ring.rotation.y === yaw) return;
+    ring.rotation.y = yaw;
+    ring.position.x = -Math.sin(yaw) * PORTAL_RING_BACK;
+    ring.position.z = -Math.cos(yaw) * PORTAL_RING_BACK;
+    ring.updateMatrixWorld();
+  };
+  g.add(ring);
+  return g;
 }

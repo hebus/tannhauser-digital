@@ -63,12 +63,26 @@ export function loadBoard(data: unknown, source = 'board'): LoadedBoard {
   const doors: Record<string, Door> = {};
   for (const d of json.doors ?? []) doors[d.id] = d;
 
-  const board: BoardState = { nodes, edges: json.edges, doors, portals: json.portals ?? [] };
+  const board: BoardState = { nodes, edges: json.edges, doors, portals: json.portals ?? [], ...(json.crates && json.crates.length > 0 ? { crates: json.crates } : {}) };
   const issues = validateBoard(board);
   if (issues.length > 0) throw new ContentError(source, issues.map((i) => `${i.code} : ${i.message}`));
   const problems = json.layout ? layoutProblems(json.layout) : [];
   if (problems.length > 0) throw new ContentError(source, problems);
   return { id: json.id, nameKey: json.nameKey, board, ...(json.layout ? { layout: json.layout } : {}) };
+}
+
+/**
+ * Problèmes d'un plateau JSON, sans exception : liste vide si `loadBoard` l'accepte. Les problèmes du moteur sont
+ * préfixés par leur code (`ORPHAN_NODE : …`). Sert au diagnostic en direct de l'éditeur et à son serveur.
+ */
+export function diagnoseBoard(data: unknown, source = 'board'): string[] {
+  try {
+    loadBoard(data, source);
+    return [];
+  } catch (error) {
+    if (error instanceof ContentError) return [...error.problems];
+    throw error;
+  }
 }
 
 export function loadEquipment(data: unknown, source = 'equipment'): EquipmentDefinition[] {
