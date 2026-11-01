@@ -4,7 +4,7 @@
 
 ## 1. À vérifier à l'œil (personne ne l'a regardé à l'écran)
 
-- [ ] **Capture du drapeau sur le château** : taille et position des fanions (au sol, portés, plantés), lisibilité des anneaux dorés des cases d'objectif, animations de ramassage / dépôt / plantage, mouvement réduit (touche R).
+- [ ] **Capture du drapeau sur le château** : taille et position des fanions (au sol, portés, plantés), lisibilité des marques dorées des cases d'objectif (3D : bande en pointillés et piquets), animations de ramassage / dépôt / plantage, mouvement réduit (touche R).
 - [ ] **Explication des modes** : bloc sous la liste « Mode de jeu » (écran de mise en place), ligne « Objectif » et fenêtre « Règles du mode » (touche V) dans le HUD.
 - [ ] **Frise des phases** : largeur plafonnée à 780 px ; largeurs inférieures à 1100 px jamais vues ; dialogue de réaction d'Overwatch placé sous la frise (jamais vu déclenché).
 - [ ] **Teintes des couleurs de ligne de vue** : les 18 couleurs du château se distinguent-elles toutes ? Lister celles qui se ressemblent.

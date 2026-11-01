@@ -557,7 +557,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   }
 
   frame();
-  notify(meta.editable ? 'Prêt. Outils : V N C D P R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau généré : lecture seule.');
+  notify(meta.editable ? 'Prêt. Outils : V N C D P B R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau généré : lecture seule.');
 }
 
 /** Garde la sélection si ce qu'elle désigne existe encore (après annuler / rétablir). */

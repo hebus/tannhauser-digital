@@ -30,6 +30,7 @@ puis ouvrir `http://localhost:5173/?editor` (liste des plateaux, nouveau plateau
 | `C` | Relier | cliquer des cases à la suite ; re-cliquer une arête existante la retire ; `Échap` arrête la chaîne |
 | `D` | Porte | clic sur une arête : pose (bois, fermée) ou retire une porte ; type et état dans le panneau |
 | `P` | Portail | deux cases : pose ou retire une porte secrète |
+| `B` | Caisse | clic sur une case : pose ou retire une caisse en bois (fermée, elle rend la case impraticable) ; aussi la case « Caisse » du panneau |
 | `R` | Pièce | cliquer les sommets ; cliquer le premier, `Entrée` ou double-clic ferme le polygone |
 | `L` | Couloir | cliquer les points ; `Entrée` ou double-clic termine |
 
@@ -107,6 +108,10 @@ Données d'**affichage uniquement** (contrat `BoardLayout` de `packages/renderer
 - `corridors[].points` : ligne brisée d'au moins 2 points ; le générateur la prolonge jusqu'aux seuils des pièces.
 - Les `id` de pièces et de couloirs sont uniques et égaux aux `zoneId` des nœuds correspondants.
 - `layout` est facultatif (le plateau de dev n'en a pas) ; `createGameFromSetup` le transmet à `GameFacade.layout`.
+
+## Caisses (`crates`)
+
+Données de **jeu** (pas d'affichage) : `"crates": [{ "id": "crate1", "nodeId": "hall-05" }]`, au plus une caisse par case. Une caisse fermée rend sa case impraticable (RULE-NODE-006, `isPassable` du moteur) ; elle est dessinée en 2D (vue de dessus) et en 3D (caisse en volume). Le champ est absent d'un plateau sans caisse. Ouverture et contenu : plus tard, avec l'inventaire.
 
 ## Plateaux disponibles
 
