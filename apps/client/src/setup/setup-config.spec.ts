@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { loadDevContent } from '@tannhauser/content';
 import { BoardBuilder } from '@tannhauser/core';
 import { createGameFromSetup, setupContentOf } from '../ui/new-game';
-import { MAX_SEED, decodeSetup, defaultSetup, encodeSetup, placeTeams, randomSeed, validateSetup, type SetupConfig } from './setup-config';
+import { MAX_SEED, decodeSetup, defaultSetup, encodeSetup, placeTeams, preselectBoard, randomSeed, validateSetup, type SetupConfig } from './setup-config';
 
 const content = loadDevContent();
 const available = setupContentOf(content);
@@ -204,4 +204,18 @@ describe('mode Capture du drapeau', () => {
       for (const camp of Object.values(game.state.camps!)) expect(camp).toHaveLength(1);
     });
   }
+});
+
+describe('preselectBoard', () => {
+  const boards = [{ id: 'dev-board' }, { id: 'crypte' }];
+  const base: SetupConfig = { boardId: 'dev-board', seed: 1, teams: [] };
+
+  it('applique un plateau connu passé par ?board=', () => {
+    expect(preselectBoard(base, '?board=crypte', boards).boardId).toBe('crypte');
+  });
+
+  it('ignore un plateau inconnu ou l’absence du paramètre', () => {
+    expect(preselectBoard(base, '?board=nope', boards)).toBe(base);
+    expect(preselectBoard(base, '', boards)).toBe(base);
+  });
 });

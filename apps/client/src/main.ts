@@ -26,6 +26,15 @@ async function main(): Promise<void> {
   const host = document.getElementById('app');
   if (!host) throw new Error('Conteneur #app introuvable');
 
+  // Éditeur de plateaux : outil de développement (`?editor` ou `?editor=<id>`), absent du build de production.
+  const editorParam = import.meta.env.DEV ? new URLSearchParams(location.search).get('editor') : null;
+  if (editorParam !== null) {
+    await import('../ui.css');
+    document.getElementById('hud')?.remove(); // l'aide de jeu d'index.html ne concerne pas l'éditeur
+    await (await import('./board-editor/editor-app')).startBoardEditor(host, editorParam || null);
+    return;
+  }
+
   // Mise en place (ou configuration lue dans l'URL) puis HUD : voir ui/boot.ts et ui/mount.ts.
   // Plateau de démonstration non orthogonal : développement uniquement (`?demoBoard=castle`), sans écran de mise en place.
   const demoBoard = import.meta.env.DEV ? new URLSearchParams(location.search).get('demoBoard') : null;

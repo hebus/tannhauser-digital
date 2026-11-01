@@ -71,6 +71,20 @@ export function loadBoard(data: unknown, source = 'board'): LoadedBoard {
   return { id: json.id, nameKey: json.nameKey, board, ...(json.layout ? { layout: json.layout } : {}) };
 }
 
+/**
+ * Problèmes d'un plateau JSON, sans exception : liste vide si `loadBoard` l'accepte. Les problèmes du moteur sont
+ * préfixés par leur code (`ORPHAN_NODE : …`). Sert au diagnostic en direct de l'éditeur et à son serveur.
+ */
+export function diagnoseBoard(data: unknown, source = 'board'): string[] {
+  try {
+    loadBoard(data, source);
+    return [];
+  } catch (error) {
+    if (error instanceof ContentError) return [...error.problems];
+    throw error;
+  }
+}
+
 export function loadEquipment(data: unknown, source = 'equipment'): EquipmentDefinition[] {
   const list = check(source, equipmentSchema.array()(data));
   assertUniqueIds(source, list);
