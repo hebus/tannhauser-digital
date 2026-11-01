@@ -14,6 +14,11 @@ export * from './generated-boards';
 // ne pas modifier à la main) ou enregistrés par l'éditeur de plateaux. Un nouveau fichier apparaît sans autre réglage.
 const boardModules = import.meta.glob<unknown>('./data/*-board.json', { eager: true, import: 'default' });
 
+/** JSON bruts des plateaux embarqués dans l'application (l'éditeur de plateaux du navigateur les propose en lecture seule). */
+export function bundledBoardSources(): unknown[] {
+  return Object.values(boardModules);
+}
+
 /**
  * Contenu de développement (placeholders originaux, aucun asset sous licence).
  * `boards` liste tous les plateaux sélectionnables (dev d'abord, puis château, puis manoir, puis les autres par

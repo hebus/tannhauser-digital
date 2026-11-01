@@ -1,7 +1,7 @@
 import { BOARD_ID_PATTERN, normalizeBoardJson, serializeBoard } from '@tannhauser/content/src/board-format';
 import { h, isTypingTarget } from '../ui/dom';
 import { hasKey, t } from '../ui/i18n';
-import { getBoard, listBoards, saveBoard } from './api-client';
+import { STORAGE_KIND, STORAGE_LABEL, getBoard, listBoards, saveBoard } from './api-client';
 import { diagnose, hasErrors, type Diagnostic } from './diagnostics';
 import { clearDraft, readDraft, writeDraft } from './draft-store';
 import { contentBounds, hitTest, snap } from './geometry';
@@ -17,8 +17,8 @@ import { s } from './view/svg';
 import './editor.css';
 
 /**
- * Éditeur de plateaux (outil de développement interne, `?editor` ou `?editor=<id>` avec `npm run dev`).
- * Édite le JSON d'un plateau de `packages/content/src/data/` et l'enregistre par l'API du serveur de développement.
+ * Éditeur de plateaux (`?editor` ou `?editor=<id>`). Édite le JSON d'un plateau ; l'enregistrement dépend du stockage
+ * (voir `api-client.ts`) : fichiers de `packages/content/src/data/` avec `npm run dev`, navigateur en production.
  * Textes en français, non traduits (outil interne, voir docs/product/non-goals.md).
  */
 
@@ -103,7 +103,7 @@ function chooseBoard(): Promise<{ doc: EditorDoc; meta: Meta }> {
         'div',
         { class: 'be-dialog', attrs: { role: 'dialog', 'aria-label': 'Ouvrir un plateau' } },
         h('h1', { text: 'Éditeur de plateaux' }),
-        h('p', { class: 'be-hint', text: 'Outil de développement : les plateaux sont enregistrés dans packages/content/src/data/ par le serveur de dev.' }),
+        h('p', { class: 'be-hint', text: STORAGE_KIND === 'disk' ? 'Outil de développement : les plateaux sont enregistrés dans packages/content/src/data/ par le serveur de dev.' : 'Les plateaux sont enregistrés dans ce navigateur (jouables ici, dans la liste de mise en place). Les plateaux embarqués sont en lecture seule : « Enregistrer sous » en fait une copie. « Exporter » télécharge le JSON.' }),
         h('h2', { text: 'Ouvrir' }),
         list,
         h('h2', { text: 'Nouveau plateau' }),
@@ -125,7 +125,7 @@ function chooseBoard(): Promise<{ doc: EditorDoc; meta: Meta }> {
                 class: 'be-btn',
                 attrs: { type: 'button' },
                 on: { click: () => void openById(b.id).then((r) => r && done(r)) },
-              }, h('b', { text: b.id }), h('span', { text: ` · ${b.nodes} cases${b.editable ? '' : ' · généré (lecture seule)'}` })),
+              }, h('b', { text: b.id }), h('span', { text: ` · ${b.nodes} cases${b.editable ? '' : ' · lecture seule'}` })),
             ),
           ),
         );
@@ -218,7 +218,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
     h(
       'div',
       { class: 'be-group be-file' },
-      h('button', { class: 'be-btn is-primary', text: 'Enregistrer', attrs: { type: 'button', title: 'Écrire dans packages/content/src/data (Ctrl+S)' }, on: { click: () => void save() } }),
+      h('button', { class: 'be-btn is-primary', text: 'Enregistrer', attrs: { type: 'button', title: `Écrire dans ${STORAGE_LABEL} (Ctrl+S)` }, on: { click: () => void save() } }),
       h('button', { class: 'be-btn', text: 'Enregistrer sous…', attrs: { type: 'button' }, on: { click: () => void saveAs() } }),
       h('button', { class: 'be-btn', text: 'Tester', attrs: { type: 'button', title: 'Enregistrer puis ouvrir une partie sur ce plateau (nouvel onglet)' }, on: { click: () => void playtest() } }),
       h('button', { class: 'be-btn', text: 'Exporter', attrs: { type: 'button', title: 'Télécharger le JSON' }, on: { click: () => download(hist.present) } }),
@@ -241,7 +241,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   function apply(doc: EditorDoc, key: string | null = null): void {
     if (doc === hist.present) return;
     if (!meta.editable) {
-      notify('Plateau généré : lecture seule. « Enregistrer sous » pour en faire une copie modifiable.', 'error');
+      notify('Plateau en lecture seule. « Enregistrer sous » pour en faire une copie modifiable.', 'error');
       redraw();
       return;
     }
@@ -493,7 +493,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   // --- Fichiers ---
   async function save(): Promise<boolean> {
     if (!meta.editable) {
-      notify('Plateau généré : modifier son .map.ts (tools/board-generator), ou « Enregistrer sous » une copie.', 'error');
+      notify(STORAGE_KIND === 'disk' ? 'Plateau généré : modifier son .map.ts (tools/board-generator), ou « Enregistrer sous » une copie.' : 'Plateau embarqué en lecture seule : « Enregistrer sous » une copie.', 'error');
       return false;
     }
     if (hasErrors(diagnose(hist.present, hasKey))) {
@@ -502,13 +502,14 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
     }
     const doc = hist.present;
     let result = await saveBoard(doc, { create: meta.isNew, ...(meta.hash ? { baseHash: meta.hash } : {}) });
-    if (!result.ok && result.error === 'changed-on-disk' && confirm('Le fichier a changé sur le disque depuis son ouverture. L’écraser ?')) {
+    if (!result.ok && result.error === 'changed-on-disk' && confirm(STORAGE_KIND === 'disk' ? 'Le fichier a changé sur le disque depuis son ouverture. L’écraser ?' : 'Ce plateau a changé dans un autre onglet depuis son ouverture. L’écraser ?')) {
       result = await saveBoard(doc, { create: false });
     }
     if (!result.ok) {
       const reasons: Record<string, string> = {
         exists: `Le plateau ${doc.id} existe déjà : « Enregistrer sous » un autre identifiant.`,
-        generated: 'Plateau généré : enregistrement refusé.',
+        generated: STORAGE_KIND === 'disk' ? 'Plateau généré : enregistrement refusé.' : `Le plateau ${doc.id} est embarqué dans l’application : « Enregistrer sous » un autre identifiant.`,
+        storage: 'Le navigateur refuse l’enregistrement (stockage plein ou bloqué) : « Exporter » pour garder le JSON.',
         invalid: `Plateau refusé par le serveur : ${result.problems.join(' ; ')}`,
         'changed-on-disk': 'Enregistrement annulé.',
       };
@@ -520,7 +521,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
     hist = markSaved(hist, doc);
     clearTimeout(draftTimer);
     clearDraft(doc.id);
-    notify(`Enregistré dans packages/content/src/data/${result.file}`);
+    notify(STORAGE_KIND === 'disk' ? `Enregistré dans packages/content/src/data/${result.file}` : `Enregistré dans ce navigateur : ${doc.id} (disponible dans la mise en place d’une partie).`);
     redraw();
     return true;
   }
@@ -557,7 +558,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   }
 
   frame();
-  notify(meta.editable ? 'Prêt. Outils : V N C D P B R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau généré : lecture seule.');
+  notify(meta.editable ? 'Prêt. Outils : V N C D P B R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau en lecture seule.');
 }
 
 /** Garde la sélection si ce qu'elle désigne existe encore (après annuler / rétablir). */
