@@ -10,6 +10,7 @@ import { NODE_KINDS, newBoard, type EditorDoc, type NodeKind, type Pt, type Sele
 import { findEdge, setOneWay } from './ops-edges';
 import { setNodeProperties } from './ops-nodes';
 import { cancel, deleteSelection, finishDraft, initialToolState, pointerDown, pointerMove, pointerUp, setTool, type Step, type ToolState } from './tools';
+import { Preview3d } from './preview-3d';
 import { renderPanel } from './ui/panel';
 import { renderScene } from './view/scene';
 import { s } from './view/svg';
@@ -205,6 +206,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
       })()),
       h('button', { class: 'be-btn', text: 'Ids', attrs: { type: 'button', title: 'Afficher les identifiants (I)' }, on: { click: () => ((showIds = !showIds), redraw()) } }),
       h('button', { class: 'be-btn', text: 'Cadrer', attrs: { type: 'button', title: 'Tout voir (F)' }, on: { click: () => frame() } }),
+      h('button', { class: 'be-btn', text: 'Aperçu 3D', attrs: { type: 'button', title: 'Voir le plateau dans le rendu 3D du jeu (W)' }, on: { click: () => showPreview() } }),
     ),
     h(
       'div',
@@ -312,6 +314,19 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
     renderPanel(panel, { doc, selection: tools.selection, diagnostics, editable: meta.editable, isNew: meta.isNew, dirty }, { apply: (d) => apply(d), select, notify });
   }
 
+  // --- Aperçu 3D (lecture seule, reconstruit à chaque ouverture) ---
+  const preview = new Preview3d(() => {
+    svg.focus();
+    redraw();
+  });
+  function showPreview(): void {
+    if (hasErrors(diagnose(hist.present, hasKey))) return notify('Aperçu 3D impossible : corriger d’abord les erreurs (panneau « Problèmes »).', 'error');
+    preview.open(hist.present).catch((e: unknown) => {
+      preview.close();
+      notify(`Aperçu 3D impossible : ${String(e)}`, 'error');
+    });
+  }
+
   // --- Vue : cadrage, zoom, déplacement ---
   function frame(): void {
     const b = contentBounds(hist.present);
@@ -411,6 +426,11 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   // --- Clavier ---
   window.addEventListener('keydown', (e) => {
     if (isTypingTarget(e.target)) return;
+    // Aperçu 3D ouvert : ses propres commandes (flèches, Maj + flèches) ; seuls W et Échap le referment.
+    if (preview.isOpen) {
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'w') preview.close();
+      return;
+    }
     const k = e.key.toLowerCase();
     const mod = e.ctrlKey || e.metaKey;
     if (mod && k === 's') {
@@ -447,6 +467,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
     }
     if (k === 'i') return void ((showIds = !showIds), redraw());
     if (k === 'f') return frame();
+    if (k === 'w') return showPreview();
     if (k === 'o' && tools.selection?.kind === 'edge') {
       const edge = findEdge(hist.present, tools.selection.ref);
       if (edge) apply(setOneWay(hist.present, edge, !edge.oneWay));
