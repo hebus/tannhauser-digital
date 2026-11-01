@@ -4,7 +4,7 @@ import { h, isTypingTarget, withFocusKept } from './dom';
 import { ACTION_KEYS, MAIN_HANDLED_KEYS, actionRows, placementModel, reactionContext, rosterRows, statusModel, visibleActions, type ActionRow, type RosterRow } from './hud-model';
 import { EFFECT_ICONS } from './effect-icons';
 import { reasonText, t } from './i18n';
-import { STAT_ICONS } from './stat-icons';
+import { ATTACK_ICONS, STAT_ICONS } from './stat-icons';
 import { modeRules } from './mode-rules';
 import { createLabeler, type Labeler } from './labels';
 import { createModeRulesDialog } from './dialogs';
@@ -125,6 +125,17 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
           ),
           h('div', { text: `${STAT_ICONS.movement} ${t('status.movementLeft', { n: `${c.movementLeft}/${c.movementMax}` })}` }),
           h('div', { class: `hud-badge ${m.actionUsed ? 'is-used' : 'is-free'}`, text: `${m.actionUsed ? '✖' : '✔'} ${t(m.actionUsed ? 'status.action.used' : 'status.action.available')}` }),
+          h(
+            'ul',
+            { class: 'hud-weapons', attrs: { 'aria-label': t('status.attack') } },
+            ...(c.weapons.length === 0
+              ? [h('li', { class: 'hud-badge is-none', text: `∅ ${t('status.attack.none')}` })]
+              : c.weapons.map((w) => {
+                  const mode = t(w.mode === 'MELEE' ? 'status.attack.melee' : 'status.attack.ranged');
+                  const reach = w.mode === 'MELEE' ? '' : ` · ${w.range === null ? t('status.attack.sight') : t('status.attack.range', { n: w.range })}`;
+                  return h('li', { class: `hud-badge is-${w.mode === 'MELEE' ? 'melee' : 'ranged'}`, text: `${ATTACK_ICONS[w.mode]} ${mode}${reach}`, attrs: { title: w.name } }, h('span', { class: 'hud-weapon-name', text: ` — ${w.name}` }));
+                })),
+          ),
           c.overwatch ? h('div', { class: 'hud-badge is-ow', text: `◉ ${t('status.overwatch')}` }) : null,
         ),
       );

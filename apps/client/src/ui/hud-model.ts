@@ -1,4 +1,4 @@
-import { FLAGS_TO_WIN, OVERWATCH_COST, carriedFlags, currentStats, plantedFlags, getLegalActions, getReactionOptions, isCaptureTheFlag, type ActionId, type CharacterState, type GameCommand, type GameState } from '@tannhauser/core';
+import { FLAGS_TO_WIN, OVERWATCH_COST, carriedFlags, currentStats, plantedFlags, getLegalActions, getReactionOptions, isCaptureTheFlag, type ActionId, type CharacterState, type GameCommand, type GameState, type WeaponDefinition } from '@tannhauser/core';
 import { reasonText, t } from './i18n';
 import type { Labeler } from './labels';
 
@@ -34,6 +34,19 @@ export const MAIN_HANDLED_KEYS: ReadonlySet<string> = new Set(['e', 'o', 'p', 't
 /** Phase de placement de l'Overwatch (avant les activations) : le HUD affiche alors le panneau de placement. */
 export const isPlacementPhase = (state: GameState): boolean => state.phase === 'OVERWATCH';
 
+/** Mode d'attaque d'une arme : mêlée (cible adjacente) ou distance (ligne de vue, portée éventuelle). */
+export type AttackMode = 'MELEE' | 'RANGED';
+
+/** Même partage que le moteur (`checkTargeting`, `smokeAttackPenalty`) : seule la famille `CAC` frappe au corps à corps. */
+export const attackMode = (weapon: Pick<WeaponDefinition, 'kind'>): AttackMode => (weapon.kind === 'CAC' ? 'MELEE' : 'RANGED');
+
+export interface WeaponRow {
+  readonly name: string;
+  readonly mode: AttackMode;
+  /** Portée maximale en pas ; `null` = limitée par la seule ligne de vue (toujours `null` en mêlée). */
+  readonly range: number | null;
+}
+
 export interface CharacterCard {
   readonly id: string;
   readonly name: string;
@@ -45,6 +58,8 @@ export interface CharacterCard {
   readonly movementLeft: number;
   readonly movementMax: number;
   readonly overwatch: boolean;
+  /** Armes du personnage avec leur mode d'attaque (mêlée d'abord) ; vide = désarmé, aucune attaque possible. */
+  readonly weapons: readonly WeaponRow[];
 }
 
 export interface StatusPlayer {
@@ -83,6 +98,9 @@ export function characterCard(c: CharacterState, labels: Labeler): CharacterCard
     movementLeft: c.movementLeft,
     movementMax: stats.movement,
     overwatch: c.overwatch === true,
+    weapons: (c.weapons ?? [])
+      .map((w): WeaponRow => ({ name: labels.weapon(w.id), mode: attackMode(w), range: attackMode(w) === 'RANGED' ? (w.maxRange ?? null) : null }))
+      .sort((a, b) => Number(b.mode === 'MELEE') - Number(a.mode === 'MELEE')),
   };
 }
 
