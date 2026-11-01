@@ -1,5 +1,5 @@
 import { h } from '../ui/dom';
-import { t } from '../ui/i18n';
+import { boardLabel, t } from '../ui/i18n';
 import { modeRules } from '../ui/mode-rules';
 import { GAME_MODES, MAX_SEED, MAX_TEAM_SIZE, PLAYER_IDS, randomSeed, validateSetup, type SetupConfig, type SetupContent, type SetupIssue } from './setup-config';
 import { SETUP_STEPS, issueStep, stepIssues, type SetupStep } from './setup-steps';
@@ -89,7 +89,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
     const boardSelect = h(
       'select',
       { class: 'setup-input setup-select', attrs: { id: 'setup-board', 'aria-label': t('setup.board') }, on: { change: (e) => { boardId = (e.target as HTMLSelectElement).value; renderBoardMeta(); } } },
-      ...content.boards.map((b) => h('option', { text: t(b.nameKey), attrs: { value: b.id, selected: b.id === boardId } })),
+      ...content.boards.map((b) => h('option', { text: boardLabel(b), attrs: { value: b.id, selected: b.id === boardId } })),
     );
     renderBoardMeta();
     const boardField = h('div', { class: 'setup-board-field' }, boardSelect, boardMeta);
@@ -280,7 +280,7 @@ export function showSetupScreen(host: HTMLElement, content: SetupScreenContent, 
           .join(', ');
       summaryList.textContent = '';
       summaryList.append(
-        ...row(t('setup.board'), board ? `${t(board.nameKey)} · ${t('setup.boardSize', { n: Object.keys(board.board.nodes).length })}` : boardId),
+        ...row(t('setup.board'), board ? `${boardLabel(board)} · ${t('setup.boardSize', { n: Object.keys(board.board.nodes).length })}` : boardId),
         ...row(t('setup.mode'), t(`modeCard.${mode}.title`)),
         ...row(t('setup.seedShort'), seedInput.value.trim() || '—'),
         ...PLAYER_IDS.flatMap((id) => row(`${t(`player.${id}`)} · ${aiPlayers.has(id) ? t('setup.aiShort') : t('setup.human')}`, names(id) || '—')),

@@ -1,7 +1,7 @@
 import { loadDevContent } from '@tannhauser/content';
 import type { GameFacade } from '../game-facade';
 import { showSetupScreen } from '../setup/setup-screen';
-import { defaultSetup, randomSeed, validateSetup, type SetupConfig } from '../setup/setup-config';
+import { defaultSetup, preselectBoard, randomSeed, validateSetup, type SetupConfig } from '../setup/setup-config';
 import '../../ui.css';
 import { detectLocale, setLocale } from './i18n';
 import { createGameFromSetup, setupContentOf } from './new-game';
@@ -24,7 +24,8 @@ export async function startFromSetup(): Promise<GameFacade> {
     // Équipes de la dernière partie si elles sont encore valides ; nouvelle graine à chaque mise en place.
     const previous = lastSetup();
     const base = defaultSetup(available, randomSeed());
-    const initial: SetupConfig = previous && validateSetup(previous, available).length === 0 ? { ...previous, seed: base.seed } : base;
+    const remembered: SetupConfig = previous && validateSetup(previous, available).length === 0 ? { ...previous, seed: base.seed } : base;
+    const initial = preselectBoard(remembered, location.search, content.boards);
     config = await showSetupScreen(document.body, { boards: content.boards, characters: content.characters }, initial);
   }
   writeSetupToLocation(config);

@@ -369,7 +369,8 @@ export function generateBoard(spec: BoardSpec): BoardJson {
   return json;
 }
 
-/** Sérialisation canonique (indentation 2, fin de ligne LF) : la sortie est comparée octet par octet au JSON committé. */
-export function serializeBoard(json: BoardJson): string {
-  return `${JSON.stringify(json, null, 2)}\n`;
-}
+/**
+ * Sérialisation canonique (indentation 2, fin de ligne LF) : la sortie est comparée octet par octet au JSON committé.
+ * Définie dans `@tannhauser/content`, partagée avec l'éditeur de plateaux.
+ */
+export { serializeBoard } from '@tannhauser/content';

@@ -845,6 +845,11 @@ export function hasKey(key: string): boolean {
   return key in FR;
 }
 
+/** Nom affiché d'un plateau : sa clé traduite, à défaut son identifiant (plateau tout juste créé par l'éditeur). */
+export function boardLabel(board: { readonly id: string; readonly nameKey: string }): string {
+  return hasKey(board.nameKey) ? t(board.nameKey) : board.id;
+}
+
 /** Message d'un refus du moteur : traduction par code si connue, sinon texte français du moteur. */
 export function reasonText(code: string | undefined, engineMessage: string | undefined, locale: Locale = current): string {
   if (code !== undefined) {

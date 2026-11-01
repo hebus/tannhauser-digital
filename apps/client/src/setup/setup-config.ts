@@ -93,6 +93,15 @@ export function defaultSetup(content: SetupContent, seed: number): SetupConfig {
   return { boardId: content.boards[0]?.id ?? '', seed, teams };
 }
 
+/**
+ * Plateau présélectionné par l'URL (`?board=<id>`, bouton « Tester » de l'éditeur de plateaux) ; un identifiant inconnu
+ * ou absent laisse la configuration telle quelle.
+ */
+export function preselectBoard(config: SetupConfig, search: string, boards: readonly { readonly id: string }[]): SetupConfig {
+  const id = new URLSearchParams(search).get('board');
+  return id !== null && boards.some((b) => b.id === id) ? { ...config, boardId: id } : config;
+}
+
 // --- Sérialisation (hash d'URL : permet de rejouer une partie en rechargeant la page) ---
 
 export function encodeSetup(config: SetupConfig): string {
