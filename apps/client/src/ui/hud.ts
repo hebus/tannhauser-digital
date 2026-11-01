@@ -45,6 +45,8 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
   const rulesDialog = createModeRulesDialog(root, mode, () => root.querySelector<HTMLElement>('[data-fid="mode-rules"]')?.focus());
 
   let menu: MenuKind | null = null;
+  /** Infos de partie (objectif, consigne de phase, graine) : masquées par défaut, affichées à la demande (touche S). */
+  let showInfo = false;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
   const activeId = (s: GameState): string | undefined => s.turn.activeCharacterId;
@@ -93,14 +95,16 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
       return [li];
     });
     if (m.finished) statusPanel.append(h('div', { class: 'hud-row hud-head' }, h('span', { class: 'hud-pill hud-pill-end', text: `■ ${t('status.finished')}` })));
-    statusPanel.append(
-      h(
-        'div',
-        { class: 'hud-row hud-goal' },
-        h('span', { text: `🎯 ${modeRules(mode).goal}` }),
-        h('button', { class: 'hud-link', text: `${t('modeHelp.button')} (V)`, attrs: { type: 'button', 'data-fid': 'mode-rules' }, on: { click: () => rulesDialog.toggle() } }),
-      ),
-    );
+    if (showInfo) {
+      statusPanel.append(
+        h(
+          'div',
+          { class: 'hud-row hud-goal' },
+          h('span', { text: `🎯 ${modeRules(mode).goal}` }),
+          h('button', { class: 'hud-link', text: `${t('modeHelp.button')} (V)`, attrs: { type: 'button', 'data-fid': 'mode-rules' }, on: { click: () => rulesDialog.toggle() } }),
+        ),
+      );
+    }
     if (meta.length > 0) statusPanel.append(h('ul', { class: 'hud-meta', attrs: { 'aria-label': t('phase.players') } }, ...meta));
 
     if (m.character) {
@@ -124,10 +128,13 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
           c.overwatch ? h('div', { class: 'hud-badge is-ow', text: `◉ ${t('status.overwatch')}` }) : null,
         ),
       );
-    } else if (!m.finished) {
+    } else if (!m.finished && showInfo) {
       statusPanel.append(h('div', { class: 'hud-char hud-char-none', text: t(m.placement ? 'status.hint.placement' : 'status.hint.select') }));
     }
 
+    // Rien à montrer (infos masquées, aucun personnage actif) : pas de cadre vide.
+    statusPanel.hidden = statusPanel.childElementCount === 0;
+    if (!showInfo) return;
     const seed = game.replaySeed;
     statusPanel.append(
       h(
@@ -526,6 +533,11 @@ export function createHud(root: HTMLElement, game: GameFacade): Hud {
     if (key === 'escape') return rulesDialog.close() || closeMenu();
     if (key === 'v') {
       rulesDialog.toggle();
+      return true;
+    }
+    if (key === 's') {
+      showInfo = !showInfo;
+      renderStatus(state, createLabeler(state));
       return true;
     }
     if (MAIN_HANDLED_KEYS.has(key) || state.turn.reaction || state.phase === 'FINISHED') return false;

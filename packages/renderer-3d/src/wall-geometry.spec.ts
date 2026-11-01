@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadDevContent } from '@tannhauser/content';
-import { corridorPolygons, passageWidth, planWalls, pointInPolygons, type Pt } from './wall-geometry';
+import { corridorPolygons, footprintMask, passageWidth, planWalls, pointInPolygons, type Pt } from './wall-geometry';
 
 const square = (x: number, y: number, s: number): Pt[] => [
   { x, y },
@@ -88,4 +88,22 @@ describe('plateaux réels', () => {
       expect(blocked).toEqual([]);
     });
   }
+});
+
+describe('footprintMask', () => {
+  it('sol jouable à 255, dehors à 0, ligne 0 en haut de l’emprise', () => {
+    // Emprise 200 × 100 ; seule la moitié gauche est jouable.
+    const mask = footprintMask([{ outer: square(0, 0, 100), holes: [] }], { x: 0, y: 0, width: 200, height: 100 }, 20);
+    expect([mask.width, mask.height]).toEqual([20, 10]);
+    expect(mask.data[0]).toBe(255); // coin haut gauche
+    expect(mask.data[19]).toBe(0); // coin haut droit
+    expect(mask.data[9 * 20 + 5]).toBe(255); // bas, dans la moitié gauche
+    expect(mask.data[9 * 20 + 15]).toBe(0);
+  });
+
+  it('les trous de l’empreinte restent hors du sol', () => {
+    const mask = footprintMask([{ outer: square(0, 0, 100), holes: [square(40, 40, 20)] }], { x: 0, y: 0, width: 100, height: 100 }, 10);
+    expect(mask.data[5 * 10 + 5]).toBe(0);
+    expect(mask.data[1 * 10 + 1]).toBe(255);
+  });
 });

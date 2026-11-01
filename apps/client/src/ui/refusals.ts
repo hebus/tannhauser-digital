@@ -47,7 +47,8 @@ export function watchIgnoredInput(game: GameFacade, dispatchCount: () => number,
   let down = false;
   let moved = 0;
   window.addEventListener('pointerdown', (e) => {
-    if (!(e.target instanceof HTMLCanvasElement)) return;
+    // Clic droit ou molette : la caméra 3D pivote, ce n'est pas un clic sur une case.
+    if (!(e.target instanceof HTMLCanvasElement) || e.button !== 0) return;
     down = true;
     moved = 0;
   });

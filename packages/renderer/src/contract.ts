@@ -29,6 +29,9 @@ export interface BoardRendererEvents {
   readonly onInteract: () => void;
 }
 
+/** Commandes de caméra propres à un rendu (le 3D pivote ; le 2D n'en a pas). */
+export type CameraControl = 'rotateLeft' | 'rotateRight' | 'north';
+
 /** Couleur de la surbrillance de cases : déplacement possible, ou case visable par un lancer. */
 export type HighlightTone = 'move' | 'throw';
 
@@ -104,6 +107,8 @@ export interface BoardRendererOptions {
   readonly calloutText: (tone: CalloutTone) => string;
   /** Débogage : les bannières restent affichées (figées) jusqu'à la suivante. */
   readonly holdBanners?: boolean;
+  /** Infobulle (localisée par le client) d'une commande de caméra ; absente = boutons sans libellé. */
+  readonly cameraText?: (control: CameraControl) => string;
   readonly events: BoardRendererEvents;
 }
 

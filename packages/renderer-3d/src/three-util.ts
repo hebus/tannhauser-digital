@@ -67,17 +67,60 @@ export function createTextTexture(text: string, style: TextStyle = {}): { textur
 }
 
 /**
- * Texte qui fait toujours face à la caméra, dessiné par-dessus les murs (lisibilité avant tout).
- * `worldHeight` = hauteur d'UNE ligne, en unités plateau.
+ * Donne au sprite une taille fixe À L'ÉCRAN (`pixelHeight` px de haut), quel que soit le zoom : sans atténuation, la
+ * taille d'un sprite ne dépend plus que du champ de la caméra et de la hauteur du canevas, relus juste avant le dessin.
  */
-export function createTextSprite(text: string, style: TextStyle & { worldHeight?: number } = {}): THREE.Sprite {
-  const { worldHeight = 10, ...textStyle } = style;
+function keepScreenSize(sprite: THREE.Sprite, pixelHeight: number, aspect: number): void {
+  sprite.material.sizeAttenuation = false;
+  sprite.onBeforeRender = (renderer, _scene, camera) => {
+    const fov = (camera as THREE.PerspectiveCamera).fov ?? 40;
+    const h = (pixelHeight * 2 * Math.tan(THREE.MathUtils.degToRad(fov) / 2)) / Math.max(1, renderer.domElement.clientHeight);
+    if (sprite.scale.y === h) return;
+    sprite.scale.set(h * aspect, h, 1);
+    sprite.updateMatrixWorld();
+  };
+}
+
+/**
+ * Texte qui fait toujours face à la caméra, dessiné par-dessus les murs (lisibilité avant tout). Taille d'UNE ligne :
+ * `pixelHeight` (px, constante à l'écran : étiquettes permanentes) ou `worldHeight` (unités plateau : textes d'effets
+ * brefs, dont l'animation joue sur l'échelle).
+ */
+export function createTextSprite(text: string, style: TextStyle & { pixelHeight?: number; worldHeight?: number } = {}): THREE.Sprite {
+  const { pixelHeight = 12, worldHeight, ...textStyle } = style;
   const { texture, aspect } = createTextTexture(text, textStyle);
   const lines = text.split('\n').length;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false }));
-  const h = worldHeight * lines;
-  sprite.scale.set(h * aspect, h, 1);
+  if (worldHeight !== undefined) sprite.scale.set(worldHeight * lines * aspect, worldHeight * lines, 1);
+  else keepScreenSize(sprite, pixelHeight * lines, aspect);
   sprite.renderOrder = 10;
+  return sprite;
+}
+
+/** Pastille ronde (fond clair, lettre sombre) à taille constante à l'écran : initiale du type de personnage, comme le 2D. */
+export function createBadgeSprite(letter: string, pixelHeight = 18): THREE.Sprite {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#f1f3f5';
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#111111';
+  ctx.stroke();
+  ctx.font = '800 36px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#111111';
+  ctx.fillText(letter, size / 2, size / 2 + 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+  keepScreenSize(sprite, pixelHeight, 1);
+  sprite.renderOrder = 9;
   return sprite;
 }
 

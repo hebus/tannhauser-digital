@@ -79,6 +79,7 @@ async function main(): Promise<void> {
     characterLabels: (s) => createLabeler(s).character,
     bannerText: (plan) => bannerText(plan, createLabeler(game.state)),
     calloutText: (tone) => t(`callout.${tone}`),
+    cameraText: (control) => t(`view.camera.${control}`),
     holdBanners: debugBanner !== null,
     events: {
       onPick: (nodeId) => onNodeClick(nodeId),

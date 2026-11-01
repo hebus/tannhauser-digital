@@ -196,3 +196,28 @@ export function passageWidth(footprint: readonly Polygon[], center: Pt, angle: n
   };
   return reach(1) + reach(-1);
 }
+
+/** Masque de l'empreinte : 255 = sol jouable, 0 = dehors (ou mur). La ligne 0 est en haut de l'emprise (`box.y`). */
+export interface FootprintMask {
+  readonly data: Uint8Array<ArrayBuffer>;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Échantillonne l'empreinte sur une grille couvrant `box` (au plus `maxSize` cellules par côté, centre de chaque cellule).
+ * Sert aux murs en coupe : un mur est abaissé là où il cache du sol à la caméra.
+ */
+export function footprintMask(footprint: readonly Polygon[], box: { x: number; y: number; width: number; height: number }, maxSize = 256): FootprintMask {
+  const scale = maxSize / Math.max(box.width, box.height, 1);
+  const width = Math.max(1, Math.round(box.width * scale));
+  const height = Math.max(1, Math.round(box.height * scale));
+  const data = new Uint8Array(width * height);
+  for (let j = 0; j < height; j++) {
+    for (let i = 0; i < width; i++) {
+      const p = { x: box.x + ((i + 0.5) / width) * box.width, y: box.y + ((j + 0.5) / height) * box.height };
+      if (pointInPolygons(p, footprint)) data[j * width + i] = 255;
+    }
+  }
+  return { data, width, height };
+}

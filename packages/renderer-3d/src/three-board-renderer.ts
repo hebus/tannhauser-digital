@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 import type { BoardState, GameState } from '@tannhauser/core';
 import type { BoardRenderer, BoardRendererFactory, BoardRendererOptions, HighlightTone } from '@tannhauser/renderer/src/contract';
 import { AnimationRunner } from '@tannhauser/renderer/src/presentation/animation-queue';
@@ -8,6 +8,8 @@ import { easeInOutQuad } from '@tannhauser/renderer/src/presentation/easing';
 import type { PathPreview } from '@tannhauser/renderer/src/presentation/path-geometry';
 import { Presentation } from '@tannhauser/renderer/src/presentation/presentation';
 import { buildBoardScene, WALL_HEIGHT, type BoardScene } from './board-scene';
+import { clampToBox, FIT_POLAR, fitDistance, nextQuarter, polarForDistance, quarterIndex, wrapAngle } from './camera-math';
+import { CameraWidget } from './camera-widget';
 import { FlagLayer3D } from './flags-3d';
 import { PawnLayer } from './pawn-layer';
 import { DomScreenEffects } from './screen-effects';
@@ -19,23 +21,45 @@ import { ThreeWorldEffects } from './world-effects';
 const CLICK_SLOP = 4;
 /** Durée du recentrage de la caméra sur une case (ms). */
 const FOCUS_DURATION = 450;
+/** Durée d'un quart de tour de la caméra (ms). */
+const ROTATE_DURATION = 380;
+/** Distance minimale caméra – point visé (unités plateau, les cases sont espacées d'environ 100). */
+const MIN_DISTANCE = 160;
+/** Vitesse du déplacement au clavier, en fraction de la distance caméra par seconde. */
+const KEY_PAN_SPEED = 0.9;
 const BACKGROUND = 0x14161a;
-/** Direction (du point visé vers la caméra) du cadrage : vue de dessus inclinée, lisible pour un jeu tactique. */
-const VIEW_DIRECTION = new THREE.Vector3(0, 0.82, 0.6).normalize();
+/** Hauteur (poitrine des pions) des rayons de vue. */
+const SIGHT_HEIGHT = 26;
 
 const doorSignature = (board: BoardState): string => Object.values(board.doors).map((d) => `${d.id}:${d.state}`).join('|');
 
+/** Touche fléchée → direction de déplacement (avant, droite) relative à l'écran. */
+const PAN_KEYS: Readonly<Record<string, readonly [number, number]>> = {
+  ArrowUp: [1, 0],
+  ArrowDown: [-1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
 interface Focus {
   elapsed: number;
+  /** Avancement déjà appliqué (0 à 1) : le recentrage se cumule avec une rotation en cours. */
+  applied: number;
   readonly delta: THREE.Vector3;
-  readonly targetFrom: THREE.Vector3;
-  readonly cameraFrom: THREE.Vector3;
+}
+
+interface Rotation {
+  elapsed: number;
+  readonly from: number;
+  readonly to: number;
 }
 
 /**
  * Rendu 3D (Three.js, style low poly) du plateau. Même contrat que le rendu 2D : le client ne parle qu'à `BoardRenderer`.
- * La caméra est orbitale (glisser = tourner, molette = zoom, clic droit = déplacer) ; les murs qui masquent un pion
- * sont percés autour de lui. Les bannières et avis sont en DOM : ce rendu n'a aucune dépendance à Pixi.
+ * Caméra tactique : glisser = déplacer (comme le 2D), clic droit = pivoter, molette = zoom vers le curseur ; l'inclinaison
+ * suit le zoom (presque de dessus au cadrage, rasante de près). Flèches = déplacer, Maj + ←/→ = quart de tour. Le point
+ * visé reste sur le plateau. Les murs qui masquent un pion sont percés autour de lui. Les bannières, avis et commandes de
+ * caméra sont en DOM : ce rendu n'a aucune dépendance à Pixi.
  */
 export class ThreeBoardRenderer implements BoardRenderer {
   readonly presentation: Presentation;
@@ -54,18 +78,25 @@ export class ThreeBoardRenderer implements BoardRenderer {
   private readonly clock = new THREE.Clock();
 
   private webgl: THREE.WebGLRenderer | null = null;
-  private controls: OrbitControls | null = null;
+  private controls: MapControls | null = null;
+  private widget: CameraWidget | null = null;
   private boardScene: BoardScene;
   private board: BoardState;
   private shownDoors: string;
   private fitDistance = 1;
   private focus: Focus | null = null;
+  private rotation: Rotation | null = null;
+  /** Flèches enfoncées (déplacement continu tant qu'elles le restent). */
+  private readonly panKeys = new Set<string>();
   private hover: string | null = null;
   // Surcouches demandées par le client, rejouées quand le plateau est reconstruit (porte ouverte ou fermée).
   private reach: { ids: string[]; tone: HighlightTone } = { ids: [], tone: 'move' };
   private targets: string[] = [];
   private los: { origin: string; visible: ReadonlySet<string> } | null = null;
   private showIds = false;
+  /** Cases occupées par un personnage vivant (d'après le dernier état) : extrémités des rayons de vue. */
+  private occupied = new Set<string>();
+  private readonly losGroup = new THREE.Group();
 
   constructor(private readonly options: BoardRendererOptions) {
     this.board = options.board;
@@ -91,7 +122,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
 
     this.scene.background = new THREE.Color(BACKGROUND);
     this.scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x20232b, 1.6), this.sun, this.sun.target);
-    this.scene.add(this.pawns.group, this.flags.group, this.smoke.group, this.worldEffects.layer, this.pathGroup);
+    this.scene.add(this.pawns.group, this.flags.group, this.smoke.group, this.worldEffects.layer, this.pathGroup, this.losGroup);
     this.configureLights();
   }
 
@@ -104,10 +135,21 @@ export class ThreeBoardRenderer implements BoardRenderer {
     host.appendChild(webgl.domElement);
     this.webgl = webgl;
 
-    const controls = new OrbitControls(this.camera, webgl.domElement);
-    controls.maxPolarAngle = Math.PI * 0.46;
-    controls.minDistance = 120;
+    // Glisser = déplacer sur le sol, clic droit = pivoter (l'inclinaison est fixée par le zoom, voir `frame`), molette =
+    // zoom vers le curseur ; au doigt : un doigt déplace, deux doigts zooment et pivotent.
+    const controls = new MapControls(this.camera, webgl.domElement);
+    controls.screenSpacePanning = false;
+    controls.zoomToCursor = true;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.18;
+    controls.minDistance = MIN_DISTANCE;
     this.controls = controls;
+
+    this.widget = new CameraWidget({
+      text: (control) => this.options.cameraText?.(control) ?? '',
+      onRotate: (direction) => this.rotateQuarter(direction),
+      onNorth: () => this.rotateTo(0),
+    });
 
     this.resize();
     this.listen();
@@ -119,11 +161,14 @@ export class ThreeBoardRenderer implements BoardRenderer {
     this.webgl?.setAnimationLoop(null);
     this.presentation.destroy();
     this.controls?.dispose();
+    this.widget?.destroy();
+    this.widget = null;
     this.boardScene.dispose();
     this.pawns.destroy();
     this.flags.destroy();
     this.smoke.destroy();
     clearGroup(this.pathGroup);
+    clearGroup(this.losGroup);
     this.webgl?.dispose();
     this.webgl?.domElement.remove();
     this.webgl = null;
@@ -143,6 +188,8 @@ export class ThreeBoardRenderer implements BoardRenderer {
     this.pawns.update(state, this.options.characterLabels(state));
     this.flags.update(state);
     this.smoke.update(state);
+    this.occupied = new Set(state.characters.filter((c) => c.alive).map((c) => c.nodeId));
+    this.drawSightRays();
   }
 
   setShowNodeIds(show: boolean): void {
@@ -163,6 +210,28 @@ export class ThreeBoardRenderer implements BoardRenderer {
   showLineOfSight(origin: string | null, visible: ReadonlySet<string> | null): void {
     this.los = origin !== null && visible !== null ? { origin, visible } : null;
     this.boardScene.setLineOfSight(origin, visible);
+    this.drawSightRays();
+  }
+
+  /**
+   * Rayons de vue : de la case d'origine vers chaque personnage qu'elle voit, à hauteur de poitrine. Le volume montre
+   * d'un coup d'œil qui peut tirer sur qui, sans compter les pastilles des cases.
+   */
+  private drawSightRays(): void {
+    clearGroup(this.losGroup);
+    const origin = this.los ? this.board.nodes[this.los.origin] : undefined;
+    if (!this.los || !origin) return;
+    const material = new THREE.MeshBasicMaterial({ color: OVERLAY_COLORS.losVisible, transparent: true, opacity: 0.75, depthWrite: false });
+    const from = new THREE.Vector3(origin.x, SIGHT_HEIGHT, origin.y);
+    for (const id of this.los.visible) {
+      const node = this.board.nodes[id];
+      if (id === this.los.origin || !node || !this.occupied.has(id)) continue;
+      const to = new THREE.Vector3(node.x, SIGHT_HEIGHT, node.y);
+      const ray = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, from.distanceTo(to), 6, 1, true), material);
+      ray.position.copy(from).add(to).multiplyScalar(0.5);
+      ray.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+      this.losGroup.add(ray);
+    }
   }
 
   showPath(preview: PathPreview | null): void {
@@ -190,7 +259,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
     const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(9), material);
     diamond.position.set(end.x, y + 6, end.y);
     this.pathGroup.add(diamond);
-    const label = createTextSprite(`${preview.cost} PM`, { worldHeight: 12, color: '#111111', stroke: '#ffe066' });
+    const label = createTextSprite(`${preview.cost} PM`, { pixelHeight: 15, color: '#111111', stroke: '#ffe066' });
     label.position.set(end.x, y + 30, end.y);
     this.pathGroup.add(label);
   }
@@ -208,6 +277,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
     built.setTargets(this.targets);
     built.setLineOfSight(this.los?.origin ?? null, this.los?.visible ?? null);
     built.setShowIds(this.showIds);
+    built.setHover(this.hover);
     return built;
   }
 
@@ -230,8 +300,16 @@ export class ThreeBoardRenderer implements BoardRenderer {
     const dtMs = Math.min(100, this.clock.getDelta() * 1000);
     this.presentation.tick(dtMs, performance.now());
     this.smoke.tick(dtMs, this.options.reducedMotion.value);
+    this.stepKeyPan(dtMs);
     this.stepFocus(dtMs);
+    this.stepRotation(dtMs);
+    // L'inclinaison n'est pas libre : elle découle de la distance (les contrôles la ramènent dans cette « plage »).
+    const polar = polarForDistance(this.camera.position.distanceTo(controls.target), MIN_DISTANCE, this.fitDistance);
+    controls.minPolarAngle = polar;
+    controls.maxPolarAngle = polar;
     controls.update();
+    this.keepOnBoard();
+    this.widget?.setAzimuth(controls.getAzimuthalAngle());
     this.boardScene.setOccluders(this.pawns.chestPositions());
     webgl.render(this.scene, this.camera);
   };
@@ -249,30 +327,37 @@ export class ThreeBoardRenderer implements BoardRenderer {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Cadre tout le plateau, presque de dessus, en gardant le quart de tour courant. */
   fit(): void {
     const { controls } = this;
     if (!controls) return;
     const { width: W, height: H } = this.size();
     const { left, right, top } = this.options.insets();
-    const freeW = Math.max(200, W - left - right);
-    const freeH = Math.max(200, H - top);
     const b = this.boardScene.bounds;
     const center = new THREE.Vector3(b.x + b.width / 2, 0, b.y + b.height / 2);
-    const tanV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
-    const tanH = tanV * this.camera.aspect;
-    const elevation = Math.asin(VIEW_DIRECTION.y);
+    const quarter = quarterIndex(controls.getAzimuthalAngle());
+    const azimuth = (quarter * Math.PI) / 2;
     // La zone libre (hors HUD) est une fraction de la vue : le plateau doit y tenir en entier.
-    const needWidth = b.width / 2 / (tanH * (freeW / W));
-    const needDepth = ((b.height / 2) * Math.sin(elevation) + (WALL_HEIGHT / 2) * Math.cos(elevation)) / (tanV * (freeH / H));
-    const distance = Math.max(needWidth, needDepth) * 1.08 + (b.height / 2) * Math.cos(elevation);
+    const distance = fitDistance({
+      bounds: b,
+      quarter,
+      polar: FIT_POLAR,
+      fov: this.camera.fov,
+      aspect: this.camera.aspect,
+      freeWidth: Math.max(200, W - left - right) / W,
+      freeHeight: Math.max(200, H - top) / H,
+      wallHeight: WALL_HEIGHT,
+    });
     this.fitDistance = distance;
     this.focus = null;
+    this.rotation = null;
     controls.target.copy(center);
-    this.camera.position.copy(center).addScaledVector(VIEW_DIRECTION, distance);
-    controls.maxDistance = distance * 2.5;
+    this.camera.position.copy(center).add(new THREE.Vector3().setFromSphericalCoords(distance, FIT_POLAR, azimuth));
+    controls.maxDistance = distance * 1.6;
     // Décale l'image pour centrer le plateau dans la zone libre plutôt que dans la fenêtre.
     this.camera.setViewOffset(W, H, -(left - right) / 2, -top / 2, W, H);
     this.camera.updateProjectionMatrix();
+    this.widget?.setRightInset(right);
     controls.update();
   }
 
@@ -284,14 +369,13 @@ export class ThreeBoardRenderer implements BoardRenderer {
     const { controls } = this;
     const node = this.board.nodes[nodeId];
     if (!controls || !node) return;
-    const to = new THREE.Vector3(node.x, 0, node.y);
-    const delta = to.clone().sub(controls.target);
+    const delta = new THREE.Vector3(node.x, 0, node.y).sub(controls.target);
     if (this.options.reducedMotion.value) {
       controls.target.add(delta);
       this.camera.position.add(delta);
       return;
     }
-    this.focus = { elapsed: 0, delta, targetFrom: controls.target.clone(), cameraFrom: this.camera.position.clone() };
+    this.focus = { elapsed: 0, applied: 0, delta };
   }
 
   private stepFocus(dtMs: number): void {
@@ -300,12 +384,87 @@ export class ThreeBoardRenderer implements BoardRenderer {
     focus.elapsed += dtMs;
     const p = Math.min(1, focus.elapsed / FOCUS_DURATION);
     const e = easeInOutQuad(p);
-    controls.target.copy(focus.targetFrom).addScaledVector(focus.delta, e);
-    this.camera.position.copy(focus.cameraFrom).addScaledVector(focus.delta, e);
+    // Translation par incréments : se cumule avec une rotation ou un zoom en cours sans les écraser.
+    const step = focus.delta.clone().multiplyScalar(e - focus.applied);
+    focus.applied = e;
+    controls.target.add(step);
+    this.camera.position.add(step);
     if (p >= 1) this.focus = null;
   }
 
-  // ---- Entrées : clic, survol (la caméra est gérée par OrbitControls) ---------------------------------
+  /** Quart de tour (1 : plateau dans le sens horaire à l'écran), animé ; depuis un angle libre, jusqu'au cran suivant. */
+  private rotateQuarter(direction: 1 | -1): void {
+    const from = this.rotation?.to ?? this.controls?.getAzimuthalAngle() ?? 0;
+    this.rotateTo(nextQuarter(from, direction));
+  }
+
+  /** Pivote la caméra autour du point visé jusqu'à `azimuth` (par le plus court chemin depuis l'angle actuel). */
+  private rotateTo(azimuth: number): void {
+    const { controls } = this;
+    if (!controls) return;
+    const from = controls.getAzimuthalAngle();
+    const to = from + wrapAngle(azimuth - from);
+    if (this.options.reducedMotion.value) {
+      this.setAzimuth(to);
+      return;
+    }
+    this.rotation = { elapsed: 0, from, to };
+  }
+
+  private stepRotation(dtMs: number): void {
+    const { rotation } = this;
+    if (!rotation) return;
+    rotation.elapsed += dtMs;
+    const p = Math.min(1, rotation.elapsed / ROTATE_DURATION);
+    this.setAzimuth(rotation.from + (rotation.to - rotation.from) * easeInOutQuad(p));
+    if (p >= 1) this.rotation = null;
+  }
+
+  private setAzimuth(azimuth: number): void {
+    const { controls } = this;
+    if (!controls) return;
+    const offset = this.camera.position.clone().sub(controls.target);
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    spherical.theta = azimuth;
+    this.camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(spherical));
+  }
+
+  /** Déplacement continu aux flèches, relatif à l'écran (haut = vers le fond de la vue). */
+  private stepKeyPan(dtMs: number): void {
+    const { controls } = this;
+    if (!controls || this.panKeys.size === 0) return;
+    let forward = 0;
+    let rightward = 0;
+    for (const key of this.panKeys) {
+      const [f, r] = PAN_KEYS[key] ?? [0, 0];
+      forward += f;
+      rightward += r;
+    }
+    const azimuth = controls.getAzimuthalAngle();
+    // Vers le fond de la vue : à l'opposé de la caméra, sur le sol ; la droite de l'écran en découle.
+    const fx = -Math.sin(azimuth);
+    const fz = -Math.cos(azimuth);
+    const speed = KEY_PAN_SPEED * this.camera.position.distanceTo(controls.target) * (dtMs / 1000);
+    const move = new THREE.Vector3(fx * forward - fz * rightward, 0, fz * forward + fx * rightward).multiplyScalar(speed);
+    controls.target.add(move);
+    this.camera.position.add(move);
+  }
+
+  /** Le point visé reste dans l'emprise du plateau : impossible de le perdre de vue en glissant. */
+  private keepOnBoard(): void {
+    const { controls } = this;
+    if (!controls) return;
+    const t = controls.target;
+    const clamped = clampToBox(t.x, t.z, this.boardScene.bounds);
+    const dx = clamped.x - t.x;
+    const dz = clamped.y - t.z;
+    if (dx === 0 && dz === 0 && t.y === 0) return;
+    const shift = new THREE.Vector3(dx, -t.y, dz);
+    t.add(shift);
+    this.camera.position.add(shift);
+  }
+
+  // ---- Entrées : clic, survol, flèches (glisser et molette sont gérés par MapControls) ----------------------
 
   /** Case sous un point de l'écran (pixels du canevas) : un pion compte pour sa case ; `null` hors plateau. */
   private nodeAt(clientX: number, clientY: number): string | null {
@@ -326,6 +485,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
     const pointers = new Map<number, { x: number; y: number }>();
     let moved = 0;
     let multiTouch = false; // un geste à plusieurs doigts a eu lieu : le relâchement n'est pas un clic
+    let secondary = false; // clic droit ou molette : c'est la caméra qui pivote, pas une sélection
     el.addEventListener(
       'pointerdown',
       (e) => {
@@ -334,7 +494,10 @@ export class ThreeBoardRenderer implements BoardRenderer {
         if (pointers.size === 1) {
           moved = 0;
           multiTouch = false;
+          secondary = e.button !== 0;
         } else multiTouch = true;
+        this.rotation = null; // la main reprend la caméra
+        this.focus = null;
       },
       { signal },
     );
@@ -350,6 +513,8 @@ export class ThreeBoardRenderer implements BoardRenderer {
         const next = e.target === el ? this.nodeAt(e.clientX, e.clientY) : null;
         if (next !== this.hover) {
           this.hover = next;
+          this.boardScene.setHover(next);
+          el.style.cursor = next ? 'pointer' : '';
           events.onHover(next);
         }
       },
@@ -357,7 +522,7 @@ export class ThreeBoardRenderer implements BoardRenderer {
     );
     const end = (e: PointerEvent, click: boolean): void => {
       if (!pointers.has(e.pointerId)) return;
-      const wasClick = click && pointers.size === 1 && !multiTouch && moved < CLICK_SLOP;
+      const wasClick = click && pointers.size === 1 && !multiTouch && !secondary && moved < CLICK_SLOP;
       pointers.delete(e.pointerId);
       if (wasClick && e.target === el) {
         const id = this.nodeAt(e.clientX, e.clientY);
@@ -366,6 +531,23 @@ export class ThreeBoardRenderer implements BoardRenderer {
     };
     window.addEventListener('pointerup', (e) => end(e, true), { signal });
     window.addEventListener('pointercancel', (e) => end(e, false), { signal });
+    // Flèches : déplacer tant qu'elles sont enfoncées ; Maj + ←/→ : quart de tour. Jamais pendant une saisie de texte.
+    const typing = (e: KeyboardEvent): boolean => e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!(e.key in PAN_KEYS) || e.ctrlKey || e.metaKey || e.altKey || typing(e)) return;
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (!e.repeat && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) this.rotateQuarter(e.key === 'ArrowRight' ? 1 : -1);
+          return;
+        }
+        this.panKeys.add(e.key);
+      },
+      { signal },
+    );
+    window.addEventListener('keyup', (e) => this.panKeys.delete(e.key), { signal });
+    window.addEventListener('blur', () => this.panKeys.clear(), { signal });
     window.addEventListener(
       'resize',
       () => {
