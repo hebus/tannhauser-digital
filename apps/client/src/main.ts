@@ -26,8 +26,8 @@ async function main(): Promise<void> {
   const host = document.getElementById('app');
   if (!host) throw new Error('Conteneur #app introuvable');
 
-  // Éditeur de plateaux : outil de développement (`?editor` ou `?editor=<id>`), absent du build de production.
-  const editorParam = import.meta.env.DEV ? new URLSearchParams(location.search).get('editor') : null;
+  // Éditeur de plateaux (`?editor` ou `?editor=<id>`), aussi en production : il y enregistre dans le navigateur.
+  const editorParam = new URLSearchParams(location.search).get('editor');
   if (editorParam !== null) {
     await import('../ui.css');
     document.getElementById('hud')?.remove(); // l'aide de jeu d'index.html ne concerne pas l'éditeur

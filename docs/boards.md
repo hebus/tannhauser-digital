@@ -11,15 +11,14 @@ Deux façons de créer une carte :
 
 Tout fichier `packages/content/src/data/*-board.json` valide est chargé automatiquement (`import.meta.glob` dans `packages/content/src/index.ts`) : dev, château et manoir en tête, puis les autres par identifiant.
 
-## L'éditeur de plateaux (outil de développement)
+## L'éditeur de plateaux
 
-Outil **interne** (voir `docs/product/non-goals.md` : pas d'éditeur grand public), absent du build de production.
+Outil **interne** (voir `docs/product/non-goals.md` : pas d'éditeur grand public), accessible par l'URL `?editor` (aucun lien dans le jeu). Deux modes de stockage, choisis selon le build :
 
-```
-npm run dev
-```
+- **Développement** (`npm run dev`, puis `http://localhost:5173/?editor`) : l'éditeur écrit les fichiers `packages/content/src/data/*-board.json` par l'API du serveur de dev.
+- **Production** (site déployé, `<site>/?editor`) : aucun fichier n'est écrit, l'éditeur enregistre dans le **navigateur** (`localStorage`, clé `tannhauser.localBoards`). Ces plateaux apparaissent dans l'écran de mise en place de ce navigateur uniquement, et le bouton « Tester » les joue. Les plateaux embarqués sont en lecture seule (« Enregistrer sous » en fait une copie locale) ; un plateau local ne peut pas reprendre l'identifiant d'un plateau embarqué. Vider les données du site efface les plateaux locaux : utiliser « Exporter » pour en garder le JSON (à déposer ensuite dans `data/` pour l'intégrer au jeu).
 
-puis ouvrir `http://localhost:5173/?editor` (liste des plateaux, nouveau plateau, import d'un JSON) ou `/?editor=<id>` pour ouvrir directement un plateau.
+Dans les deux cas : liste des plateaux, nouveau plateau, import d'un JSON, ou `?editor=<id>` pour ouvrir directement un plateau.
 
 **Outils** (barre du haut ou touche) :
 

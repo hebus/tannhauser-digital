@@ -1,5 +1,6 @@
 import { SeededRng, applyCommand, createInitialState, type CharacterState } from '@tannhauser/core';
-import { createCharacterState, loadDevContent } from '@tannhauser/content';
+import { createCharacterState, type loadDevContent } from '@tannhauser/content';
+import { loadGameContent } from '../content';
 import { GameFacade } from '../game-facade';
 import { placeTeams, validateSetup, type SetupConfig, type SetupContent } from '../setup/setup-config';
 
@@ -23,7 +24,7 @@ export class InvalidSetupError extends Error {
  * Un personnage choisi par les deux équipes reçoit l'id `<définition>#<joueur>` ; plusieurs troupes du même type dans
  * une équipe sont numérotées `<définition>#<joueur>-<n>` (ids toujours uniques).
  */
-export function createGameFromSetup(config: SetupConfig, content: DevContent = loadDevContent()): GameFacade {
+export function createGameFromSetup(config: SetupConfig, content: DevContent = loadGameContent()): GameFacade {
   const issues = validateSetup(config, setupContentOf(content));
   if (issues.length > 0) throw new InvalidSetupError(issues.map((i) => i.code));
 

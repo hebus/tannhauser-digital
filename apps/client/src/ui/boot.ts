@@ -1,4 +1,4 @@
-import { loadDevContent } from '@tannhauser/content';
+import { loadGameContent } from '../content';
 import type { GameFacade } from '../game-facade';
 import { showSetupScreen } from '../setup/setup-screen';
 import { defaultSetup, preselectBoard, randomSeed, validateSetup, type SetupConfig } from '../setup/setup-config';
@@ -14,7 +14,7 @@ import { lastSetup, setupFromLocation, writeSetupToLocation } from './session';
 export async function startFromSetup(): Promise<GameFacade> {
   setLocale(detectLocale(location.search));
   document.documentElement.lang = detectLocale(location.search);
-  const content = loadDevContent();
+  const content = loadGameContent();
   const available = setupContentOf(content);
 
   let config: SetupConfig | null = setupFromLocation();
