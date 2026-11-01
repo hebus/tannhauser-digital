@@ -17,7 +17,7 @@
 
 ## Cartes
 
-- `boards.md` : créer une carte (générateur, schéma de mise en page, convention de couleurs)
+- `boards.md` : créer une carte (éditeur de plateaux `?editor`, générateur, schéma de mise en page, convention de couleurs)
 
 ## Tickets (`docs/tickets/`)
 
