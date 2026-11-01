@@ -1,4 +1,4 @@
-import type { GameState, CharacterState } from '@tannhauser/core';
+import { isPassable, type GameState, type CharacterState } from '@tannhauser/core';
 
 /** Retouche d'état de l'éditeur : un nouvel état, ou le motif (texte) du refus. Hors règles : outil de test uniquement. */
 export type EditResult = { readonly ok: true; readonly state: GameState; readonly message: string } | { readonly ok: false; readonly message: string };
@@ -17,7 +17,7 @@ function find(state: GameState, characterId: string): CharacterState | null {
 /** Cases où l'on peut poser `characterId` : praticables et sans autre personnage vivant. */
 export function freeNodes(state: GameState, characterId: string): string[] {
   return Object.values(state.board.nodes)
-    .filter((n) => n.properties.passable && !state.characters.some((c) => c.alive && c.id !== characterId && c.nodeId === n.id))
+    .filter((n) => isPassable(state.board, n.id) && !state.characters.some((c) => c.alive && c.id !== characterId && c.nodeId === n.id))
     .map((n) => n.id);
 }
 
@@ -27,7 +27,7 @@ export function relocateCharacter(state: GameState, characterId: string, nodeId:
   if (!character) return refuse(`Personnage inconnu : ${characterId}.`);
   const node = state.board.nodes[nodeId];
   if (!node) return refuse(`Case inconnue : ${nodeId}.`);
-  if (!node.properties.passable) return refuse(`La case ${nodeId} est impraticable.`);
+  if (!isPassable(state.board, nodeId)) return refuse(`La case ${nodeId} est impraticable.`);
   if (state.characters.some((c) => c.alive && c.id !== characterId && c.nodeId === nodeId)) return refuse(`La case ${nodeId} est occupée.`);
   if (character.nodeId === nodeId) return refuse(`${characterId} est déjà en ${nodeId}.`);
   return { ok: true, state: withCharacter(state, { ...character, nodeId }), message: `${characterId} placé en ${nodeId}.` };

@@ -5,7 +5,7 @@ L'équipement est un **contenu** (définitions de données validées par ArkType
 | ID | Règle testable | Événements |
 |---|---|---|
 | RULE-EQUIP-001 | Chaque personnage a un nombre limité d'emplacements ; l'équipement appartient à l'inventaire. Équiper au-delà des emplacements est refusé. | |
-| RULE-EQUIP-002 | Actions d'équipement : attaquer, lancer une grenade, ramasser, déposer, donner, utiliser, ouvrir une caisse le cas échéant. Chacune est une commande avec validation. | `EQUIPMENT_USED` |
+| RULE-EQUIP-002 | Actions d'équipement : attaquer, lancer une grenade, ramasser, déposer, donner, utiliser, ouvrir une caisse le cas échéant. Chacune est une commande avec validation. Les caisses existent déjà sur le plateau (RULE-NODE-006, obstacle) ; leur ouverture et leur contenu restent à implémenter avec l'inventaire. | `EQUIPMENT_USED` |
 | RULE-EQUIP-003 | Ramasser/déposer exige un personnage vivant et adjacent au nœud portant l'équipement. | `EQUIPMENT_PICKED_UP` |
 | RULE-EQUIP-004 | Donner : un personnage peut transférer un ou plusieurs équipements à un personnage adjacent ; si le receveur n'a pas l'emplacement adapté, la restriction de la règle s'applique. | `EQUIPMENT_GIVEN` |
 | RULE-EQUIP-005 | L'équipement déposé reste dans l'état de jeu sur son nœud et peut être récupéré. | `EQUIPMENT_DROPPED` |

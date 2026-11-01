@@ -5,6 +5,7 @@ import {
   type BoardPortal,
   type BoardState,
   type ColorId,
+  type Crate,
   type Door,
   type NodeProperties,
 } from './types';
@@ -15,6 +16,7 @@ export class BoardBuilder {
   private readonly edges: BoardEdge[] = [];
   private readonly doors: Record<string, Door> = {};
   private readonly portals: BoardPortal[] = [];
+  private readonly crates: Crate[] = [];
 
   node(id: string, colors: ColorId[], x = 0, y = 0, props: Partial<NodeProperties> = {}, zoneId?: string): this {
     this.nodes[id] = { id, x, y, colors, zoneId, properties: { ...defaultNodeProperties, ...props } };
@@ -36,7 +38,13 @@ export class BoardBuilder {
     return this;
   }
 
+  /** Caisse en bois (fermée) sur une case : la rend impraticable. */
+  crate(id: string, nodeId: string): this {
+    this.crates.push({ id, nodeId });
+    return this;
+  }
+
   build(): BoardState {
-    return { nodes: this.nodes, edges: this.edges, doors: this.doors, portals: this.portals };
+    return { nodes: this.nodes, edges: this.edges, doors: this.doors, portals: this.portals, ...(this.crates.length > 0 ? { crates: this.crates } : {}) };
   }
 }

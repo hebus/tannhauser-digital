@@ -71,3 +71,9 @@ export const HIGHLIGHT_COLORS = { move: 0xffffff, throw: 0xffb454 } as const;
 
 /** Teintes du terrain : sol d'une pièce (la teinte de la pièce n'en colore que `ROOM_TINT_ALPHA`), sol d'un couloir, murs. */
 export const TERRAIN_COLORS = { room: 0x1f2329, roomTintAlpha: 0.28, corridor: 0x2e333c, wall: 0x8a8f9a } as const;
+
+/** Caisse en bois (planches, cadre, ombres), commune aux rendus 2D et 3D et à l'éditeur de plateaux. */
+export const CRATE_COLORS = { wood: 0xa0703c, frame: 0x6b4423, dark: 0x3d2614 } as const;
+
+/** Portail (porte secrète) : trait et marques de ses deux cases, communs aux rendus 2D et 3D et à l'éditeur. */
+export const PORTAL_COLOR = 0xc084fc;

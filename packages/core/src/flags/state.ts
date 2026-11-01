@@ -1,4 +1,4 @@
-import type { NodeId } from '../board/types';
+import { isPassable, type NodeId } from '../board/types';
 import type { GameEvent } from '../events/events';
 import type { CharacterState, FlagState, GameState, PlayerId } from '../state/types';
 
@@ -47,7 +47,7 @@ export function captureTheFlagWinner(state: GameState): PlayerId | null {
 /** Cases d'objectif du plateau, triées par id (cases où l'on place les drapeaux). */
 export function objectiveNodes(state: GameState): NodeId[] {
   return Object.values(state.board.nodes)
-    .filter((n) => n.properties.kind === 'OBJECTIVE' && n.properties.passable)
+    .filter((n) => n.properties.kind === 'OBJECTIVE' && isPassable(state.board, n.id))
     .map((n) => n.id)
     .sort();
 }

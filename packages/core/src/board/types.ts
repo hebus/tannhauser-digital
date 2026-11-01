@@ -63,11 +63,35 @@ export interface BoardPortal {
   readonly type: 'SECRET_DOOR';
 }
 
+export type CrateId = string;
+
+/**
+ * Caisse en bois posée sur une case (RULE-NODE-006) : fermée, elle rend sa case impraticable (voir
+ * `isPassable`). Son ouverture et son contenu (matériel) viendront avec l'inventaire.
+ */
+export interface Crate {
+  readonly id: CrateId;
+  readonly nodeId: NodeId;
+}
+
 export interface BoardState {
   readonly nodes: Readonly<Record<NodeId, BoardNode>>;
   readonly edges: readonly BoardEdge[];
   readonly doors: Readonly<Record<DoorId, Door>>;
   readonly portals: readonly BoardPortal[];
+  /** Caisses en bois (absent = aucune). */
+  readonly crates?: readonly Crate[];
+}
+
+/** Caisse posée sur une case, s'il y en a une. */
+export function crateAt(board: BoardState, nodeId: NodeId): Crate | undefined {
+  return board.crates?.find((c) => c.nodeId === nodeId);
+}
+
+/** Une case est praticable si sa propriété le dit ET qu'aucune caisse (fermée) ne l'occupe. */
+export function isPassable(board: BoardState, nodeId: NodeId): boolean {
+  const node = board.nodes[nodeId];
+  return node !== undefined && node.properties.passable && crateAt(board, nodeId) === undefined;
 }
 
 export const MAX_COLORS_PER_NODE = 3;

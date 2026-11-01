@@ -13,6 +13,8 @@ export interface BoardIssue {
     | 'DUPLICATE_COLOR'
     | 'ID_MISMATCH'
     | 'NEGATIVE_MOVEMENT_COST'
+    | 'CRATE_UNKNOWN_NODE'
+    | 'DUPLICATE_CRATE'
     | 'UNREACHABLE_AREA';
   readonly message: string;
 }
@@ -62,6 +64,17 @@ export function validateBoard(board: BoardState): BoardIssue[] {
       if (!(end in board.nodes)) issues.push({ code: 'PORTAL_UNKNOWN_NODE', message: `Portail ${portal.id} : nœud ${end} inconnu` });
       else touched.add(end);
     }
+  }
+
+  // Caisses : sur une case existante, une seule par case, identifiants uniques.
+  const crateIds = new Set<string>();
+  const crateNodes = new Set<string>();
+  for (const crate of board.crates ?? []) {
+    if (!(crate.nodeId in board.nodes)) issues.push({ code: 'CRATE_UNKNOWN_NODE', message: `Caisse ${crate.id} : nœud ${crate.nodeId} inconnu` });
+    if (crateIds.has(crate.id)) issues.push({ code: 'DUPLICATE_CRATE', message: `Caisse dupliquée ${crate.id}` });
+    else if (crateNodes.has(crate.nodeId)) issues.push({ code: 'DUPLICATE_CRATE', message: `Deux caisses sur ${crate.nodeId}` });
+    crateIds.add(crate.id);
+    crateNodes.add(crate.nodeId);
   }
 
   for (const id of ids) {

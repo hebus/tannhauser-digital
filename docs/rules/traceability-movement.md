@@ -4,6 +4,7 @@
 |---|---|---|---|---|
 | RULE-MOVE-001 | 1 PM par case + surcoût `movementCostModifier` de la case d'arrivée | §68.2, §68.4 | `movement/graph.ts` (`entryCost`, `checkStep`) | coût normal, surcoût +1/+2, chemin le moins cher |
 | RULE-MOVE-002 | Case impraticable (`passable=false`) | §68.5 | `checkStep` (IMPASSABLE) | case impraticable |
+| RULE-NODE-006 | Case sous une caisse fermée impraticable (déplacement, objectifs, placement) ; validation CRATE_UNKNOWN_NODE / DUPLICATE_CRATE | décision PO | `board/types.ts` (`isPassable`, `crateAt`), `checkStep` (IMPASSABLE), `board/validate.ts` | `board/crates.spec.ts` |
 | RULE-MOVE-003 | Arête à sens unique utilisable de `from` vers `to` seulement | §76.8 | `checkStep`, `neighborCandidates` | sens unique ; refus ONE_WAY |
 | RULE-MOVE-004 | PM insuffisants (« Impossible : N PM requis… ») | §68.2 | `movement/validate-path.ts`, `movement/reachable.ts` | PM insuffisants |
 | RULE-MOVE-005 | Chemin connexe uniquement | §68.5 | `checkStep` (NOT_ADJACENT) | chemin non connexe |

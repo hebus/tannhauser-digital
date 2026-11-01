@@ -63,7 +63,7 @@ export function loadBoard(data: unknown, source = 'board'): LoadedBoard {
   const doors: Record<string, Door> = {};
   for (const d of json.doors ?? []) doors[d.id] = d;
 
-  const board: BoardState = { nodes, edges: json.edges, doors, portals: json.portals ?? [] };
+  const board: BoardState = { nodes, edges: json.edges, doors, portals: json.portals ?? [], ...(json.crates && json.crates.length > 0 ? { crates: json.crates } : {}) };
   const issues = validateBoard(board);
   if (issues.length > 0) throw new ContentError(source, issues.map((i) => `${i.code} : ${i.message}`));
   const problems = json.layout ? layoutProblems(json.layout) : [];

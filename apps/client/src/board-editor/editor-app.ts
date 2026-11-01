@@ -44,6 +44,7 @@ const TOOLS: readonly { readonly tool: Tool; readonly key: string; readonly labe
   { tool: 'connect', key: 'C', label: 'Relier', hint: 'Cliquer des cases à la suite pour les relier (re-cliquer une arête existante la retire) ; Échap arrête' },
   { tool: 'door', key: 'D', label: 'Porte', hint: 'Cliquer une arête pour poser ou retirer une porte' },
   { tool: 'portal', key: 'P', label: 'Portail', hint: 'Cliquer deux cases pour poser ou retirer une porte secrète' },
+  { tool: 'crate', key: 'B', label: 'Caisse', hint: 'Cliquer une case pour poser ou retirer une caisse en bois (fermée : la case devient impraticable)' },
   { tool: 'room', key: 'R', label: 'Pièce', hint: 'Cliquer les sommets ; cliquer le premier, Entrée ou double-clic pour fermer' },
   { tool: 'corridor', key: 'L', label: 'Couloir', hint: 'Cliquer les points ; Entrée ou double-clic pour finir' },
 ];
@@ -556,7 +557,7 @@ function mountEditor(host: HTMLElement, initial: EditorDoc, meta: Meta): void {
   }
 
   frame();
-  notify(meta.editable ? 'Prêt. Outils : V N C D P R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau généré : lecture seule.');
+  notify(meta.editable ? 'Prêt. Outils : V N C D P B R L · Suppr · Ctrl+Z / Ctrl+S · Espace ou molette pressée : déplacer la vue.' : 'Plateau généré : lecture seule.');
 }
 
 /** Garde la sélection si ce qu'elle désigne existe encore (après annuler / rétablir). */
