@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { BoardState } from '@tannhauser/core';
 import { buildColorMap, CRATE_COLORS } from '@tannhauser/renderer/src/palette';
-import { buildBoardScene, TILE_RADIUS } from './board-scene';
+import { buildBoardScene, createPortalMarker, TILE_RADIUS } from './board-scene';
 
 const node = (id: string, x: number, y: number, colors: string[]) => ({ id, x, y, colors, properties: { kind: 'NORMAL' as const, passable: true, movementCostModifier: 0, modifiers: [] } });
 const board: BoardState = {
@@ -94,5 +94,26 @@ describe('caisses', () => {
   it('une caisse du plateau est modélisée sur sa case, et seulement là', () => {
     expect(woodMeshes(board)).toBe(0);
     expect(woodMeshes({ ...board, crates: [{ id: 'crate1', nodeId: 'b' }] })).toBe(1);
+  });
+});
+
+describe('portails', () => {
+  const rings = (b: BoardState) => {
+    const at: string[] = [];
+    buildBoardScene(b, undefined, (k) => k).group.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.geometry instanceof THREE.TorusGeometry) at.push(`${Math.round(o.getWorldPosition(new THREE.Vector3()).x)}`);
+    });
+    return at.sort();
+  };
+
+  it('chaque extrémité d’un portail porte un anneau dressé, les autres cases aucun', () => {
+    expect(rings(board)).toEqual([]);
+    expect(rings({ ...board, portals: [{ id: 'p1', from: 'a', to: 'c', type: 'SECRET_DOOR' }] })).toEqual(['0', '200']);
+  });
+
+  it('l’anneau est assez grand pour se lire (plus de la moitié du diamètre d’une case)', () => {
+    const marker = createPortalMarker();
+    const torus = marker.children.find((c): c is THREE.Mesh => c instanceof THREE.Mesh && c.geometry instanceof THREE.TorusGeometry)!;
+    expect((torus.geometry as THREE.TorusGeometry).parameters.radius * 2).toBeGreaterThan(TILE_RADIUS);
   });
 });

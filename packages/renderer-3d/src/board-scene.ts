@@ -298,7 +298,9 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       dashes.push({ a: { x: a.x + (b.x - a.x) * t0, y: a.y + (b.y - a.y) * t0 }, b: { x: a.x + (b.x - a.x) * t1, y: a.y + (b.y - a.y) * t1 } });
     }
   }
-  if (dashes.length > 0) group.add(new THREE.Mesh(ribbons(dashes, 4.5, 1.4), basic(PORTAL_COLOR)));
+  if (dashes.length > 0) group.add(new THREE.Mesh(ribbons(dashes, 5.5, 1.4), basic(PORTAL_COLOR)));
+  // Extrémités des portails : chaque case reliée reçoit une marque (voir `createPortalMarker`).
+  const portalEnds = new Set(board.portals.flatMap((p) => (p.from in board.nodes && p.to in board.nodes ? [p.from, p.to] : [])));
 
   // Tuiles de nœuds : disque en camembert, un secteur égal par couleur de ligne de vue, dans le même ordre que le 2D
   // (premier secteur en haut, puis dans le sens des aiguilles d'une montre) ; teintes de `buildColorMap`, distinctes par id
@@ -381,6 +383,7 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       tile.add(ring);
     }
     if (crateAt(board, node.id)) tile.add(crateModel());
+    if (portalEnds.has(node.id)) tile.add(createPortalMarker());
     if (node.properties.movementCostModifier > 0) {
       const badge = createTextSprite(`+${node.properties.movementCostModifier}`, { pixelHeight: 13 });
       badge.position.set(R * 0.75, 12, -R * 0.75);
@@ -579,4 +582,49 @@ export function buildBoardScene(board: BoardState, layout: BoardLayout | undefin
       cutMask?.dispose();
     },
   };
+}
+
+/** Rayon de l'anneau dressé d'une case à portail (unités plateau ; une case fait 60 de diamètre). */
+const PORTAL_RING_RADIUS = 18;
+/** Recul de l'anneau derrière le centre de la case : au-delà du corps d'un pion (rayon ≈ 20). */
+const PORTAL_RING_BACK = TILE_RADIUS * 0.85;
+
+/**
+ * Marque d'une case reliée par un portail (porte secrète), centrée sur la tuile : bande violette en pointillés autour
+ * de la case (lisible vue de dessus, sans masquer sa couleur) et anneau violet dressé sur la case, qui pivote pour
+ * toujours faire face à la caméra (jamais vu par la tranche), dressé au bord arrière de la case (un pion posé dessus reste devant, visible). Même principe
+ * que les cases d'objectif.
+ */
+export function createPortalMarker(): THREE.Group {
+  const g = new THREE.Group();
+  const R = TILE_RADIUS;
+  const band = new THREE.MeshBasicMaterial({ color: PORTAL_COLOR, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+  const dashes = 10;
+  for (let i = 0; i < dashes; i++) {
+    const arc = (Math.PI * 2) / dashes;
+    const dash = new THREE.Mesh(new THREE.RingGeometry(R + 3, R + 8, 6, 1, i * arc + arc * 0.2, arc * 0.6), band);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.y = TILE_HEIGHT + 1.2;
+    g.add(dash);
+  }
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(PORTAL_RING_RADIUS, 3.4, 10, 36),
+    new THREE.MeshStandardMaterial({ color: PORTAL_COLOR, emissive: 0x3b1a66, flatShading: true, roughness: 0.6 }),
+  );
+  ring.position.y = TILE_HEIGHT + PORTAL_RING_RADIUS + 1;
+  ring.castShadow = true;
+  // Face à la caméra autour de l'axe vertical et posé au bord ARRIÈRE de la case (côté opposé à la caméra) : un pion
+  // sur la case reste entièrement devant l'anneau, donc visible ; recalculé juste avant chaque dessin.
+  const center = new THREE.Vector3();
+  ring.onBeforeRender = (_renderer, _scene, camera) => {
+    g.getWorldPosition(center);
+    const yaw = Math.atan2(camera.position.x - center.x, camera.position.z - center.z);
+    if (ring.rotation.y === yaw) return;
+    ring.rotation.y = yaw;
+    ring.position.x = -Math.sin(yaw) * PORTAL_RING_BACK;
+    ring.position.z = -Math.cos(yaw) * PORTAL_RING_BACK;
+    ring.updateMatrixWorld();
+  };
+  g.add(ring);
+  return g;
 }
